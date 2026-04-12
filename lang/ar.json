@@ -1,0 +1,291 @@
+{
+    "Français": "الفرنسية",
+    "العربية": "العربية",
+    "Langue": "اللغة",
+    "Boîte de réception": "صندوق الوارد",
+    "Messages envoyés": "الرسائل المرسلة",
+    "Brouillons": "المسودات",
+    "Archives": "الأرشيف",
+    "Nouveau message": "رسالة جديدة",
+    "Contacts": "جهات الاتصال",
+    "Départements": "الأقسام",
+    "Rôles": "الأدوار",
+    "Tableau de bord": "لوحة التحكم",
+    "Profil": "الملف الشخصي",
+    "Déconnexion": "تسجيل الخروج",
+    "Connexion": "تسجيل الدخول",
+    "Rechercher": "بحث",
+    "Rechercher un contact": "ابحث عن جهة اتصال",
+    "Sujet": "الموضوع",
+    "Message": "الرسالة",
+    "Envoyer": "إرسال",
+    "Annuler": "إلغاء",
+    "Enregistrer comme brouillon": "حفظ كمسودة",
+    "Destinataire": "المستلم",
+    "Expéditeur": "المرسل",
+    "Date": "التاريخ",
+    "Établissement": "المؤسسة",
+    "Département": "القسم",
+    "Statut": "الحالة",
+    "En ligne": "متصل",
+    "Hors ligne": "غير متصل",
+    "Bloqué": "محظور",
+    "Aucun résultat": "لا توجد نتائج",
+    "Changer la langue": "تغيير اللغة",
+    "Sélectionner une langue": "اختر اللغة",
+    "Message envoyé avec succès.": "تم إرسال الرسالة بنجاح.",
+    "Centre hospitalier": "المركز الاستشفائي",
+    "Plateforme de communication interne pour les départements, les unités et les établissements.": "منصة تواصل داخلية للأقسام والوحدات والمؤسسات.",
+    "Utilisateur connecté": "المستخدم المتصل",
+    "Messagerie centrale": "المراسلة المركزية",
+    "Changer le thème": "تغيير المظهر",
+    "Non lus": "غير المقروءة",
+    "Critiques": "حرجة",
+    "Boîte centralisée pour les messages entrants des départements et des établissements hospitaliers.": "صندوق مركزي للرسائل الواردة من الأقسام والمؤسسات الاستشفائية.",
+    "File de réception": "قائمة الوارد",
+    "La structure React/Inertia est prête. La vraie requête de boîte de réception et les filtres seront connectés lors de la phase backend.": "هيكل React وInertia جاهز. سيتم ربط الاستعلام الحقيقي للبريد الوارد والفلاتر خلال مرحلة الخلفية.",
+    "Phase 2 prête": "المرحلة الثانية جاهزة",
+    "Service des urgences -> Nouvelle note de transfert patient": "مصلحة الاستعجالات -> ملاحظة جديدة لتحويل مريض",
+    "Radiologie -> Résultats d’imagerie disponibles pour révision": "الأشعة -> نتائج التصوير متاحة للمراجعة",
+    "Administration -> Mémo hebdomadaire de coordination du personnel": "الإدارة -> مذكرة أسبوعية لتنسيق الموظفين",
+    "Carte de message non lu de démonstration": "بطاقة رسالة غير مقروءة تجريبية",
+    "Nouveau": "جديد",
+    "Suivez les messages déjà livrés aux départements, aux équipes et aux établissements.": "تابع الرسائل التي تم تسليمها بالفعل إلى الأقسام والفرق والمؤسسات.",
+    "Envois récents": "الإرسالات الأخيرة",
+    "Bloc opératoire": "غرفة العمليات",
+    "Mise à jour du protocole de stérilisation": "تحديث بروتوكول التعقيم",
+    "Livré à 14:20": "تم التسليم 14:20",
+    "Maternité": "مصلحة الولادة",
+    "Suivi de disponibilité des lits": "متابعة توفر الأسرة",
+    "Livré à 12:35": "تم التسليم 12:35",
+    "Laboratoire": "المخبر",
+    "Demande urgente d’acheminement d’échantillon": "طلب عاجل لتوجيه عينة",
+    "Livré à 09:10": "تم التسليم 09:10",
+    "Aperçu": "نظرة عامة",
+    "Messages livrés ce mois-ci.": "الرسائل المسلّمة هذا الشهر.",
+    "Cette vue recevra ensuite la pagination, les destinataires, l’état de livraison et la recherche par département.": "ستتلقى هذه الواجهة لاحقًا الترقيم والجهات المستلمة وحالة التسليم والبحث حسب القسم.",
+    "Compositions enregistrées qui ne sont pas encore envoyées.": "مسودات محفوظة لم يتم إرسالها بعد.",
+    "Espace brouillons": "مساحة المسودات",
+    "Conçu pour prendre en charge les brouillons multi-destinataires avec support futur des pièces jointes.": "مصمم لدعم المسودات متعددة المستلمين مع دعم لاحق للمرفقات.",
+    "Non envoyé": "غير مرسل",
+    "Brouillon pour la coordination en cardiologie": "مسودة لتنسيق أمراض القلب",
+    "Brouillon pour la demande de stock en pharmacie": "مسودة لطلب مخزون الصيدلية",
+    "Brouillon pour le mémo de politique administrative": "مسودة لمذكرة السياسة الإدارية",
+    "Brouillon pour la transmission de l’unité néonatale": "مسودة لتسليم وحدة حديثي الولادة",
+    "Dernière mise à jour il y a quelques minutes": "آخر تحديث منذ بضع دقائق",
+    "Messages reçus archivés et conservés pour une récupération ultérieure.": "رسائل مستلمة مؤرشفة ومحفوظة للاسترجاع لاحقًا.",
+    "Éléments archivés": "العناصر المؤرشفة",
+    "Ancienne circulaire du personnel": "منشور قديم للموظفين",
+    "Demande de maintenance terminée": "طلب صيانة مكتمل",
+    "Note de référence du service achat": "ملاحظة مرجعية من مصلحة المشتريات",
+    "Disponible pour restauration une fois les actions backend connectées": "متاح للاستعادة بمجرد ربط إجراءات الخلفية",
+    "Archivé": "مؤرشف",
+    "Rétention": "الاحتفاظ",
+    "Archives prêtes pour une restauration par utilisateur.": "الأرشيف جاهز للاستعادة حسب المستخدم.",
+    "En phase 3, cette page sera alimentée par les lignes de destinataires archivées afin que l’archivage reste spécifique à chaque utilisateur.": "في المرحلة الثالثة سيتم تغذية هذه الصفحة بصفوف المستلمين المؤرشفة حتى يبقى الأرشيف خاصًا بكل مستخدم.",
+    "Vue de départ pour le flux de messagerie interne de l’hôpital.": "واجهة أولية لتدفق المراسلة الداخلية بالمستشفى.",
+    "Zone de composition": "منطقة التحرير",
+    "Le sélecteur de destinataires sera connecté aux départements et aux contacts enregistrés pendant la phase backend.": "سيتم ربط محدد المستلمين بالأقسام وجهات الاتصال المحفوظة خلال مرحلة الخلفية.",
+    "Le sujet, la priorité, le contenu, les pièces jointes et les actions de brouillon seront ajoutés pendant la phase de construction du module.": "سيتم إضافة الموضوع والأولوية والمحتوى والمرفقات وإجراءات المسودة خلال مرحلة بناء الوحدة.",
+    "Étape suivante": "الخطوة التالية",
+    "La structure de la page de composition est en place.": "هيكل صفحة التحرير جاهز.",
+    "Nous pouvons maintenant créer de vrais formulaires sans refaire la navigation ou la mise en page plus tard.": "يمكننا الآن إنشاء نماذج حقيقية دون إعادة بناء التنقل أو التخطيط لاحقًا.",
+    "Annuaire des utilisateurs, départements et établissements de l’application.": "دليل مستخدمي التطبيق والأقسام والمؤسسات.",
+    "Utilisateurs": "المستخدمون",
+    "Établissements": "المؤسسات",
+    "Annuaire des utilisateurs": "دليل المستخدمين",
+    "Recherchez et filtrez les utilisateurs par nom, rôle, département et statut.": "ابحث وصفِّ المستخدمين حسب الاسم والدور والقسم والحالة.",
+    "Rechercher par nom, identifiant ou email": "ابحث بالاسم أو اسم المستخدم أو البريد الإلكتروني",
+    "Tous les départements": "كل الأقسام",
+    "Tous les rôles": "كل الأدوار",
+    "Tous les statuts": "كل الحالات",
+    "Affinez l’annuaire avec des filtres rapides et appliquez-les instantanément.": "قم بتضييق الدليل بفلاتر سريعة وطبّقها مباشرة.",
+    "Réinitialiser": "إعادة تعيين",
+    "Appliquer les filtres": "تطبيق الفلاتر",
+    "sans-identifiant": "بدون اسم مستخدم",
+    "Aucun département assigné": "لا يوجد قسم معيّن",
+    "Aucun rôle assigné": "لا يوجد دور معيّن",
+    "Aucun utilisateur trouvé pour la recherche et les filtres actuels.": "لم يتم العثور على مستخدمين وفق البحث والفلاتر الحالية.",
+    "Affichage de": "عرض",
+    "à": "إلى",
+    "sur": "من أصل",
+    "utilisateurs": "مستخدمين",
+    "Page": "الصفحة",
+    "Précédent": "السابق",
+    "Suivant": "التالي",
+    "Nom du département": "اسم القسم",
+    "Service des urgences": "مصلحة الاستعجالات",
+    "Sélectionner un établissement": "اختر مؤسسة",
+    "Créer un département": "إنشاء قسم",
+    "Mettre à jour le département": "تحديث القسم",
+    "Ajoutez un nouveau département et liez-le à un établissement.": "أضف قسمًا جديدًا واربطه بمؤسسة.",
+    "Modifier le département": "تعديل القسم",
+    "Mettez à jour les détails du département et l’établissement lié.": "قم بتحديث تفاصيل القسم والمؤسسة المرتبطة به.",
+    "Supprimer le département \":name\" ?": "هل تريد حذف القسم \":name\"؟",
+    "Gérez les départements hospitaliers et leurs établissements liés.": "أدر أقسام المستشفى والمؤسسات المرتبطة بها.",
+    "Créer un nouveau département": "إنشاء قسم جديد",
+    "Annuaire des départements": "دليل الأقسام",
+    "Afficher, créer, modifier et supprimer des départements.": "عرض الأقسام وإنشاؤها وتعديلها وحذفها.",
+    "ID": "المعرّف",
+    "Nom de l’établissement": "اسم المؤسسة",
+    "Actions": "الإجراءات",
+    "N/A": "غير متوفر",
+    "Modifier": "تعديل",
+    "Supprimer": "حذف",
+    "Aucun département trouvé pour le moment.": "لا توجد أقسام حاليًا.",
+    "Nom du rôle": "اسم الدور",
+    "Chef de service": "رئيس المصلحة",
+    "Rôle protégé": "دور محمي",
+    "Empêche la suppression ou la modification une fois créé.": "يمنع الحذف أو التعديل بعد الإنشاء.",
+    "Rôle unique": "دور فريد",
+    "Limite ce rôle à un seul utilisateur assigné.": "يقيّد هذا الدور بمستخدم واحد فقط.",
+    "Créer un rôle": "إنشاء دور",
+    "Mettre à jour le rôle": "تحديث الدور",
+    "Ajoutez un nouveau rôle pour les utilisateurs du système.": "أضف دورًا جديدًا لمستخدمي النظام.",
+    "Modifier le rôle": "تعديل الدور",
+    "Mettez à jour un rôle système existant.": "قم بتحديث دور نظام موجود.",
+    "Supprimer le rôle \":name\" ?": "هل تريد حذف الدور \":name\"؟",
+    "Gérez les rôles des utilisateurs et les règles de protection.": "أدر أدوار المستخدمين وقواعد الحماية.",
+    "Annuaire des rôles": "دليل الأدوار",
+    "Créez et maintenez les rôles système utilisés dans toute l’application.": "أنشئ وحافظ على الأدوار المستخدمة في كامل التطبيق.",
+    "Protégé": "محمي",
+    "Unique": "فريد",
+    "Utilisateurs assignés": "المستخدمون المعيّنون",
+    "Oui": "نعم",
+    "Non": "لا",
+    "Aucun rôle trouvé pour le moment.": "لا توجد أدوار حاليًا.",
+    "Gérez les paramètres personnels de votre compte.": "أدر إعدادات حسابك الشخصية.",
+    "Informations du profil": "معلومات الملف الشخصي",
+    "Mettez à jour les informations de votre profil et votre adresse email.": "قم بتحديث معلومات ملفك الشخصي وعنوان بريدك الإلكتروني.",
+    "Nom": "الاسم",
+    "Votre adresse email n’est pas vérifiée.": "عنوان بريدك الإلكتروني غير موثّق.",
+    "Cliquez ici pour renvoyer l’email de vérification.": "اضغط هنا لإعادة إرسال رسالة التحقق.",
+    "Un nouveau lien de vérification a été envoyé à votre adresse email.": "تم إرسال رابط تحقق جديد إلى بريدك الإلكتروني.",
+    "Enregistrer": "حفظ",
+    "Enregistré.": "تم الحفظ.",
+    "Mettre à jour le mot de passe": "تحديث كلمة المرور",
+    "Assurez-vous que votre compte utilise un mot de passe long et aléatoire pour rester sécurisé.": "تأكد من أن حسابك يستخدم كلمة مرور طويلة وعشوائية للبقاء آمنًا.",
+    "Mot de passe actuel": "كلمة المرور الحالية",
+    "Nouveau mot de passe": "كلمة المرور الجديدة",
+    "Confirmer le mot de passe": "تأكيد كلمة المرور",
+    "Supprimer le compte": "حذف الحساب",
+    "Une fois votre compte supprimé, toutes ses ressources et données seront définitivement supprimées. Avant de supprimer votre compte, veuillez conserver les informations que vous souhaitez garder.": "بمجرد حذف حسابك، سيتم حذف جميع موارده وبياناته نهائيًا. قبل الحذف، احتفظ بالمعلومات التي ترغب في الاحتفاظ بها.",
+    "Êtes-vous sûr de vouloir supprimer votre compte ?": "هل أنت متأكد أنك تريد حذف حسابك؟",
+    "Une fois votre compte supprimé, toutes ses ressources et données seront définitivement supprimées. Veuillez saisir votre mot de passe pour confirmer cette suppression définitive.": "بعد حذف الحساب سيتم حذف جميع موارده وبياناته نهائيًا. يرجى إدخال كلمة المرور لتأكيد هذا الحذف النهائي.",
+    "Plateforme hospitalière sécurisée": "منصة استشفائية آمنة",
+    "Connectez-vous à une messagerie conçue pour les équipes de soins.": "سجّل الدخول إلى نظام مراسلة مصمم لفرق الرعاية.",
+    "Retrouvez une interface cohérente avec l’identité bleue de Cmail, pensée pour une expérience professionnelle, claire et rassurante.": "استمتع بواجهة متناسقة مع هوية Cmail الزرقاء، مصممة لتجربة مهنية واضحة ومطمئنة.",
+    "Accédez à votre espace Cmail.": "ادخل إلى مساحة Cmail الخاصة بك.",
+    "Mot de passe": "كلمة المرور",
+    "Se souvenir de moi": "تذكرني",
+    "Mot de passe oublié ?": "هل نسيت كلمة المرور؟",
+    "Vous n’avez pas encore de compte ?": "ليس لديك حساب بعد؟",
+    "Créer un accès": "إنشاء وصول",
+    "Créer un compte": "إنشاء حساب",
+    "Expérience Cmail unifiée": "تجربة Cmail موحدة",
+    "Créez votre accès et rejoignez l’espace de communication hospitalière.": "أنشئ وصولك وانضم إلى مساحة التواصل الاستشفائي.",
+    "Une inscription simple, dans la même identité bleue que le reste de l’application, pour garder une expérience claire et cohérente.": "تسجيل بسيط بنفس الهوية الزرقاء لباقي التطبيق للحفاظ على تجربة واضحة ومتناسقة.",
+    "Rejoignez votre espace Cmail.": "انضم إلى مساحة Cmail الخاصة بك.",
+    "Déjà inscrit ?": "مسجل بالفعل؟",
+    "Rédigez et envoyez un message interne à un destinataire.": "حرر وأرسل رسالة داخلية إلى مستلم.",
+    "Sélectionner un destinataire": "اختر مستلمًا",
+    "Objet du message": "عنوان الرسالة",
+    "Saisissez le contenu de votre message": "أدخل محتوى رسالتك",
+    "Pièce jointe": "مرفق",
+    "Options du message": "خيارات الرسالة",
+    "Type de message": "نوع الرسالة",
+    "Normal": "عادي",
+    "Urgent": "عاجل",
+    "Information": "معلومة",
+    "Envoi programmé": "إرسال مجدول",
+    "Date limite de réponse": "آخر أجل للرد",
+    "Marquer comme important": "وضع علامة مهم",
+    "Demander un accusé de réception": "طلب إشعار استلام",
+    "Autoriser la redirection": "السماح بإعادة التوجيه",
+    "Résumé": "ملخص",
+    "Le message sera envoyé immédiatement sauf si une date de planification future est définie.": "سيتم إرسال الرسالة فورًا ما لم يتم تحديد تاريخ جدولة مستقبلي.",
+    "Téléversement du fichier": "رفع الملف",
+    "Envoi en cours...": "جاري الإرسال...",
+    "Consultez les messages reçus et leur état de lecture.": "اطلع على الرسائل المستلمة وحالة قراءتها.",
+    "Importants": "مهمة",
+    "Total": "الإجمالي",
+    "Messages reçus": "الرسائل المستلمة",
+    "Les messages les plus récents apparaissent en premier.": "تظهر أحدث الرسائل أولاً.",
+    "Important": "مهم",
+    "Lu": "مقروء",
+    "Non lu": "غير مقروء",
+    "De": "من",
+    "Inconnu": "غير معروف",
+    "Planifié": "مجدول",
+    "Aucun message reçu pour le moment.": "لا توجد رسائل مستلمة حاليًا.",
+    "Suivez les messages envoyés et programmés.": "تابع الرسائل المرسلة والمجدولة.",
+    "Historique des envois": "سجل الإرسال",
+    "Accusé demandé": "إشعار مطلوب",
+    "À": "إلى",
+    "Brouillon": "مسودة",
+    "Aucun message envoyé pour le moment.": "لا توجد رسائل مرسلة حاليًا.",
+    "Messages enregistrés dans les éléments envoyés.": "رسائل محفوظة في المرسلة.",
+    "Les messages programmés apparaissent ici jusqu’à leur envoi effectif.": "تظهر الرسائل المجدولة هنا إلى أن يتم إرسالها فعليًا."
+    ,"Rédigez un message et envoyez-le à un ou plusieurs destinataires.": "حرر رسالة وأرسلها إلى مستلم واحد أو عدة مستلمين."
+    ,"Destinataires": "المستلمون"
+    ,"Filtrer par rôle": "التصفية حسب الدور"
+    ,"Rechercher par nom": "البحث بالاسم"
+    ,"Tapez un nom ou un email": "اكتب اسمًا أو بريدًا إلكترونيًا"
+    ,"Liste des destinataires": "قائمة المستلمين"
+    ,"résultat(s)": "نتيجة"
+    ,"Sans rôle": "بدون دور"
+    ,"Aucun destinataire trouvé avec ce filtre.": "لم يتم العثور على أي مستلم بهذا الفلتر."
+    ,"Destinataires sélectionnés": "المستلمون المحددون"
+    ,"Contenu du message": "محتوى الرسالة"
+    ,"Le message sera envoyé à tous les destinataires sélectionnés.": "سيتم إرسال الرسالة إلى جميع المستلمين المحددين."
+    ,"Nombre de destinataires": "عدد المستلمين"
+    ,"Envoyer le message": "إرسال الرسالة"
+    ,"Détail du message envoyé.": "ØªÙØ§ØµÙŠÙ„ Ø§Ù„Ø±Ø³Ø§Ù„Ø© Ø§Ù„Ù…Ø±Ø³Ù„Ø©."
+    ,"Retour aux messages envoyés": "Ø§Ù„Ø¹ÙˆØ¯Ø© Ø¥Ù„Ù‰ Ø§Ù„Ø±Ø³Ø§Ø¦Ù„ Ø§Ù„Ù…Ø±Ø³Ù„Ø©"
+    ,"Informations": "Ù…Ø¹Ù„ÙˆÙ…Ø§Øª"
+    ,"Envoyé le": "ØªÙ… Ø¥Ø±Ø³Ø§Ù„Ù‡Ø§ ÙÙŠ"
+    ,"Non envoyé": "Ù„Ù… ØªÙØ±Ø³Ù„ Ø¨Ø¹Ø¯"
+    ,"Planifié pour": "Ù…Ø¬Ø¯ÙˆÙ„Ø© Ù„Ù€"
+    ,"Aucune planification": "Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¬Ø¯ÙˆÙ„Ø©"
+    ,"Télécharger la pièce jointe": "ØªØ­Ù…ÙŠÙ„ Ø§Ù„Ù…Ø±ÙÙ‚"
+    ,"Redirection": "Ø¥Ø¹Ø§Ø¯Ø© Ø§Ù„ØªÙˆØ¬ÙŠÙ‡"
+    ,"Autorisée": "Ù…Ø³Ù…ÙˆØ­Ø©"
+    ,"Non autorisée": "ØºÙŠØ± Ù…Ø³Ù…ÙˆØ­Ø©"
+    ,"Aucune date limite": "Ù„Ø§ ØªÙˆØ¬Ø¯ Ù…Ù‡Ù„Ø©"
+    ,"Date limite de réponse": "Ø¢Ø®Ø± Ù…ÙˆØ¹Ø¯ Ù„Ù„Ø±Ø¯"
+    ,"Oui": "Ù†Ø¹Ù…"
+    ,"Normal": "Ø¹Ø§Ø¯ÙŠ"
+    ,"Modifier le brouillon": "ØªØ¹Ø¯ÙŠÙ„ Ø§Ù„Ù…Ø³ÙˆØ¯Ø©"
+    ,"Mettez à jour votre brouillon puis envoyez-le quand vous êtes prêt.": "Ø­Ø¯Ù‘Ø« Ø§Ù„Ù…Ø³ÙˆØ¯Ø© Ø«Ù… Ø£Ø±Ø³Ù„Ù‡Ø§ Ø¹Ù†Ø¯Ù…Ø§ ØªÙƒÙˆÙ† Ø¬Ø§Ù‡Ø²Ø§Ù‹."
+    ,"Tous les rôles": "Ø¬Ù…ÙŠØ¹ Ø§Ù„Ø£Ø¯ÙˆØ§Ø±"
+    ,"Pièce jointe actuelle": "Ø§Ù„Ù…Ø±ÙÙ‚ Ø§Ù„Ø­Ø§Ù„ÙŠ"
+    ,"Fichier joint": "Ù…Ù„Ù Ù…Ø±ÙÙ‚"
+    ,"Brouillon actuel": "Ø§Ù„Ù…Ø³ÙˆØ¯Ø© Ø§Ù„Ø­Ø§Ù„ÙŠØ©"
+    ,"Enregistrement...": "Ø¬Ø§Ø±ÙŠ Ø§Ù„Ø­ÙØ¸..."
+    ,"Enregistrer comme brouillon": "Ø­ÙØ¸ ÙƒÙ…Ø³ÙˆØ¯Ø©"
+    ,"Envoyer ce brouillon": "Ø¥Ø±Ø³Ø§Ù„ Ù‡Ø°Ù‡ Ø§Ù„Ù…Ø³ÙˆØ¯Ø©"
+    ,"Retour aux brouillons": "Ø§Ù„Ø¹ÙˆØ¯Ø© Ø¥Ù„Ù‰ Ø§Ù„Ù…Ø³ÙˆØ¯Ø§Øª"
+    ,"Compositions enregistrées que vous pouvez reprendre puis envoyer plus tard.": "Ù…Ø³ÙˆØ¯Ø§Øª Ù…Ø­ÙÙˆØ¸Ø© ÙŠÙ…ÙƒÙ†Ùƒ Ø§Ù„Ø¹ÙˆØ¯Ø© Ø¥Ù„ÙŠÙ‡Ø§ Ø«Ù… Ø¥Ø±Ø³Ø§Ù„Ù‡Ø§ Ù„Ø§Ø­Ù‚Ø§Ù‹."
+    ,"Espace brouillons": "Ù…Ø³Ø§Ø­Ø© Ø§Ù„Ù…Ø³ÙˆØ¯Ø§Øª"
+    ,"Ouvrez un brouillon, complétez-le, puis envoyez-le quand vous êtes prêt.": "Ø§ÙØªØ­ Ù…Ø³ÙˆØ¯Ø©ØŒ Ø£ÙƒÙ…Ù„Ù‡Ø§ØŒ Ø«Ù… Ø£Ø±Ø³Ù„Ù‡Ø§ Ø¹Ù†Ø¯Ù…Ø§ ØªÙƒÙˆÙ† Ø¬Ø§Ù‡Ø²Ø§Ù‹."
+    ,"Brouillon sans sujet": "Ù…Ø³ÙˆØ¯Ø© Ø¨Ø¯ÙˆÙ† Ù…ÙˆØ¶ÙˆØ¹"
+    ,"Aucun contenu pour le moment.": "Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ù…Ø­ØªÙˆÙ‰ Ø­Ø§Ù„ÙŠØ§Ù‹."
+    ,"Dernière mise à jour": "Ø¢Ø®Ø± ØªØ­Ø¯ÙŠØ«"
+    ,"Pièce jointe incluse": "ÙŠÙˆØ¬Ø¯ Ù…Ø±ÙÙ‚"
+    ,"Aucun brouillon enregistré pour le moment.": "Ù„Ø§ ØªÙˆØ¬Ø¯ Ù…Ø³ÙˆØ¯Ø§Øª Ù…Ø­ÙÙˆØ¸Ø© Ø­Ø§Ù„ÙŠØ§Ù‹."
+    ,"Brouillon enregistré avec succès.": "ØªÙ… Ø­ÙØ¸ Ø§Ù„Ù…Ø³ÙˆØ¯Ø© Ø¨Ù†Ø¬Ø§Ø­."
+    ,"Brouillon mis à jour.": "ØªÙ… ØªØ­Ø¯ÙŠØ« Ø§Ù„Ù…Ø³ÙˆØ¯Ø©."
+    ,"Brouillon envoyé avec succès.": "ØªÙ… Ø¥Ø±Ø³Ø§Ù„ Ø§Ù„Ù…Ø³ÙˆØ¯Ø© Ø¨Ù†Ø¬Ø§Ø­."
+    ,"Aucun message trouvé avec ce filtre.": "Ù„Ù… ÙŠØªÙ… Ø§Ù„Ø¹Ø«ÙˆØ± Ø¹Ù„Ù‰ Ø£ÙŠ Ø±Ø³Ø§Ù„Ø© Ø¨Ù‡Ø°Ø§ Ø§Ù„ÙÙ„ØªØ±."
+    ,"Archiver": "Ø£Ø±Ø´ÙØ©"
+    ,"Désarchiver": "Ø¥Ù„ØºØ§Ø¡ Ø§Ù„Ø£Ø±Ø´ÙØ©"
+    ,"Archives": "Ø§Ù„Ø£Ø±Ø´ÙŠÙ"
+    ,"Messages archivés et conservés pour une récupération ultérieure.": "Ø±Ø³Ø§Ø¦Ù„ Ù…Ø¤Ø±Ø´ÙØ© ÙˆÙ…Ø­ÙÙˆØ¸Ø© Ù„Ø§Ø³ØªØ±Ø¬Ø§Ø¹Ù‡Ø§ Ù„Ø§Ø­Ù‚Ø§Ù‹."
+    ,"Éléments archivés": "Ø§Ù„Ø¹Ù†Ø§ØµØ± Ø§Ù„Ù…Ø¤Ø±Ø´ÙØ©"
+    ,"Archivé": "Ù…Ø¤Ø±Ø´Ù"
+    ,"Aucun message archivé pour le moment.": "Ù„Ø§ ØªÙˆØ¬Ø¯ Ø±Ø³Ø§Ø¦Ù„ Ù…Ø¤Ø±Ø´ÙØ© Ø­Ø§Ù„ÙŠØ§Ù‹."
+    ,"Rétention": "Ø§Ù„Ø§Ø­ØªÙØ§Ø¸"
+    ,"Les messages archivés sont masqués de la boîte de réception et des messages envoyés jusqu’à leur restauration.": "ØªÙØ®ÙÙ‰ Ø§Ù„Ø±Ø³Ø§Ø¦Ù„ Ø§Ù„Ù…Ø¤Ø±Ø´ÙØ© Ù…Ù† Ø§Ù„ÙˆØ§Ø±Ø¯ ÙˆØ§Ù„Ù…Ø±Ø³Ù„ Ø­ØªÙ‰ ØªÙ… Ø§Ø³ØªØ¹Ø§Ø¯ØªÙ‡Ø§."
+    ,"Message archivé avec succès.": "ØªÙ… Ø£Ø±Ø´ÙØ© Ø§Ù„Ø±Ø³Ø§Ù„Ø© Ø¨Ù†Ø¬Ø§Ø­."
+    ,"Message restauré avec succès.": "ØªÙ… Ø§Ø³ØªØ¹Ø§Ø¯Ø© Ø§Ù„Ø±Ø³Ø§Ù„Ø© Ø¨Ù†Ø¬Ø§Ø­."
+}

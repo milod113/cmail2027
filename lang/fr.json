@@ -1,0 +1,291 @@
+{
+    "Français": "Français",
+    "العربية": "العربية",
+    "Langue": "Langue",
+    "Boîte de réception": "Boîte de réception",
+    "Messages envoyés": "Messages envoyés",
+    "Brouillons": "Brouillons",
+    "Archives": "Archives",
+    "Nouveau message": "Nouveau message",
+    "Contacts": "Contacts",
+    "Départements": "Départements",
+    "Rôles": "Rôles",
+    "Tableau de bord": "Tableau de bord",
+    "Profil": "Profil",
+    "Déconnexion": "Déconnexion",
+    "Connexion": "Connexion",
+    "Rechercher": "Rechercher",
+    "Rechercher un contact": "Rechercher un contact",
+    "Sujet": "Sujet",
+    "Message": "Message",
+    "Envoyer": "Envoyer",
+    "Annuler": "Annuler",
+    "Enregistrer comme brouillon": "Enregistrer comme brouillon",
+    "Destinataire": "Destinataire",
+    "Expéditeur": "Expéditeur",
+    "Date": "Date",
+    "Établissement": "Établissement",
+    "Département": "Département",
+    "Statut": "Statut",
+    "En ligne": "En ligne",
+    "Hors ligne": "Hors ligne",
+    "Bloqué": "Bloqué",
+    "Aucun résultat": "Aucun résultat",
+    "Changer la langue": "Changer la langue",
+    "Sélectionner une langue": "Sélectionner une langue",
+    "Message envoyé avec succès.": "Message envoyé avec succès.",
+    "Centre hospitalier": "Centre hospitalier",
+    "Plateforme de communication interne pour les départements, les unités et les établissements.": "Plateforme de communication interne pour les départements, les unités et les établissements.",
+    "Utilisateur connecté": "Utilisateur connecté",
+    "Messagerie centrale": "Messagerie centrale",
+    "Changer le thème": "Changer le thème",
+    "Non lus": "Non lus",
+    "Critiques": "Critiques",
+    "Boîte centralisée pour les messages entrants des départements et des établissements hospitaliers.": "Boîte centralisée pour les messages entrants des départements et des établissements hospitaliers.",
+    "File de réception": "File de réception",
+    "La structure React/Inertia est prête. La vraie requête de boîte de réception et les filtres seront connectés lors de la phase backend.": "La structure React/Inertia est prête. La vraie requête de boîte de réception et les filtres seront connectés lors de la phase backend.",
+    "Phase 2 prête": "Phase 2 prête",
+    "Service des urgences -> Nouvelle note de transfert patient": "Service des urgences -> Nouvelle note de transfert patient",
+    "Radiologie -> Résultats d’imagerie disponibles pour révision": "Radiologie -> Résultats d’imagerie disponibles pour révision",
+    "Administration -> Mémo hebdomadaire de coordination du personnel": "Administration -> Mémo hebdomadaire de coordination du personnel",
+    "Carte de message non lu de démonstration": "Carte de message non lu de démonstration",
+    "Nouveau": "Nouveau",
+    "Suivez les messages déjà livrés aux départements, aux équipes et aux établissements.": "Suivez les messages déjà livrés aux départements, aux équipes et aux établissements.",
+    "Envois récents": "Envois récents",
+    "Bloc opératoire": "Bloc opératoire",
+    "Mise à jour du protocole de stérilisation": "Mise à jour du protocole de stérilisation",
+    "Livré à 14:20": "Livré à 14:20",
+    "Maternité": "Maternité",
+    "Suivi de disponibilité des lits": "Suivi de disponibilité des lits",
+    "Livré à 12:35": "Livré à 12:35",
+    "Laboratoire": "Laboratoire",
+    "Demande urgente d’acheminement d’échantillon": "Demande urgente d’acheminement d’échantillon",
+    "Livré à 09:10": "Livré à 09:10",
+    "Aperçu": "Aperçu",
+    "Messages livrés ce mois-ci.": "Messages livrés ce mois-ci.",
+    "Cette vue recevra ensuite la pagination, les destinataires, l’état de livraison et la recherche par département.": "Cette vue recevra ensuite la pagination, les destinataires, l’état de livraison et la recherche par département.",
+    "Compositions enregistrées qui ne sont pas encore envoyées.": "Compositions enregistrées qui ne sont pas encore envoyées.",
+    "Espace brouillons": "Espace brouillons",
+    "Conçu pour prendre en charge les brouillons multi-destinataires avec support futur des pièces jointes.": "Conçu pour prendre en charge les brouillons multi-destinataires avec support futur des pièces jointes.",
+    "Non envoyé": "Non envoyé",
+    "Brouillon pour la coordination en cardiologie": "Brouillon pour la coordination en cardiologie",
+    "Brouillon pour la demande de stock en pharmacie": "Brouillon pour la demande de stock en pharmacie",
+    "Brouillon pour le mémo de politique administrative": "Brouillon pour le mémo de politique administrative",
+    "Brouillon pour la transmission de l’unité néonatale": "Brouillon pour la transmission de l’unité néonatale",
+    "Dernière mise à jour il y a quelques minutes": "Dernière mise à jour il y a quelques minutes",
+    "Messages reçus archivés et conservés pour une récupération ultérieure.": "Messages reçus archivés et conservés pour une récupération ultérieure.",
+    "Éléments archivés": "Éléments archivés",
+    "Ancienne circulaire du personnel": "Ancienne circulaire du personnel",
+    "Demande de maintenance terminée": "Demande de maintenance terminée",
+    "Note de référence du service achat": "Note de référence du service achat",
+    "Disponible pour restauration une fois les actions backend connectées": "Disponible pour restauration une fois les actions backend connectées",
+    "Archivé": "Archivé",
+    "Rétention": "Rétention",
+    "Archives prêtes pour une restauration par utilisateur.": "Archives prêtes pour une restauration par utilisateur.",
+    "En phase 3, cette page sera alimentée par les lignes de destinataires archivées afin que l’archivage reste spécifique à chaque utilisateur.": "En phase 3, cette page sera alimentée par les lignes de destinataires archivées afin que l’archivage reste spécifique à chaque utilisateur.",
+    "Vue de départ pour le flux de messagerie interne de l’hôpital.": "Vue de départ pour le flux de messagerie interne de l’hôpital.",
+    "Zone de composition": "Zone de composition",
+    "Le sélecteur de destinataires sera connecté aux départements et aux contacts enregistrés pendant la phase backend.": "Le sélecteur de destinataires sera connecté aux départements et aux contacts enregistrés pendant la phase backend.",
+    "Le sujet, la priorité, le contenu, les pièces jointes et les actions de brouillon seront ajoutés pendant la phase de construction du module.": "Le sujet, la priorité, le contenu, les pièces jointes et les actions de brouillon seront ajoutés pendant la phase de construction du module.",
+    "Étape suivante": "Étape suivante",
+    "La structure de la page de composition est en place.": "La structure de la page de composition est en place.",
+    "Nous pouvons maintenant créer de vrais formulaires sans refaire la navigation ou la mise en page plus tard.": "Nous pouvons maintenant créer de vrais formulaires sans refaire la navigation ou la mise en page plus tard.",
+    "Annuaire des utilisateurs, départements et établissements de l’application.": "Annuaire des utilisateurs, départements et établissements de l’application.",
+    "Utilisateurs": "Utilisateurs",
+    "Établissements": "Établissements",
+    "Annuaire des utilisateurs": "Annuaire des utilisateurs",
+    "Recherchez et filtrez les utilisateurs par nom, rôle, département et statut.": "Recherchez et filtrez les utilisateurs par nom, rôle, département et statut.",
+    "Rechercher par nom, identifiant ou email": "Rechercher par nom, identifiant ou email",
+    "Tous les départements": "Tous les départements",
+    "Tous les rôles": "Tous les rôles",
+    "Tous les statuts": "Tous les statuts",
+    "Affinez l’annuaire avec des filtres rapides et appliquez-les instantanément.": "Affinez l’annuaire avec des filtres rapides et appliquez-les instantanément.",
+    "Réinitialiser": "Réinitialiser",
+    "Appliquer les filtres": "Appliquer les filtres",
+    "sans-identifiant": "sans-identifiant",
+    "Aucun département assigné": "Aucun département assigné",
+    "Aucun rôle assigné": "Aucun rôle assigné",
+    "Aucun utilisateur trouvé pour la recherche et les filtres actuels.": "Aucun utilisateur trouvé pour la recherche et les filtres actuels.",
+    "Affichage de": "Affichage de",
+    "à": "à",
+    "sur": "sur",
+    "utilisateurs": "utilisateurs",
+    "Page": "Page",
+    "Précédent": "Précédent",
+    "Suivant": "Suivant",
+    "Nom du département": "Nom du département",
+    "Service des urgences": "Service des urgences",
+    "Sélectionner un établissement": "Sélectionner un établissement",
+    "Créer un département": "Créer un département",
+    "Mettre à jour le département": "Mettre à jour le département",
+    "Ajoutez un nouveau département et liez-le à un établissement.": "Ajoutez un nouveau département et liez-le à un établissement.",
+    "Modifier le département": "Modifier le département",
+    "Mettez à jour les détails du département et l’établissement lié.": "Mettez à jour les détails du département et l’établissement lié.",
+    "Supprimer le département \":name\" ?": "Supprimer le département \":name\" ?",
+    "Gérez les départements hospitaliers et leurs établissements liés.": "Gérez les départements hospitaliers et leurs établissements liés.",
+    "Créer un nouveau département": "Créer un nouveau département",
+    "Annuaire des départements": "Annuaire des départements",
+    "Afficher, créer, modifier et supprimer des départements.": "Afficher, créer, modifier et supprimer des départements.",
+    "ID": "ID",
+    "Nom de l’établissement": "Nom de l’établissement",
+    "Actions": "Actions",
+    "N/A": "N/A",
+    "Modifier": "Modifier",
+    "Supprimer": "Supprimer",
+    "Aucun département trouvé pour le moment.": "Aucun département trouvé pour le moment.",
+    "Nom du rôle": "Nom du rôle",
+    "Chef de service": "Chef de service",
+    "Rôle protégé": "Rôle protégé",
+    "Empêche la suppression ou la modification une fois créé.": "Empêche la suppression ou la modification une fois créé.",
+    "Rôle unique": "Rôle unique",
+    "Limite ce rôle à un seul utilisateur assigné.": "Limite ce rôle à un seul utilisateur assigné.",
+    "Créer un rôle": "Créer un rôle",
+    "Mettre à jour le rôle": "Mettre à jour le rôle",
+    "Ajoutez un nouveau rôle pour les utilisateurs du système.": "Ajoutez un nouveau rôle pour les utilisateurs du système.",
+    "Modifier le rôle": "Modifier le rôle",
+    "Mettez à jour un rôle système existant.": "Mettez à jour un rôle système existant.",
+    "Supprimer le rôle \":name\" ?": "Supprimer le rôle \":name\" ?",
+    "Gérez les rôles des utilisateurs et les règles de protection.": "Gérez les rôles des utilisateurs et les règles de protection.",
+    "Annuaire des rôles": "Annuaire des rôles",
+    "Créez et maintenez les rôles système utilisés dans toute l’application.": "Créez et maintenez les rôles système utilisés dans toute l’application.",
+    "Protégé": "Protégé",
+    "Unique": "Unique",
+    "Utilisateurs assignés": "Utilisateurs assignés",
+    "Oui": "Oui",
+    "Non": "Non",
+    "Aucun rôle trouvé pour le moment.": "Aucun rôle trouvé pour le moment.",
+    "Gérez les paramètres personnels de votre compte.": "Gérez les paramètres personnels de votre compte.",
+    "Informations du profil": "Informations du profil",
+    "Mettez à jour les informations de votre profil et votre adresse email.": "Mettez à jour les informations de votre profil et votre adresse email.",
+    "Nom": "Nom",
+    "Votre adresse email n’est pas vérifiée.": "Votre adresse email n’est pas vérifiée.",
+    "Cliquez ici pour renvoyer l’email de vérification.": "Cliquez ici pour renvoyer l’email de vérification.",
+    "Un nouveau lien de vérification a été envoyé à votre adresse email.": "Un nouveau lien de vérification a été envoyé à votre adresse email.",
+    "Enregistrer": "Enregistrer",
+    "Enregistré.": "Enregistré.",
+    "Mettre à jour le mot de passe": "Mettre à jour le mot de passe",
+    "Assurez-vous que votre compte utilise un mot de passe long et aléatoire pour rester sécurisé.": "Assurez-vous que votre compte utilise un mot de passe long et aléatoire pour rester sécurisé.",
+    "Mot de passe actuel": "Mot de passe actuel",
+    "Nouveau mot de passe": "Nouveau mot de passe",
+    "Confirmer le mot de passe": "Confirmer le mot de passe",
+    "Supprimer le compte": "Supprimer le compte",
+    "Une fois votre compte supprimé, toutes ses ressources et données seront définitivement supprimées. Avant de supprimer votre compte, veuillez conserver les informations que vous souhaitez garder.": "Une fois votre compte supprimé, toutes ses ressources et données seront définitivement supprimées. Avant de supprimer votre compte, veuillez conserver les informations que vous souhaitez garder.",
+    "Êtes-vous sûr de vouloir supprimer votre compte ?": "Êtes-vous sûr de vouloir supprimer votre compte ?",
+    "Une fois votre compte supprimé, toutes ses ressources et données seront définitivement supprimées. Veuillez saisir votre mot de passe pour confirmer cette suppression définitive.": "Une fois votre compte supprimé, toutes ses ressources et données seront définitivement supprimées. Veuillez saisir votre mot de passe pour confirmer cette suppression définitive.",
+    "Plateforme hospitalière sécurisée": "Plateforme hospitalière sécurisée",
+    "Connectez-vous à une messagerie conçue pour les équipes de soins.": "Connectez-vous à une messagerie conçue pour les équipes de soins.",
+    "Retrouvez une interface cohérente avec l’identité bleue de Cmail, pensée pour une expérience professionnelle, claire et rassurante.": "Retrouvez une interface cohérente avec l’identité bleue de Cmail, pensée pour une expérience professionnelle, claire et rassurante.",
+    "Accédez à votre espace Cmail.": "Accédez à votre espace Cmail.",
+    "Mot de passe": "Mot de passe",
+    "Se souvenir de moi": "Se souvenir de moi",
+    "Mot de passe oublié ?": "Mot de passe oublié ?",
+    "Vous n’avez pas encore de compte ?": "Vous n’avez pas encore de compte ?",
+    "Créer un accès": "Créer un accès",
+    "Créer un compte": "Créer un compte",
+    "Expérience Cmail unifiée": "Expérience Cmail unifiée",
+    "Créez votre accès et rejoignez l’espace de communication hospitalière.": "Créez votre accès et rejoignez l’espace de communication hospitalière.",
+    "Une inscription simple, dans la même identité bleue que le reste de l’application, pour garder une expérience claire et cohérente.": "Une inscription simple, dans la même identité bleue que le reste de l’application, pour garder une expérience claire et cohérente.",
+    "Rejoignez votre espace Cmail.": "Rejoignez votre espace Cmail.",
+    "Déjà inscrit ?": "Déjà inscrit ?",
+    "Rédigez et envoyez un message interne à un destinataire.": "Rédigez et envoyez un message interne à un destinataire.",
+    "Sélectionner un destinataire": "Sélectionner un destinataire",
+    "Objet du message": "Objet du message",
+    "Saisissez le contenu de votre message": "Saisissez le contenu de votre message",
+    "Pièce jointe": "Pièce jointe",
+    "Options du message": "Options du message",
+    "Type de message": "Type de message",
+    "Normal": "Normal",
+    "Urgent": "Urgent",
+    "Information": "Information",
+    "Envoi programmé": "Envoi programmé",
+    "Date limite de réponse": "Date limite de réponse",
+    "Marquer comme important": "Marquer comme important",
+    "Demander un accusé de réception": "Demander un accusé de réception",
+    "Autoriser la redirection": "Autoriser la redirection",
+    "Résumé": "Résumé",
+    "Le message sera envoyé immédiatement sauf si une date de planification future est définie.": "Le message sera envoyé immédiatement sauf si une date de planification future est définie.",
+    "Téléversement du fichier": "Téléversement du fichier",
+    "Envoi en cours...": "Envoi en cours...",
+    "Consultez les messages reçus et leur état de lecture.": "Consultez les messages reçus et leur état de lecture.",
+    "Importants": "Importants",
+    "Total": "Total",
+    "Messages reçus": "Messages reçus",
+    "Les messages les plus récents apparaissent en premier.": "Les messages les plus récents apparaissent en premier.",
+    "Important": "Important",
+    "Lu": "Lu",
+    "Non lu": "Non lu",
+    "De": "De",
+    "Inconnu": "Inconnu",
+    "Planifié": "Planifié",
+    "Aucun message reçu pour le moment.": "Aucun message reçu pour le moment.",
+    "Suivez les messages envoyés et programmés.": "Suivez les messages envoyés et programmés.",
+    "Historique des envois": "Historique des envois",
+    "Accusé demandé": "Accusé demandé",
+    "À": "À",
+    "Brouillon": "Brouillon",
+    "Aucun message envoyé pour le moment.": "Aucun message envoyé pour le moment.",
+    "Messages enregistrés dans les éléments envoyés.": "Messages enregistrés dans les éléments envoyés.",
+    "Les messages programmés apparaissent ici jusqu’à leur envoi effectif.": "Les messages programmés apparaissent ici jusqu’à leur envoi effectif."
+    ,"Rédigez un message et envoyez-le à un ou plusieurs destinataires.": "Rédigez un message et envoyez-le à un ou plusieurs destinataires."
+    ,"Destinataires": "Destinataires"
+    ,"Filtrer par rôle": "Filtrer par rôle"
+    ,"Rechercher par nom": "Rechercher par nom"
+    ,"Tapez un nom ou un email": "Tapez un nom ou un email"
+    ,"Liste des destinataires": "Liste des destinataires"
+    ,"résultat(s)": "résultat(s)"
+    ,"Sans rôle": "Sans rôle"
+    ,"Aucun destinataire trouvé avec ce filtre.": "Aucun destinataire trouvé avec ce filtre."
+    ,"Destinataires sélectionnés": "Destinataires sélectionnés"
+    ,"Contenu du message": "Contenu du message"
+    ,"Le message sera envoyé à tous les destinataires sélectionnés.": "Le message sera envoyé à tous les destinataires sélectionnés."
+    ,"Nombre de destinataires": "Nombre de destinataires"
+    ,"Envoyer le message": "Envoyer le message"
+    ,"Détail du message envoyé.": "Détail du message envoyé."
+    ,"Retour aux messages envoyés": "Retour aux messages envoyés"
+    ,"Informations": "Informations"
+    ,"Envoyé le": "Envoyé le"
+    ,"Non envoyé": "Non envoyé"
+    ,"Planifié pour": "Planifié pour"
+    ,"Aucune planification": "Aucune planification"
+    ,"Télécharger la pièce jointe": "Télécharger la pièce jointe"
+    ,"Redirection": "Redirection"
+    ,"Autorisée": "Autorisée"
+    ,"Non autorisée": "Non autorisée"
+    ,"Aucune date limite": "Aucune date limite"
+    ,"Date limite de réponse": "Date limite de réponse"
+    ,"Oui": "Oui"
+    ,"Normal": "Normal"
+    ,"Modifier le brouillon": "Modifier le brouillon"
+    ,"Mettez à jour votre brouillon puis envoyez-le quand vous êtes prêt.": "Mettez à jour votre brouillon puis envoyez-le quand vous êtes prêt."
+    ,"Tous les rôles": "Tous les rôles"
+    ,"Pièce jointe actuelle": "Pièce jointe actuelle"
+    ,"Fichier joint": "Fichier joint"
+    ,"Brouillon actuel": "Brouillon actuel"
+    ,"Enregistrement...": "Enregistrement..."
+    ,"Enregistrer comme brouillon": "Enregistrer comme brouillon"
+    ,"Envoyer ce brouillon": "Envoyer ce brouillon"
+    ,"Retour aux brouillons": "Retour aux brouillons"
+    ,"Compositions enregistrées que vous pouvez reprendre puis envoyer plus tard.": "Compositions enregistrées que vous pouvez reprendre puis envoyer plus tard."
+    ,"Espace brouillons": "Espace brouillons"
+    ,"Ouvrez un brouillon, complétez-le, puis envoyez-le quand vous êtes prêt.": "Ouvrez un brouillon, complétez-le, puis envoyez-le quand vous êtes prêt."
+    ,"Brouillon sans sujet": "Brouillon sans sujet"
+    ,"Aucun contenu pour le moment.": "Aucun contenu pour le moment."
+    ,"Dernière mise à jour": "Dernière mise à jour"
+    ,"Pièce jointe incluse": "Pièce jointe incluse"
+    ,"Aucun brouillon enregistré pour le moment.": "Aucun brouillon enregistré pour le moment."
+    ,"Brouillon enregistré avec succès.": "Brouillon enregistré avec succès."
+    ,"Brouillon mis à jour.": "Brouillon mis à jour."
+    ,"Brouillon envoyé avec succès.": "Brouillon envoyé avec succès."
+    ,"Aucun message trouvé avec ce filtre.": "Aucun message trouvé avec ce filtre."
+    ,"Archiver": "Archiver"
+    ,"Désarchiver": "Désarchiver"
+    ,"Archives": "Archives"
+    ,"Messages archivés et conservés pour une récupération ultérieure.": "Messages archivés et conservés pour une récupération ultérieure."
+    ,"Éléments archivés": "Éléments archivés"
+    ,"Archivé": "Archivé"
+    ,"Aucun message archivé pour le moment.": "Aucun message archivé pour le moment."
+    ,"Rétention": "Rétention"
+    ,"Les messages archivés sont masqués de la boîte de réception et des messages envoyés jusqu’à leur restauration.": "Les messages archivés sont masqués de la boîte de réception et des messages envoyés jusqu’à leur restauration."
+    ,"Message archivé avec succès.": "Message archivé avec succès."
+    ,"Message restauré avec succès.": "Message restauré avec succès."
+}
