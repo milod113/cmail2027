@@ -2,7 +2,7 @@ import Dropdown from '@/Components/Dropdown';
 import LanguageSwitcher from '@/Components/LanguageSwitcher';
 import { useTranslation } from '@/Hooks/useTranslation';
 import { Link, usePage } from '@inertiajs/react';
-import { Moon, Sun, Bell, Search, Menu, X, ChevronRight, LogOut, User, Settings, HelpCircle, PenSquare } from 'lucide-react';
+import { Moon, Sun, Bell, Search, Menu, X, ChevronRight, LogOut, User, Settings, HelpCircle, PenSquare, Users } from 'lucide-react';
 import { PropsWithChildren, ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 
 type LayoutProps = PropsWithChildren<{
@@ -374,6 +374,14 @@ export default function AuthenticatedLayout({
                     <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M6 12 3.75 3.75 20.25 12 3.75 20.25 6 12Zm0 0h7.5" />
                     </svg>
+                ),
+            },
+            {
+                label: __('Messages groupÃ©s'),
+                routeName: 'messages.group',
+                href: route('messages.group'),
+                icon: (
+                    <Users className="h-5 w-5" />
                 ),
             },
             {

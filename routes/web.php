@@ -33,6 +33,7 @@ Route::post('/language', function (Request $request) {
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/inbox', [MessageController::class, 'inbox'])->name('messages.inbox');
+    Route::get('/messages/group', [MessageController::class, 'groupMessages'])->name('messages.group');
     Route::get('/messages/create', [MessageController::class, 'create'])->name('messages.create');
     Route::post('/messages', [MessageController::class, 'store'])->name('messages.store');
     Route::get('/messages/{message}', [MessageController::class, 'show'])->name('messages.show');

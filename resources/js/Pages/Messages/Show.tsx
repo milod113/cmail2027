@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 
 type MessageUser = {
+    id?: number;
     name: string;
     email?: string;
 };
@@ -49,6 +50,8 @@ type MessageDetail = {
     created_at: string | null;
     can_be_redirected: boolean;
     can_forward: boolean;
+    receiver_ids: number[];
+    current_user_id: number;
     replies: ReplyItem[];
     unread_replies_count?: number;
     has_unread_replies?: boolean;
@@ -225,6 +228,12 @@ export default function Show({ message }: { message: MessageDetail }) {
                                         <span>{originalRelative}</span>
                                     </div>
                                 )}
+                                {message.receiver_ids.length >= 2 && (
+                                    <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
+                                        <Users className="h-3.5 w-3.5" />
+                                        {__('Message GroupÃ©')} ({message.receiver_ids.length + 1} {__('participants')})
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -262,7 +271,7 @@ export default function Show({ message }: { message: MessageDetail }) {
                                     {__('Message original')}
                                 </h2>
                                 {originalDate && (
-                                    <span className="ml-auto text-xs text-slate-400 dark:text-slate-500">
+                                    <span className="ms-auto text-xs text-slate-400 dark:text-slate-500">
                                         {originalDate}
                                     </span>
                                 )}
@@ -331,22 +340,31 @@ export default function Show({ message }: { message: MessageDetail }) {
                                         const replyRelative = formatRelativeDate(reply.created_at, locale);
                                         const attachmentUrl = resolveAttachmentUrl(reply.fichier, reply.attachment_url);
                                         const isLast = index === message.replies.length - 1;
+                                        const isMine = reply.user?.id === message.current_user_id;
 
                                         return (
                                             <article
                                                 key={reply.id}
-                                                className={`group rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50/50 to-white p-5 transition-all hover:shadow-md dark:border-slate-800 dark:from-slate-950/30 dark:to-slate-900/50 ${
+                                                className={`group rounded-2xl border p-5 transition-all hover:shadow-md ${
+                                                    isMine
+                                                        ? 'ms-auto max-w-3xl border-teal-200 bg-teal-50/90 dark:border-teal-500/30 dark:bg-teal-500/10'
+                                                        : 'me-auto border-slate-200 bg-gradient-to-br from-slate-50/50 to-white dark:border-slate-800 dark:from-slate-950/30 dark:to-slate-900/50'
+                                                } ${
                                                     !isLast ? 'border-b' : ''
                                                 }`}
                                             >
                                                 <div className="flex flex-wrap items-start justify-between gap-3">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-slate-500 to-slate-600 text-sm font-bold text-white shadow-sm">
-                                                            {reply.user?.name?.charAt(0).toUpperCase() || '?'}
+                                                        <div className={`flex h-10 w-10 items-center justify-center rounded-xl text-sm font-bold text-white shadow-sm ${
+                                                            isMine
+                                                                ? 'bg-gradient-to-br from-teal-500 to-cyan-600'
+                                                                : 'bg-gradient-to-br from-slate-500 to-slate-600'
+                                                        }`}>
+                                                            {(isMine ? __('Moi') : reply.user?.name)?.charAt(0).toUpperCase() || '?'}
                                                         </div>
                                                         <div>
                                                             <p className="font-semibold text-slate-900 dark:text-white">
-                                                                {reply.user?.name ?? __('Utilisateur')}
+                                                                {isMine ? __('Moi') : reply.user?.name ?? __('Utilisateur')}
                                                             </p>
                                                             <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
                                                                 <span>{replyDate ?? __('Date inconnue')}</span>
@@ -359,13 +377,21 @@ export default function Show({ message }: { message: MessageDetail }) {
                                                             </div>
                                                         </div>
                                                     </div>
-                                                    <div className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
-                                                        <Reply className="mr-1 inline h-3 w-3" />
+                                                    <div className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                                                        isMine
+                                                            ? 'bg-teal-100 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300'
+                                                            : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300'
+                                                    }`}>
+                                                        <Reply className="me-1 inline h-3 w-3" />
                                                         {__('Réponse')}
                                                     </div>
                                                 </div>
 
-                                                <div className="mt-4 rounded-xl bg-white p-4 text-sm leading-7 text-slate-700 shadow-sm dark:bg-slate-950/50 dark:text-slate-200">
+                                                <div className={`mt-4 rounded-xl p-4 text-sm leading-7 shadow-sm ${
+                                                    isMine
+                                                        ? 'bg-white/80 text-slate-700 dark:bg-slate-950/40 dark:text-slate-100'
+                                                        : 'bg-white text-slate-700 dark:bg-slate-950/50 dark:text-slate-200'
+                                                }`}>
                                                     <p className="whitespace-pre-wrap text-start">{reply.contenu}</p>
                                                 </div>
 
