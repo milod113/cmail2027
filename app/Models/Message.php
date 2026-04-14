@@ -13,6 +13,7 @@ class Message extends Model
     protected $fillable = [
         'sender_id',
         'receiver_id',
+        'receiver_ids',
         'sujet',
         'contenu',
         'fichier',
@@ -29,6 +30,7 @@ class Message extends Model
         'envoye',
         'deadline_reponse',
         'can_be_redirected',
+        'forwarded_from_message_id',
     ];
 
     protected $casts = [
@@ -37,6 +39,7 @@ class Message extends Model
         'lu_le' => 'datetime',
         'receipt_requested_at' => 'datetime',
         'deadline_reponse' => 'datetime',
+        'receiver_ids' => 'array',
         'lu' => 'boolean',
         'spam' => 'boolean',
         'important' => 'boolean',
@@ -54,5 +57,10 @@ class Message extends Model
     public function receiver(): BelongsTo
     {
         return $this->belongsTo(User::class, 'receiver_id');
+    }
+
+    public function forwardedFrom(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'forwarded_from_message_id');
     }
 }

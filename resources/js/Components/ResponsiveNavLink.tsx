@@ -9,11 +9,11 @@ export default function ResponsiveNavLink({
     return (
         <Link
             {...props}
-            className={`flex w-full items-start border-l-4 py-2 pe-4 ps-3 ${
+            className={`flex w-full items-center gap-3 rounded-xl border-l-4 py-3 pe-4 ps-4 text-base font-medium transition-all duration-300 ease-in-out focus:outline-none ${
                 active
-                    ? 'border-indigo-400 bg-indigo-50 text-indigo-700 focus:border-indigo-700 focus:bg-indigo-100 focus:text-indigo-800'
-                    : 'border-transparent text-gray-600 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-800 focus:border-gray-300 focus:bg-gray-50 focus:text-gray-800'
-            } text-base font-medium transition duration-150 ease-in-out focus:outline-none ${className}`}
+                    ? 'border-cyan-600 bg-gradient-to-r from-cyan-50 to-sky-50 text-cyan-700 shadow-sm dark:border-cyan-400 dark:from-cyan-900/30 dark:to-sky-900/30 dark:text-cyan-300'
+                    : 'border-transparent text-slate-600 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:border-slate-600 dark:hover:bg-slate-800/50 dark:hover:text-white'
+            } ${className}`}
         >
             {children}
         </Link>

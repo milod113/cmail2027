@@ -45,8 +45,22 @@ class HandleInertiaRequests extends Middleware
             ],
             'current_locale' => $locale,
             'translations' => File::exists($translationPath)
-                ? json_decode(File::get($translationPath), true, 512, JSON_THROW_ON_ERROR)
+                ? json_decode($this->ensureUtf8(File::get($translationPath)), true, 512, JSON_THROW_ON_ERROR)
                 : [],
         ];
+    }
+
+    /**
+     * Ensure the file content is properly UTF-8 encoded.
+     */
+    private function ensureUtf8(string $content): string
+    {
+        $encoding = mb_detect_encoding($content, mb_detect_order(), true);
+        
+        if ($encoding === false || $encoding !== 'UTF-8') {
+            return mb_convert_encoding($content, 'UTF-8', $encoding ?: 'Windows-1252');
+        }
+        
+        return $content;
     }
 }

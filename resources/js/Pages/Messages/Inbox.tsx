@@ -73,18 +73,10 @@ export default function Inbox({
 
     return (
         <AuthenticatedLayout
-            title={__('Boîte de réception')}
-            description={__('Consultez les messages reçus et leur état de lecture.')}
-            actions={
-                <Link
-                    href={route('messages.create')}
-                    className="hidden rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-slate-900/15 transition hover:bg-slate-700 dark:bg-teal-500 dark:text-slate-950 dark:hover:bg-teal-400 sm:inline-flex"
-                >
-                    {__('Nouveau message')}
-                </Link>
-            }
+            title={__('BoÃ®te de rÃ©ception')}
+            description={__('Consultez les messages reÃ§us et leur Ã©tat de lecture.')}
         >
-            <Head title={__('Boîte de réception')} />
+            <Head title={__('BoÃ®te de rÃ©ception')} />
 
             <div className="space-y-6">
                 <section className="grid gap-4 md:grid-cols-3">
@@ -101,9 +93,9 @@ export default function Inbox({
                 <section className="rounded-[2rem] border border-white/70 bg-white/80 p-6 shadow-xl shadow-slate-200/40 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/80">
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                         <div>
-                            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{__('Messages reçus')}</h2>
+                            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{__('Messages reÃ§us')}</h2>
                             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                                {__('Les messages les plus récents apparaissent en premier.')}
+                                {__('Les messages les plus rÃ©cents apparaissent en premier.')}
                             </p>
                         </div>
 
@@ -125,14 +117,14 @@ export default function Inbox({
                             <label className="block">
                                 <span className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
                                     <Filter className="h-4 w-4 text-cyan-500" />
-                                    {__('Filtrer par rôle')}
+                                    {__('Filtrer par rÃ´le')}
                                 </span>
                                 <select
                                     value={filters.role}
                                     onChange={(event) => applyFilters({ role: event.target.value })}
                                     className="block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                                 >
-                                    <option value="">{__('Tous les rôles')}</option>
+                                    <option value="">{__('Tous les rÃ´les')}</option>
                                     {roles.map((role) => (
                                         <option key={role.id} value={role.id}>
                                             {role.nom_role}
@@ -144,50 +136,65 @@ export default function Inbox({
                     </div>
 
                     <div className="mt-6 grid gap-4">
-                        {messages.length > 0 ? messages.map((message) => (
-                            <div key={message.id} className="rounded-3xl border border-slate-200/70 bg-slate-50/80 px-5 py-4 dark:border-slate-800 dark:bg-slate-950/40">
-                                <div className="flex items-start justify-between gap-4">
-                                    <div className="min-w-0 flex-1">
-                                        <div className="flex flex-wrap items-center gap-2">
-                                            <p className="font-semibold text-slate-900 dark:text-white">{message.sujet}</p>
-                                            {message.important ? (
-                                                <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800 dark:bg-amber-500/15 dark:text-amber-300">
-                                                    {__('Important')}
+                        {messages.length > 0 ? (
+                            messages.map((message) => (
+                                <div key={message.id} className="rounded-3xl border border-slate-200/70 bg-slate-50/80 px-5 py-4 dark:border-slate-800 dark:bg-slate-950/40">
+                                    <div className="flex items-start justify-between gap-4">
+                                        <div className="min-w-0 flex-1">
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <p className="font-semibold text-slate-900 dark:text-white">{message.sujet}</p>
+                                                {message.important ? (
+                                                    <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800 dark:bg-amber-500/15 dark:text-amber-300">
+                                                        {__('Important')}
+                                                    </span>
+                                                ) : null}
+                                                <span
+                                                    className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                                                        message.lu
+                                                            ? 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                                                            : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
+                                                    }`}
+                                                >
+                                                    {message.lu ? __('Lu') : __('Non lu')}
                                                 </span>
-                                            ) : null}
-                                            <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${message.lu ? 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'}`}>
-                                                {message.lu ? __('Lu') : __('Non lu')}
-                                            </span>
-                                            {message.sender?.role?.nom_role ? (
-                                                <span className="rounded-full bg-cyan-100 px-2.5 py-1 text-xs font-semibold text-cyan-800 dark:bg-cyan-500/15 dark:text-cyan-300">
-                                                    {message.sender.role.nom_role}
-                                                </span>
-                                            ) : null}
+                                                {message.sender?.role?.nom_role ? (
+                                                    <span className="rounded-full bg-cyan-100 px-2.5 py-1 text-xs font-semibold text-cyan-800 dark:bg-cyan-500/15 dark:text-cyan-300">
+                                                        {message.sender.role.nom_role}
+                                                    </span>
+                                                ) : null}
+                                            </div>
+                                            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                                                {__('De')} {message.sender?.name ?? __('Inconnu')} {message.sender?.email ? `(${message.sender.email})` : ''}
+                                            </p>
+                                            <p className="mt-3 line-clamp-2 text-sm text-slate-700 dark:text-slate-200">
+                                                {message.contenu}
+                                            </p>
                                         </div>
-                                        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                                            {__('De')} {message.sender?.name ?? __('Inconnu')} {message.sender?.email ? `(${message.sender.email})` : ''}
-                                        </p>
-                                        <p className="mt-3 line-clamp-2 text-sm text-slate-700 dark:text-slate-200">
-                                            {message.contenu}
-                                        </p>
-                                    </div>
-                                    <div className="flex flex-col items-end gap-3">
-                                        <div className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                                            {message.sent_at ? formatDate(message.sent_at) : __('Planifié')}
+
+                                        <div className="flex flex-col items-end gap-3">
+                                            <div className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                                                {message.sent_at ? formatDate(message.sent_at) : __('PlanifiÃ©')}
+                                            </div>
+                                            <Link
+                                                href={route('messages.show', message.id)}
+                                                className="rounded-full border border-cyan-300 bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-700 transition hover:border-cyan-400 hover:bg-cyan-100 dark:border-cyan-700/60 dark:bg-cyan-500/10 dark:text-cyan-300 dark:hover:border-cyan-500"
+                                            >
+                                                {__('Show')}
+                                            </Link>
+                                            <button
+                                                type="button"
+                                                onClick={() => router.post(route('messages.archive.store', message.id))}
+                                                className="rounded-full border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-700 transition hover:border-cyan-400 hover:text-cyan-700 dark:border-slate-700 dark:text-slate-300 dark:hover:border-cyan-500 dark:hover:text-cyan-300"
+                                            >
+                                                {__('Archiver')}
+                                            </button>
                                         </div>
-                                        <button
-                                            type="button"
-                                            onClick={() => router.post(route('messages.archive.store', message.id))}
-                                            className="rounded-full border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-700 transition hover:border-cyan-400 hover:text-cyan-700 dark:border-slate-700 dark:text-slate-300 dark:hover:border-cyan-500 dark:hover:text-cyan-300"
-                                        >
-                                            {__('Archiver')}
-                                        </button>
                                     </div>
                                 </div>
-                            </div>
-                        )) : (
+                            ))
+                        ) : (
                             <div className="rounded-3xl border border-dashed border-slate-300 bg-white/60 px-6 py-12 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-400">
-                                {__('Aucun message trouvé avec ce filtre.')}
+                                {__('Aucun message trouvÃ© avec ce filtre.')}
                             </div>
                         )}
                     </div>

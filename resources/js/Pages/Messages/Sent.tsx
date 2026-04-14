@@ -1,7 +1,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { useTranslation } from '@/Hooks/useTranslation';
 import { Head, Link, router } from '@inertiajs/react';
-import { Filter, Search } from 'lucide-react';
+import { Filter, Search, Send, Calendar, Clock, Flag, Receipt, Archive, Users, ChevronRight, Inbox, AlertCircle } from 'lucide-react';
 
 type RoleOption = {
     id: number;
@@ -28,6 +28,39 @@ type SentMessage = {
     } | null;
 };
 
+function StatusBadge({ type, children }: { type: 'info' | 'warning' | 'success' | 'default'; children: React.ReactNode }) {
+    const styles = {
+        info: 'bg-cyan-50 text-cyan-700 border-cyan-200 dark:bg-cyan-500/10 dark:text-cyan-300 dark:border-cyan-500/20',
+        warning: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:border-amber-500/20',
+        success: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:border-emerald-500/20',
+        default: 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700'
+    };
+
+    return (
+        <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${styles[type]}`}>
+            {children}
+        </span>
+    );
+}
+
+function formatRelativeDate(value: string | null, locale: string) {
+    if (!value) return null;
+    
+    const date = new Date(value);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return "À l'instant";
+    if (diffMins < 60) return `Il y a ${diffMins} min`;
+    if (diffHours < 24) return `Il y a ${diffHours} h`;
+    if (diffDays < 7) return `Il y a ${diffDays} j`;
+    
+    return null;
+}
+
 export default function Sent({
     messages,
     filters,
@@ -43,7 +76,12 @@ export default function Sent({
     const { __, locale } = useTranslation();
 
     const formatDate = (value: string) =>
-        new Date(value).toLocaleString(locale === 'ar' ? 'ar-DZ' : 'fr-FR');
+        new Date(value).toLocaleString(locale === 'ar' ? 'ar-DZ' : 'fr-FR', {
+            day: 'numeric',
+            month: 'short',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
 
     const applyFilters = (nextFilters: { search?: string; role?: string }) => {
         router.get(
@@ -60,133 +98,250 @@ export default function Sent({
         );
     };
 
+    const sentMessages = messages.filter(m => m.sent_at);
+    const scheduledMessages = messages.filter(m => !m.sent_at && m.scheduled_at);
+    const draftMessages = messages.filter(m => !m.sent_at && !m.scheduled_at);
+
     return (
         <AuthenticatedLayout
             title={__('Messages envoyés')}
-            description={__('Suivez les messages envoyés et programmés.')}
+            description={__('Suivez l\'historique de vos messages envoyés et programmés.')}
         >
             <Head title={__('Messages envoyés')} />
 
-            <div className="grid gap-6 lg:grid-cols-[1.4fr,0.9fr]">
-                <section className="rounded-[2rem] border border-white/70 bg-white/80 p-6 shadow-xl shadow-slate-200/40 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/80">
-                    <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-                        <div>
-                            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{__('Historique des envois')}</h2>
-                            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                                {__('Suivez les messages envoyés et programmés.')}
-                            </p>
+            <div className="space-y-6">
+                {/* Header Stats Cards */}
+                <div className="grid gap-4 sm:grid-cols-3">
+                    <div className="rounded-2xl border border-slate-200/70 bg-white/80 p-4 shadow-sm backdrop-blur-sm dark:border-slate-800/50 dark:bg-slate-900/80">
+                        <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-500/20">
+                                <Send className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                            </div>
+                            <div>
+                                <p className="text-2xl font-bold text-slate-900 dark:text-white">{sentMessages.length}</p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400">{__('Messages envoyés')}</p>
+                            </div>
                         </div>
+                    </div>
+                    
+                    <div className="rounded-2xl border border-slate-200/70 bg-white/80 p-4 shadow-sm backdrop-blur-sm dark:border-slate-800/50 dark:bg-slate-900/80">
+                        <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 dark:bg-amber-500/20">
+                                <Calendar className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                            </div>
+                            <div>
+                                <p className="text-2xl font-bold text-slate-900 dark:text-white">{scheduledMessages.length}</p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400">{__('Programmés')}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div className="rounded-2xl border border-slate-200/70 bg-white/80 p-4 shadow-sm backdrop-blur-sm dark:border-slate-800/50 dark:bg-slate-900/80">
+                        <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800">
+                                <Inbox className="h-5 w-5 text-slate-600 dark:text-slate-400" />
+                            </div>
+                            <div>
+                                <p className="text-2xl font-bold text-slate-900 dark:text-white">{draftMessages.length}</p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400">{__('Brouillons')}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-                        <div className="grid gap-3 sm:grid-cols-2">
-                            <label className="block">
-                                <span className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
-                                    <Search className="h-4 w-4 text-cyan-500" />
-                                    {__('Rechercher')}
-                                </span>
-                                <input
-                                    type="text"
-                                    value={filters.search}
-                                    onChange={(event) => applyFilters({ search: event.target.value })}
-                                    placeholder={__('Tapez un nom ou un email')}
-                                    className="block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
-                                />
-                            </label>
+                {/* Main Content */}
+                <div className="rounded-3xl border border-slate-200/70 bg-white/80 shadow-lg backdrop-blur-sm dark:border-slate-800/50 dark:bg-slate-900/80">
+                    {/* Filters Section */}
+                    <div className="border-b border-slate-200/50 p-6 dark:border-slate-800/50">
+                        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                            <div>
+                                <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
+                                    {__('Historique des envois')}
+                                </h2>
+                                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                                    {__('Consultez et gérez tous vos messages envoyés')}
+                                </p>
+                            </div>
 
-                            <label className="block">
-                                <span className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
-                                    <Filter className="h-4 w-4 text-cyan-500" />
-                                    {__('Filtrer par rôle')}
-                                </span>
-                                <select
-                                    value={filters.role}
-                                    onChange={(event) => applyFilters({ role: event.target.value })}
-                                    className="block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
-                                >
-                                    <option value="">{__('Tous les rôles')}</option>
-                                    {roles.map((role) => (
-                                        <option key={role.id} value={role.id}>
-                                            {role.nom_role}
-                                        </option>
-                                    ))}
-                                </select>
-                            </label>
+                            <div className="grid gap-3 sm:grid-cols-2">
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                        <Search className="mr-1 inline h-3.5 w-3.5 text-cyan-500" />
+                                        {__('Rechercher')}
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={filters.search}
+                                        onChange={(event) => applyFilters({ search: event.target.value })}
+                                        placeholder={__('Nom, email ou sujet...')}
+                                        className="block w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-cyan-500"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                        <Filter className="mr-1 inline h-3.5 w-3.5 text-cyan-500" />
+                                        {__('Filtrer par rôle')}
+                                    </label>
+                                    <select
+                                        value={filters.role}
+                                        onChange={(event) => applyFilters({ role: event.target.value })}
+                                        className="block w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-cyan-500"
+                                    >
+                                        <option value="">{__('Tous les rôles')}</option>
+                                        {roles.map((role) => (
+                                            <option key={role.id} value={role.id}>
+                                                {role.nom_role}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <div className="mt-6 space-y-4">
-                        {messages.length > 0 ? messages.map((message) => (
-                            <Link
-                                key={message.id}
-                                href={route('messages.sent.show', message.id)}
-                                className="block rounded-3xl border border-slate-200/70 bg-slate-50/80 p-5 transition hover:border-cyan-300 hover:bg-white focus:outline-none focus:ring-2 focus:ring-cyan-500 dark:border-slate-800 dark:bg-slate-950/40 dark:hover:border-cyan-500/60"
-                            >
-                                <div className="flex items-start justify-between gap-3">
-                                    <div className="min-w-0 flex-1">
-                                        <div className="flex flex-wrap items-center gap-2">
-                                            <p className="text-base font-medium text-slate-900 dark:text-white">{message.sujet}</p>
-                                            {message.important ? (
-                                                <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800 dark:bg-amber-500/15 dark:text-amber-300">
-                                                    {__('Important')}
-                                                </span>
-                                            ) : null}
-                                            {message.requires_receipt ? (
-                                                <span className="rounded-full bg-cyan-100 px-2.5 py-1 text-xs font-semibold text-cyan-800 dark:bg-cyan-500/15 dark:text-cyan-300">
-                                                    {__('Accusé demandé')}
-                                                </span>
-                                            ) : null}
-                                            {message.receiver?.role?.nom_role ? (
-                                                <span className="rounded-full bg-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                                                    {message.receiver.role.nom_role}
-                                                </span>
-                                            ) : null}
-                                        </div>
-                                        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                                            {__('À')} {message.receiver?.name ?? __('Inconnu')} {message.receiver?.email ? `(${message.receiver.email})` : ''}
-                                        </p>
-                                        <p className="mt-3 line-clamp-2 text-sm text-slate-700 dark:text-slate-200">
-                                            {message.contenu}
-                                        </p>
-                                    </div>
-                                    <div className="flex flex-col items-end gap-3">
-                                        <span className="rounded-full bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-700 dark:bg-cyan-500/10 dark:text-cyan-300">
-                                            {message.sent_at
-                                                ? formatDate(message.sent_at)
-                                                : message.scheduled_at
-                                                  ? `${__('Planifié')} ${formatDate(message.scheduled_at)}`
-                                                  : __('Brouillon')}
-                                        </span>
-                                        <button
-                                            type="button"
-                                            onClick={(event) => {
-                                                event.preventDefault();
-                                                event.stopPropagation();
-                                                router.post(route('messages.archive.store', message.id));
-                                            }}
-                                            className="rounded-full border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-700 transition hover:border-cyan-400 hover:text-cyan-700 dark:border-slate-700 dark:text-slate-300 dark:hover:border-cyan-500 dark:hover:text-cyan-300"
+                    {/* Messages List */}
+                    <div className="p-6">
+                        {messages.length > 0 ? (
+                            <div className="space-y-3">
+                                {messages.map((message) => {
+                                    const isScheduled = !message.sent_at && message.scheduled_at;
+                                    const isDraft = !message.sent_at && !message.scheduled_at;
+                                    const relativeDate = message.sent_at ? formatRelativeDate(message.sent_at, locale) : null;
+                                    const formattedDate = message.sent_at 
+                                        ? formatDate(message.sent_at)
+                                        : message.scheduled_at 
+                                            ? formatDate(message.scheduled_at)
+                                            : null;
+                                    
+                                    return (
+                                        <Link
+                                            key={message.id}
+                                            href={route('messages.sent.show', message.id)}
+                                            className="group block rounded-2xl border border-slate-200 bg-white p-5 transition-all hover:border-cyan-300 hover:shadow-md hover:shadow-cyan-500/5 dark:border-slate-800 dark:bg-slate-950/50 dark:hover:border-cyan-500/40"
                                         >
-                                            {__('Archiver')}
-                                        </button>
-                                    </div>
+                                            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                                                <div className="min-w-0 flex-1">
+                                                    {/* Header with badges */}
+                                                    <div className="flex flex-wrap items-center gap-2">
+                                                        <h3 className="text-base font-semibold text-slate-900 dark:text-white">
+                                                            {message.sujet}
+                                                        </h3>
+                                                        {message.important && (
+                                                            <StatusBadge type="warning">
+                                                                <Flag className="h-3 w-3" />
+                                                                {__('Important')}
+                                                            </StatusBadge>
+                                                        )}
+                                                        {message.requires_receipt && (
+                                                            <StatusBadge type="info">
+                                                                <Receipt className="h-3 w-3" />
+                                                                {__('Accusé')}
+                                                            </StatusBadge>
+                                                        )}
+                                                        {message.receiver?.role?.nom_role && (
+                                                            <StatusBadge type="default">
+                                                                <Users className="h-3 w-3" />
+                                                                {message.receiver.role.nom_role}
+                                                            </StatusBadge>
+                                                        )}
+                                                        {isScheduled && (
+                                                            <StatusBadge type="info">
+                                                                <Clock className="h-3 w-3" />
+                                                                {__('Programmé')}
+                                                            </StatusBadge>
+                                                        )}
+                                                        {isDraft && (
+                                                            <StatusBadge type="default">
+                                                                {__('Brouillon')}
+                                                            </StatusBadge>
+                                                        )}
+                                                    </div>
+                                                    
+                                                    {/* Recipient info */}
+                                                    <div className="mt-2 flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+                                                        <span>{__('À')} :</span>
+                                                        <span className="font-medium text-slate-700 dark:text-slate-300">
+                                                            {message.receiver?.name ?? __('Inconnu')}
+                                                        </span>
+                                                        {message.receiver?.email && (
+                                                            <span className="text-xs text-slate-400">
+                                                                {message.receiver.email}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    
+                                                    {/* Message preview */}
+                                                    <p className="mt-3 line-clamp-2 text-sm text-slate-600 dark:text-slate-400">
+                                                        {message.contenu}
+                                                    </p>
+                                                </div>
+                                                
+                                                {/* Right side - Date and actions */}
+                                                <div className="flex flex-row items-center justify-between gap-4 lg:flex-col lg:items-end">
+                                                    <div className="text-right">
+                                                        {relativeDate ? (
+                                                            <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                                                                {relativeDate}
+                                                            </span>
+                                                        ) : formattedDate ? (
+                                                            <span className="text-xs text-slate-500 dark:text-slate-400">
+                                                                {formattedDate}
+                                                            </span>
+                                                        ) : null}
+                                                        {message.scheduled_at && !message.sent_at && (
+                                                            <div className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
+                                                                <Clock className="h-3 w-3" />
+                                                                <span>{formatDate(message.scheduled_at)}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    
+                                                    <div className="flex items-center gap-2">
+                                                        <button
+                                                            type="button"
+                                                            onClick={(event) => {
+                                                                event.preventDefault();
+                                                                event.stopPropagation();
+                                                                router.post(route('messages.archive.store', message.id));
+                                                            }}
+                                                            className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition-all hover:border-cyan-300 hover:bg-cyan-50 hover:text-cyan-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400 dark:hover:border-cyan-500/40 dark:hover:bg-cyan-500/10 dark:hover:text-cyan-300"
+                                                        >
+                                                            <Archive className="mr-1 inline h-3 w-3" />
+                                                            {__('Archiver')}
+                                                        </button>
+                                                        <ChevronRight className="h-4 w-4 text-slate-300 opacity-0 transition-all group-hover:opacity-100 dark:text-slate-600" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </Link>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/50 py-16 text-center dark:border-slate-800 dark:bg-slate-950/30">
+                                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800">
+                                    <Send className="h-10 w-10 text-slate-400 dark:text-slate-600" />
                                 </div>
-                            </Link>
-                        )) : (
-                            <div className="rounded-3xl border border-dashed border-slate-300 bg-white/60 px-6 py-12 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-400">
-                                {__('Aucun message trouvé avec ce filtre.')}
+                                <h3 className="mt-4 text-lg font-semibold text-slate-900 dark:text-white">
+                                    {__('Aucun message trouvé')}
+                                </h3>
+                                <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                                    {__('Aucun message ne correspond à vos critères de recherche')}
+                                </p>
+                                {(filters.search || filters.role) && (
+                                    <button
+                                        onClick={() => applyFilters({ search: '', role: '' })}
+                                        className="mt-4 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-600 to-sky-700 px-4 py-2 text-sm font-medium text-white shadow-md transition-all hover:shadow-lg"
+                                    >
+                                        <Filter className="h-4 w-4" />
+                                        {__('Réinitialiser les filtres')}
+                                    </button>
+                                )}
                             </div>
                         )}
                     </div>
-                </section>
-
-                <section className="rounded-[2rem] border border-white/70 bg-gradient-to-br from-cyan-600 via-sky-700 to-slate-900 p-6 text-white shadow-2xl shadow-cyan-900/20">
-                    <div className="text-xs font-semibold uppercase tracking-[0.32em] text-cyan-100">{__('Aperçu')}</div>
-                    <div className="mt-4 text-4xl font-semibold">{messages.length}</div>
-                    <p className="mt-2 text-sm text-cyan-50/85">{__('Messages enregistrés dans les éléments envoyés.')}</p>
-                    <div className="mt-8 rounded-3xl bg-white/10 p-5 backdrop-blur">
-                        <p className="text-sm text-cyan-50/90">
-                            {__('Les messages programmés apparaissent ici jusqu’à leur envoi effectif.')}
-                        </p>
-                    </div>
-                </section>
+                </div>
             </div>
         </AuthenticatedLayout>
     );

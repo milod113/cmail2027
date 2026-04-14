@@ -22,6 +22,7 @@ class MessageDraft extends Model
         'type_message',
         'deadline_reponse',
         'can_be_redirected',
+        'forwarded_from_message_id',
     ];
 
     protected $casts = [
@@ -36,5 +37,10 @@ class MessageDraft extends Model
     public function sender(): BelongsTo
     {
         return $this->belongsTo(User::class, 'sender_id');
+    }
+
+    public function forwardedFrom(): BelongsTo
+    {
+        return $this->belongsTo(Message::class, 'forwarded_from_message_id');
     }
 }

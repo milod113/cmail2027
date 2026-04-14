@@ -1,7 +1,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { useTranslation } from '@/Hooks/useTranslation';
 import { Head, Link, router } from '@inertiajs/react';
-import { Building2, Filter, Mail, RotateCcw, Search, ShieldCheck, UserRound } from 'lucide-react';
+import { ArrowRight, Building2, Filter, Mail, RotateCcw, Search, ShieldCheck, UserRound } from 'lucide-react';
 import { FormEvent, useState } from 'react';
 
 type ContactUser = {
@@ -104,7 +104,7 @@ export default function ContactsIndex({
     return (
         <AuthenticatedLayout
             title={__('Contacts')}
-            description={__('Annuaire des utilisateurs, départements et établissements de l’application.')}
+            description={__("Annuaire des utilisateurs, departements et etablissements de l'application.")}
         >
             <Head title={__('Contacts')} />
 
@@ -112,8 +112,8 @@ export default function ContactsIndex({
                 <section className="grid gap-4 md:grid-cols-3">
                     {[
                         [__('Utilisateurs'), String(stats.users)],
-                        [__('Départements'), String(stats.departments)],
-                        [__('Établissements'), String(stats.establishments)],
+                        [__('Departements'), String(stats.departments)],
+                        [__('Etablissements'), String(stats.establishments)],
                     ].map(([label, value]) => (
                         <div
                             key={label}
@@ -136,7 +136,7 @@ export default function ContactsIndex({
                                 {__('Annuaire des utilisateurs')}
                             </h2>
                             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                                {__('Recherchez et filtrez les utilisateurs par nom, rôle, département et statut.')}
+                                {__('Recherchez et filtrez les utilisateurs par nom, role, departement et statut.')}
                             </p>
                         </div>
 
@@ -168,7 +168,7 @@ export default function ContactsIndex({
 
                                 <label className="space-y-2">
                                     <span className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500 dark:text-slate-400">
-                                        {__('Département')}
+                                        {__('Departement')}
                                     </span>
                                     <select
                                         value={form.department}
@@ -180,7 +180,7 @@ export default function ContactsIndex({
                                         }
                                         className="w-full rounded-2xl border border-cyan-200/80 bg-white/90 px-4 py-3 text-slate-900 shadow-sm transition focus:border-cyan-600 focus:ring-cyan-600 dark:border-slate-700 dark:bg-slate-950/80 dark:text-slate-100 dark:focus:border-cyan-300 dark:focus:ring-cyan-300"
                                     >
-                                        <option value="">{__('Tous les départements')}</option>
+                                        <option value="">{__('Tous les departements')}</option>
                                         {filterOptions.departments.map((department) => (
                                             <option key={department.id} value={department.id}>
                                                 {department.name}
@@ -191,7 +191,7 @@ export default function ContactsIndex({
 
                                 <label className="space-y-2">
                                     <span className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500 dark:text-slate-400">
-                                        {__('Rôle')}
+                                        {__('Role')}
                                     </span>
                                     <select
                                         value={form.role}
@@ -203,7 +203,7 @@ export default function ContactsIndex({
                                         }
                                         className="w-full rounded-2xl border border-cyan-200/80 bg-white/90 px-4 py-3 text-slate-900 shadow-sm transition focus:border-cyan-600 focus:ring-cyan-600 dark:border-slate-700 dark:bg-slate-950/80 dark:text-slate-100 dark:focus:border-cyan-300 dark:focus:ring-cyan-300"
                                     >
-                                        <option value="">{__('Tous les rôles')}</option>
+                                        <option value="">{__('Tous les roles')}</option>
                                         {filterOptions.roles.map((role) => (
                                             <option key={role.id} value={role.id}>
                                                 {role.nom_role}
@@ -229,14 +229,14 @@ export default function ContactsIndex({
                                         <option value="">{__('Tous les statuts')}</option>
                                         <option value="online">{__('En ligne')}</option>
                                         <option value="offline">{__('Hors ligne')}</option>
-                                        <option value="blocked">{__('Bloqué')}</option>
+                                        <option value="blocked">{__('Bloque')}</option>
                                     </select>
                                 </label>
                             </div>
 
                             <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                 <p className="text-sm text-slate-500 dark:text-slate-400">
-                                    {__('Affinez l’annuaire avec des filtres rapides et appliquez-les instantanément.')}
+                                    {__("Affinez l'annuaire avec des filtres rapides et appliquez-les instantanement.")}
                                 </p>
 
                                 <div className="flex flex-col gap-3 sm:flex-row">
@@ -246,7 +246,7 @@ export default function ContactsIndex({
                                         className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-cyan-200 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 sm:w-auto"
                                     >
                                         <RotateCcw className="h-4 w-4" />
-                                        {__('Réinitialiser')}
+                                        {__('Reinitialiser')}
                                     </button>
                                     <button
                                         type="submit"
@@ -292,7 +292,7 @@ export default function ContactsIndex({
                                             }`}
                                         >
                                             {user.is_blocked
-                                                ? __('Bloqué')
+                                                ? __('Bloque')
                                                 : user.is_online
                                                   ? __('En ligne')
                                                   : __('Hors ligne')}
@@ -306,19 +306,29 @@ export default function ContactsIndex({
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <Building2 className="h-4 w-4 text-cyan-600 dark:text-cyan-300" />
-                                            <span>{user.department?.name ?? __('Aucun département assigné')}</span>
+                                            <span>{user.department?.name ?? __('Aucun departement assigné')}</span>
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <ShieldCheck className="h-4 w-4 text-cyan-600 dark:text-cyan-300" />
-                                            <span>{user.role?.nom_role ?? __('Aucun rôle assigné')}</span>
+                                            <span>{user.role?.nom_role ?? __('Aucun role assigné')}</span>
                                         </div>
+                                    </div>
+
+                                    <div className="mt-5">
+                                        <Link
+                                            href={route('contacts.show', user.id)}
+                                            className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-600 via-sky-700 to-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-cyan-900/20 transition hover:-translate-y-0.5 hover:brightness-95"
+                                        >
+                                            {__('Voir le profil')}
+                                            <ArrowRight className="h-4 w-4" />
+                                        </Link>
                                     </div>
                                 </div>
                             ))
                         ) : (
                             <div className="md:col-span-2 xl:col-span-3">
                                 <div className="rounded-3xl border border-dashed border-slate-300 bg-white/60 px-6 py-12 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-400">
-                                    {__('Aucun utilisateur trouvé pour la recherche et les filtres actuels.')}
+                                    {__('Aucun utilisateur trouve pour la recherche et les filtres actuels.')}
                                 </div>
                             </div>
                         )}
@@ -328,7 +338,7 @@ export default function ContactsIndex({
                         <div className="mt-6 flex flex-col gap-4 border-t border-slate-200/70 pt-6 dark:border-slate-800">
                             <div className="flex flex-col gap-2 text-sm text-slate-500 dark:text-slate-400 sm:flex-row sm:items-center sm:justify-between">
                                 <p>
-                                    {__('Affichage de')} <span className="font-semibold text-slate-700 dark:text-slate-200">{users.from ?? 0}</span> {__('à')}{' '}
+                                    {__('Affichage de')} <span className="font-semibold text-slate-700 dark:text-slate-200">{users.from ?? 0}</span> {__('a')}{' '}
                                     <span className="font-semibold text-slate-700 dark:text-slate-200">{users.to ?? 0}</span> {__('sur')}{' '}
                                     <span className="font-semibold text-slate-700 dark:text-slate-200">{users.total}</span> {__('utilisateurs')}
                                 </p>
@@ -341,7 +351,7 @@ export default function ContactsIndex({
                             <div className="flex flex-wrap gap-2">
                                 {users.links.map((link, index) => {
                                     const label = link.label
-                                        .replace('&laquo; Previous', __('Précédent'))
+                                        .replace('&laquo; Previous', __('Precedent'))
                                         .replace('Next &raquo;', __('Suivant'));
 
                                     const baseClass =
@@ -380,3 +390,6 @@ export default function ContactsIndex({
         </AuthenticatedLayout>
     );
 }
+
+
+

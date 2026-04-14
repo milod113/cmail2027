@@ -52,17 +52,17 @@ export default function UpdatePasswordForm({
 
     return (
         <section className={className}>
-            <header>
-                <h2 className="text-lg font-medium text-gray-900">
+            <header className="mb-6">
+                <h2 className="text-lg font-medium text-slate-800 dark:text-slate-100">
                     {__('Mettre à jour le mot de passe')}
                 </h2>
 
-                <p className="mt-1 text-sm text-gray-600">
+                <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
                     {__('Assurez-vous que votre compte utilise un mot de passe long et aléatoire pour rester sécurisé.')}
                 </p>
             </header>
 
-            <form onSubmit={updatePassword} className="mt-6 space-y-6">
+            <form onSubmit={updatePassword} className="mt-6 space-y-5">
                 <div>
                     <InputLabel
                         htmlFor="current_password"
@@ -126,8 +126,10 @@ export default function UpdatePasswordForm({
                     />
                 </div>
 
-                <div className="flex items-center gap-4">
-                    <PrimaryButton disabled={processing}>{__('Enregistrer')}</PrimaryButton>
+                <div className="flex flex-col gap-3 border-t border-slate-200 pt-6 dark:border-slate-700 sm:flex-row sm:items-center">
+                    <PrimaryButton disabled={processing} className="w-full bg-gradient-to-r from-cyan-600 to-sky-700 text-white shadow-lg shadow-cyan-500/25 hover:from-cyan-700 hover:to-sky-800 hover:shadow-xl hover:shadow-cyan-500/30 sm:w-auto">
+                        {__('Enregistrer')}
+                    </PrimaryButton>
 
                     <Transition
                         show={recentlySuccessful}
@@ -136,7 +138,7 @@ export default function UpdatePasswordForm({
                         leave="transition ease-in-out"
                         leaveTo="opacity-0"
                     >
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-slate-600 dark:text-slate-400">
                             {__('Enregistré.')}
                         </p>
                     </Transition>

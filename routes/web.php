@@ -33,6 +33,10 @@ Route::post('/language', function (Request $request) {
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/inbox', [MessageController::class, 'inbox'])->name('messages.inbox');
+    Route::get('/messages/create', [MessageController::class, 'create'])->name('messages.create');
+    Route::post('/messages', [MessageController::class, 'store'])->name('messages.store');
+    Route::get('/messages/{message}', [MessageController::class, 'show'])->name('messages.show');
+    Route::post('/messages/{message}/replies', [MessageController::class, 'storeReply'])->name('replies.store');
     Route::get('/sent', [MessageController::class, 'sent'])->name('messages.sent');
     Route::get('/sent/{message}', [MessageController::class, 'showSent'])->name('messages.sent.show');
     Route::get('/drafts', [MessageController::class, 'drafts'])->name('drafts.index');
@@ -113,11 +117,12 @@ Route::middleware(['auth'])->group(function () {
             'users' => $users,
         ]);
     })->name('contacts.index');
+    Route::get('/contacts/{user}', [ProfileController::class, 'show'])->name('contacts.show');
     Route::get('/archive', [MessageController::class, 'archiveIndex'])->name('messages.archive');
     Route::post('/messages/{message}/archive', [MessageController::class, 'archive'])->name('messages.archive.store');
     Route::post('/messages/{message}/unarchive', [MessageController::class, 'unarchive'])->name('messages.archive.restore');
-    Route::get('/messages/create', [MessageController::class, 'create'])->name('messages.create');
-    Route::post('/messages', [MessageController::class, 'store'])->name('messages.store');
+    Route::get('/notifications', [MessageController::class, 'notifications'])->name('notifications.index');
+    Route::post('/notifications/read', [MessageController::class, 'markNotificationsRead'])->name('notifications.read');
     Route::resource('departments', DepartmentController::class)->except(['show']);
     Route::resource('roles', RoleController::class)->except(['show']);
 });
