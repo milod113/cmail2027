@@ -38,10 +38,10 @@ export default function GroupIndex({ messages }: { messages: GroupMessage[] }) {
 
     return (
         <AuthenticatedLayout
-            title={__('Messages groupÃ©s')}
-            description={__('Retrouvez les conversations envoyÃ©es ou reÃ§ues par plusieurs participants.')}
+            title={__('Messages groupés')}
+            description={__('Retrouvez les conversations envoyées ou reçues par plusieurs participants.')}
         >
-            <Head title={__('Messages groupÃ©s')} />
+            <Head title={__('Messages groupés')} />
 
             <div className="space-y-6">
                 <section className="rounded-[2rem] border border-white/70 bg-white/80 p-6 shadow-xl shadow-slate-200/40 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/80">
@@ -53,7 +53,7 @@ export default function GroupIndex({ messages }: { messages: GroupMessage[] }) {
                             <div>
                                 <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{__('Conversations de groupe')}</h2>
                                 <p className="text-sm text-slate-500 dark:text-slate-400">
-                                    {messages.length} {__('conversation(s) groupÃ©e(s)')}
+                                    {messages.length} {__('conversation(s) groupée(s)')}
                                 </p>
                             </div>
                         </div>
@@ -84,7 +84,7 @@ export default function GroupIndex({ messages }: { messages: GroupMessage[] }) {
                                         <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-slate-500 dark:text-slate-400">
                                             <span className="inline-flex items-center gap-1.5">
                                                 <Mail className="h-4 w-4" />
-                                                {message.is_sender ? __('EnvoyÃ© par vous') : `${__('De')} ${message.sender?.name ?? __('Inconnu')}`}
+                                                {message.is_sender ? __('Envoyé par vous') : `${__('De')} ${message.sender?.name ?? __('Inconnu')}`}
                                             </span>
                                             <span className="inline-flex items-center gap-1.5">
                                                 <Clock className="h-4 w-4" />
@@ -105,7 +105,7 @@ export default function GroupIndex({ messages }: { messages: GroupMessage[] }) {
                             </Link>
                         )) : (
                             <div className="rounded-3xl border border-dashed border-slate-300 bg-white/60 px-6 py-12 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-400">
-                                {__('Aucun message groupÃ© disponible pour le moment.')}
+                                {__('Aucun message groupé disponible pour le moment.')}
                             </div>
                         )}
                     </div>

@@ -140,6 +140,24 @@ class MessageController extends Controller
     public function groupMessages(Request $request): Response
     {
         $user = $request->user();
+        $hasReceiverIdsColumn = Schema::hasColumn('messages', 'receiver_ids');
+
+        $columns = [
+            'id',
+            'sender_id',
+            'receiver_id',
+            'sujet',
+            'contenu',
+            'important',
+            'lu',
+            'created_at',
+            'sent_at',
+            'type_message',
+        ];
+
+        if ($hasReceiverIdsColumn) {
+            $columns[] = 'receiver_ids';
+        }
 
         $messages = Message::query()
             ->with([
@@ -148,56 +166,67 @@ class MessageController extends Controller
                     ->select('id', 'name', 'email', 'role_id'),
             ])
             ->where(function ($query) use ($user) {
-                $query->where('sender_id', $user->id);
-
-                if (Schema::hasColumn('messages', 'receiver_ids')) {
-                    $query->orWhereJsonContains('receiver_ids', $user->id);
-                }
+                $query
+                    ->where('sender_id', $user->id)
+                    ->orWhere('receiver_id', $user->id);
             })
             ->when(
-                Schema::hasColumn('messages', 'receiver_ids'),
+                $hasReceiverIdsColumn,
                 fn ($query) => $query->whereRaw('JSON_LENGTH(receiver_ids) >= 2'),
                 fn ($query) => $query->whereRaw('1 = 0')
             )
             ->orderByDesc('created_at')
-            ->get([
-                'id',
-                'sender_id',
-                'receiver_id',
-                'receiver_ids',
-                'sujet',
-                'contenu',
-                'important',
-                'lu',
-                'created_at',
-                'sent_at',
-                'type_message',
-            ])
-            ->map(function (Message $message) use ($user) {
-                $receiverIds = collect($message->receiver_ids ?? [])->filter()->values();
+            ->get($columns)
+            ->groupBy(function (Message $message) {
+                $receiverIds = collect($message->receiver_ids ?? [])
+                    ->filter()
+                    ->map(fn ($id) => (int) $id)
+                    ->sort()
+                    ->values()
+                    ->all();
+
+                return implode('|', [
+                    $message->sender_id,
+                    json_encode($receiverIds),
+                    $message->sujet,
+                    $message->contenu,
+                    optional($message->sent_at ?? $message->created_at)?->toIso8601String(),
+                    $message->type_message ?? '',
+                ]);
+            })
+            ->map(function ($group) use ($user) {
+                $preferredMessage = $group->firstWhere('receiver_id', $user->id)
+                    ?? $group->firstWhere('sender_id', $user->id)
+                    ?? $group->first();
+
+                $receiverIds = collect($preferredMessage->receiver_ids ?? [])
+                    ->filter()
+                    ->map(fn ($id) => (int) $id)
+                    ->values();
 
                 return [
-                    'id' => $message->id,
-                    'sujet' => $message->sujet,
-                    'contenu' => $message->contenu,
-                    'important' => $message->important,
-                    'lu' => $message->lu,
-                    'created_at' => optional($message->created_at)?->toIso8601String(),
-                    'sent_at' => optional($message->sent_at)?->toIso8601String(),
+                    'id' => $preferredMessage->id,
+                    'sujet' => $preferredMessage->sujet,
+                    'contenu' => $preferredMessage->contenu,
+                    'important' => $group->contains(fn (Message $message) => $message->important),
+                    'lu' => (bool) $preferredMessage->lu,
+                    'created_at' => optional($preferredMessage->created_at)?->toIso8601String(),
+                    'sent_at' => optional($preferredMessage->sent_at)?->toIso8601String(),
                     'participant_count' => $receiverIds
-                        ->push($message->sender_id)
+                        ->push($preferredMessage->sender_id)
                         ->unique()
                         ->count(),
-                    'is_sender' => (int) $message->sender_id === (int) $user->id,
-                    'sender' => $message->sender
+                    'is_sender' => (int) $preferredMessage->sender_id === (int) $user->id,
+                    'sender' => $preferredMessage->sender
                         ? [
-                            'id' => $message->sender->id,
-                            'name' => $message->sender->name,
-                            'email' => $message->sender->email,
+                            'id' => $preferredMessage->sender->id,
+                            'name' => $preferredMessage->sender->name,
+                            'email' => $preferredMessage->sender->email,
                         ]
                         : null,
                 ];
-            });
+            })
+            ->values();
 
         return Inertia::render('Messages/GroupIndex', [
             'messages' => $messages,
@@ -781,7 +810,7 @@ class MessageController extends Controller
         $messages = [];
 
         foreach ($validated['receiver_ids'] as $receiverId) {
-            $messages[] = Message::create([
+            $payload = [
                 'sender_id' => $senderId,
                 'receiver_id' => $receiverId,
                 'sujet' => $validated['sujet'],
@@ -801,7 +830,13 @@ class MessageController extends Controller
                 'deadline_reponse' => $validated['deadline_reponse'] ?? null,
                 'can_be_redirected' => $validated['can_be_redirected'],
                 'forwarded_from_message_id' => $validated['forwarded_from_message_id'] ?? null,
-            ]);
+            ];
+
+            if (Schema::hasColumn('messages', 'receiver_ids')) {
+                $payload['receiver_ids'] = array_values($validated['receiver_ids']);
+            }
+
+            $messages[] = Message::create($payload);
         }
 
         return $messages;

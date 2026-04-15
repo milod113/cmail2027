@@ -1,4 +1,4 @@
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+﻿import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { useTranslation } from '@/Hooks/useTranslation';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
@@ -231,7 +231,7 @@ export default function Show({ message }: { message: MessageDetail }) {
                                 {message.receiver_ids.length >= 2 && (
                                     <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
                                         <Users className="h-3.5 w-3.5" />
-                                        {__('Message GroupÃ©')} ({message.receiver_ids.length + 1} {__('participants')})
+                                        {__('Message Groupé')} ({message.receiver_ids.length + 1} {__('participants')})
                                     </div>
                                 )}
                             </div>

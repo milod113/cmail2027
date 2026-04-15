@@ -2,8 +2,15 @@ import Dropdown from '@/Components/Dropdown';
 import LanguageSwitcher from '@/Components/LanguageSwitcher';
 import { useTranslation } from '@/Hooks/useTranslation';
 import { Link, usePage } from '@inertiajs/react';
-import { Moon, Sun, Bell, Search, Menu, X, ChevronRight, LogOut, User, Settings, HelpCircle, PenSquare, Users } from 'lucide-react';
+import {
+    Moon, Sun, Bell, Search, Menu, X, ChevronRight, LogOut, User,
+    Settings, HelpCircle, PenSquare, Users, Inbox, Send, Archive,
+    FileText, FolderTree, UsersRound, Star, Trash2, AlertCircle,
+    Sparkles, CreditCard, Shield, Activity, Circle, CheckCircle2,
+    Clock, Plus, Zap, MessageSquare, ChevronDown, LayoutDashboard
+} from 'lucide-react';
 import { PropsWithChildren, ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 type LayoutProps = PropsWithChildren<{
     title: string;
@@ -17,11 +24,13 @@ type NavItem = {
     href: string;
     icon: JSX.Element;
     badge?: number;
+    isNew?: boolean;
+    isPro?: boolean;
 };
 
 type NotificationItem = {
     id: string;
-    type: 'message' | 'reply';
+    type: 'message' | 'reply' | 'system' | 'alert';
     title: string;
     body: string;
     meta: string;
@@ -30,50 +39,92 @@ type NotificationItem = {
     unread: boolean;
 };
 
+const fadeInUp = {
+    initial: { opacity: 0, y: 20 },
+    animate: { opacity: 1, y: 0 },
+    exit: { opacity: 0, y: -20 },
+    transition: { duration: 0.2 }
+};
+
+const scaleOnHover = {
+    whileHover: { scale: 1.02 },
+    whileTap: { scale: 0.98 }
+};
+
 function SidebarLink({
     item,
     mobile = false,
     onNavigate,
+    isCollapsed = false,
 }: {
     item: NavItem;
     mobile?: boolean;
     onNavigate?: () => void;
+    isCollapsed?: boolean;
 }) {
     const isActive = route().current(item.routeName);
 
     return (
-        <Link
-            href={item.href}
-            onClick={onNavigate}
-            className={`
-                group relative flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium
-                transition-all duration-200 ease-out
-                ${isActive
-                    ? 'bg-gradient-to-r from-cyan-500/10 to-sky-500/10 text-cyan-700 dark:text-cyan-300 shadow-sm'
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800/50 dark:hover:text-white'
-                }
-                ${mobile ? 'w-full' : ''}
-            `}
+        <motion.div
+            whileHover="whileHover"
+            whileTap="whileTap"
+            variants={!mobile ? scaleOnHover : undefined}
         >
-            <span className={`
-                transition-all duration-200
-                ${isActive
-                    ? 'text-cyan-600 dark:text-cyan-400'
-                    : 'text-slate-400 group-hover:text-cyan-500 dark:text-slate-500'
-                }
-            `}>
-                {item.icon}
-            </span>
-            <span className="flex-1">{item.label}</span>
-            {item.badge && (
-                <span className="ml-auto rounded-full bg-red-500 px-1.5 py-0.5 text-xs font-bold text-white shadow-sm">
-                    {item.badge}
+            <Link
+                href={item.href}
+                onClick={onNavigate}
+                className={`
+                    group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium
+                    transition-all duration-200 ease-out
+                    ${isActive
+                        ? 'bg-gradient-to-r from-cyan-500/15 to-sky-500/15 text-cyan-700 dark:text-cyan-300 shadow-sm border border-cyan-200/30 dark:border-cyan-500/20'
+                        : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800/60 dark:hover:text-white'
+                    }
+                    ${mobile ? 'w-full' : ''}
+                    ${isCollapsed ? 'justify-center px-2' : ''}
+                `}
+            >
+                <span className={`
+                    transition-all duration-200 relative
+                    ${isActive
+                        ? 'text-cyan-600 dark:text-cyan-400'
+                        : 'text-slate-400 group-hover:text-cyan-500 dark:text-slate-500'
+                    }
+                    ${isCollapsed ? 'scale-110' : ''}
+                `}>
+                    {item.icon}
+                    {item.isNew && !isCollapsed && (
+                        <span className="absolute -right-2 -top-2 flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                        </span>
+                    )}
                 </span>
-            )}
-            {isActive && !mobile && (
-                <ChevronRight className="absolute right-3 h-4 w-4 text-cyan-500" />
-            )}
-        </Link>
+                
+                {!isCollapsed && (
+                    <>
+                        <span className="flex-1">{item.label}</span>
+                        {item.badge && item.badge > 0 && (
+                            <motion.span
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                className="ml-auto rounded-full bg-gradient-to-r from-red-500 to-orange-500 px-2 py-0.5 text-xs font-bold text-white shadow-md"
+                            >
+                                {item.badge > 99 ? '99+' : item.badge}
+                            </motion.span>
+                        )}
+                        {item.isPro && (
+                            <span className="ml-auto text-[10px] font-bold bg-gradient-to-r from-amber-500 to-orange-500 text-transparent bg-clip-text">
+                                PRO
+                            </span>
+                        )}
+                        {isActive && (
+                            <ChevronRight className="absolute right-3 h-3.5 w-3.5 text-cyan-500" />
+                        )}
+                    </>
+                )}
+            </Link>
+        </motion.div>
     );
 }
 
@@ -97,16 +148,36 @@ function NotificationBell({
     const knownUnreadIdsRef = useRef<string[]>([]);
 
     const formatDate = (value: string | null) => {
-        if (!value) {
-            return '';
-        }
+        if (!value) return '';
+        const date = new Date(value);
+        const now = new Date();
+        const diffMs = now.getTime() - date.getTime();
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        const diffDays = Math.floor(diffMs / 86400000);
 
-        return new Date(value).toLocaleString(locale === 'ar' ? 'ar-DZ' : 'fr-FR', {
+        if (diffMins < 1) return 'À l\'instant';
+        if (diffMins < 60) return `Il y a ${diffMins} min`;
+        if (diffHours < 24) return `Il y a ${diffHours} h`;
+        if (diffDays < 7) return `Il y a ${diffDays} j`;
+        
+        return date.toLocaleDateString(locale === 'ar' ? 'ar-DZ' : 'fr-FR', {
             day: 'numeric',
             month: 'short',
-            hour: '2-digit',
-            minute: '2-digit',
         });
+    };
+
+    const getNotificationIcon = (type: string) => {
+        switch (type) {
+            case 'message':
+                return <MessageSquare className="h-4 w-4 text-blue-500" />;
+            case 'reply':
+                return <Reply className="h-4 w-4 text-emerald-500" />;
+            case 'alert':
+                return <AlertCircle className="h-4 w-4 text-red-500" />;
+            default:
+                return <Bell className="h-4 w-4 text-purple-500" />;
+        }
     };
 
     const fetchNotifications = async () => {
@@ -160,158 +231,209 @@ function NotificationBell({
         oscillator.start();
         oscillator.stop(audioContext.currentTime + 0.24);
 
-        window.setTimeout(() => {
-            void audioContext.close();
-        }, 300);
+        window.setTimeout(() => void audioContext.close(), 300);
     };
 
     useEffect(() => {
         void fetchNotifications();
-
-        const intervalId = window.setInterval(() => {
-            void fetchNotifications();
-        }, 10000);
+        const intervalId = window.setInterval(() => void fetchNotifications(), 10000);
 
         if (window.Echo) {
             const channelName = `user.${userId}`;
-            window.Echo.private(channelName).listen('.NotificationCreated', () => {
-                void fetchNotifications();
-            });
+            window.Echo.private(channelName).listen('.NotificationCreated', () => void fetchNotifications());
         }
 
         return () => {
             window.clearInterval(intervalId);
-
             window.Echo?.leave?.(`user.${userId}`);
             window.Echo?.leaveChannel?.(`private-user.${userId}`);
         };
     }, [userId]);
 
     useEffect(() => {
-        if (!isOpen || unreadCount === 0) {
-            return;
-        }
-
+        if (!isOpen || unreadCount === 0) return;
         const markRead = async () => {
             await window.axios.post(route('notifications.read'));
             await fetchNotifications();
         };
-
         void markRead();
     }, [isOpen, unreadCount]);
 
     useEffect(() => {
-        if (toasts.length === 0) {
-            return;
-        }
-
+        if (toasts.length === 0) return;
         const timeoutId = window.setTimeout(() => {
             setToasts((current) => current.slice(0, -1));
         }, 4500);
-
         return () => window.clearTimeout(timeoutId);
     }, [toasts]);
 
     return (
         <>
-            <div className="relative">
+            <motion.div className="relative" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                 <button
                     onClick={() => setIsOpen(!isOpen)}
-                    className="relative inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white/80 text-slate-600 transition-all hover:border-cyan-200 hover:bg-white hover:text-cyan-600 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-300 dark:hover:border-cyan-500/30 dark:hover:bg-slate-900"
+                    className="relative inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white/80 text-slate-600 transition-all hover:border-cyan-300 hover:bg-white hover:text-cyan-600 hover:shadow-md dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-300 dark:hover:border-cyan-500/40 dark:hover:bg-slate-900"
                 >
                     <Bell className="h-4.5 w-4.5" />
                     {unreadCount > 0 && (
                         <>
                             <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-slate-950"></span>
-                            <span className="absolute -right-1 -top-1 inline-flex min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                            <motion.span
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                className="absolute -right-1 -top-1 inline-flex min-w-5 items-center justify-center rounded-full bg-gradient-to-r from-red-500 to-orange-500 px-1.5 py-0.5 text-[10px] font-bold text-white shadow-md"
+                            >
                                 {unreadCount > 9 ? '9+' : unreadCount}
-                            </span>
+                            </motion.span>
                         </>
                     )}
                 </button>
-                
-                {isOpen && (
-                    <>
-                        <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
-                        <div className="absolute right-0 mt-2 w-80 origin-top-right rounded-2xl border border-slate-200 bg-white shadow-2xl backdrop-blur-xl dark:border-slate-700 dark:bg-slate-900/95 z-50">
-                            <div className="border-b border-slate-100 px-4 py-3 dark:border-slate-800">
-                                <div className="flex items-center justify-between gap-3">
-                                    <h3 className="font-semibold text-slate-900 dark:text-white">{__('Notifications')}</h3>
-                                    <span className="text-xs text-slate-500 dark:text-slate-400">
-                                        {unreadCount > 0 ? `${unreadCount} ${__('non lues')}` : __('A jour')}
-                                    </span>
+
+                <AnimatePresence>
+                    {isOpen && (
+                        <>
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="fixed inset-0 z-40"
+                                onClick={() => setIsOpen(false)}
+                            />
+                            <motion.div
+                                initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                                transition={{ duration: 0.15 }}
+                                className="absolute right-0 mt-2 w-80 origin-top-right rounded-2xl border border-slate-200 bg-white shadow-2xl backdrop-blur-xl dark:border-slate-700 dark:bg-slate-900/95 z-50 overflow-hidden"
+                            >
+                                <div className="border-b border-slate-100 px-4 py-3 dark:border-slate-800 bg-gradient-to-r from-cyan-50/50 to-transparent dark:from-cyan-950/30">
+                                    <div className="flex items-center justify-between gap-3">
+                                        <div className="flex items-center gap-2">
+                                            <Bell className="h-4 w-4 text-cyan-500" />
+                                            <h3 className="font-semibold text-slate-900 dark:text-white">{__('Notifications')}</h3>
+                                        </div>
+                                        <span className="text-xs font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-full">
+                                            {unreadCount > 0 ? `${unreadCount} ${__('non lues')}` : __('À jour')}
+                                        </span>
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="max-h-80 overflow-y-auto">
-                                {loading ? (
-                                    <div className="px-4 py-4 text-center text-sm text-slate-500 dark:text-slate-400">
-                                        {__('Chargement...')}
-                                    </div>
-                                ) : notifications.length > 0 ? (
-                                    notifications.map((notification) => (
-                                        <Link
-                                            key={notification.id}
-                                            href={notification.href}
-                                            onClick={() => setIsOpen(false)}
-                                            className={`block border-b border-slate-100 px-4 py-3 transition hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/50 ${
-                                                notification.unread ? 'bg-cyan-50/60 dark:bg-cyan-500/10' : ''
-                                            }`}
+                                <div className="max-h-80 overflow-y-auto">
+                                    {loading ? (
+                                        <div className="px-4 py-8 text-center">
+                                            <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-cyan-500 border-t-transparent"></div>
+                                            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{__('Chargement...')}</p>
+                                        </div>
+                                    ) : notifications.length > 0 ? (
+                                        <AnimatePresence>
+                                            {notifications.map((notification, idx) => (
+                                                <motion.div
+                                                    key={notification.id}
+                                                    initial={{ opacity: 0, x: -20 }}
+                                                    animate={{ opacity: 1, x: 0 }}
+                                                    transition={{ delay: idx * 0.03 }}
+                                                >
+                                                    <Link
+                                                        href={notification.href}
+                                                        onClick={() => setIsOpen(false)}
+                                                        className={`block border-b border-slate-100 px-4 py-3 transition-all hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/50 ${
+                                                            notification.unread ? 'bg-gradient-to-r from-cyan-50/80 to-transparent dark:from-cyan-500/10' : ''
+                                                        }`}
+                                                    >
+                                                        <div className="flex items-start gap-3">
+                                                            <div className="mt-0.5 flex-shrink-0">
+                                                                {getNotificationIcon(notification.type)}
+                                                            </div>
+                                                            <div className="min-w-0 flex-1">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                                                                        {__(notification.title)}
+                                                                    </span>
+                                                                    {notification.unread && (
+                                                                        <span className="h-1.5 w-1.5 rounded-full bg-cyan-500"></span>
+                                                                    )}
+                                                                </div>
+                                                                <p className="mt-1 text-sm text-slate-600 dark:text-slate-300 line-clamp-2">
+                                                                    {notification.body}
+                                                                </p>
+                                                                <div className="flex items-center gap-2 mt-1.5">
+                                                                    <Clock className="h-3 w-3 text-slate-400" />
+                                                                    <span className="text-xs text-slate-500 dark:text-slate-400">
+                                                                        {formatDate(notification.created_at)}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </Link>
+                                                </motion.div>
+                                            ))}
+                                        </AnimatePresence>
+                                    ) : (
+                                        <motion.div
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 1 }}
+                                            className="px-4 py-8 text-center"
                                         >
-                                            <div className="flex items-start justify-between gap-3">
-                                                <div className="min-w-0 flex-1">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                                                            {__(notification.title)}
-                                                        </span>
-                                                        {notification.unread && (
-                                                            <span className="h-2 w-2 rounded-full bg-cyan-500"></span>
-                                                        )}
-                                                    </div>
-                                                    <p className="mt-1 truncate text-sm text-slate-600 dark:text-slate-300">
-                                                        {notification.body}
-                                                    </p>
-                                                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                                                        {notification.meta}
-                                                    </p>
-                                                </div>
-                                                <span className="whitespace-nowrap text-[11px] text-slate-400 dark:text-slate-500">
-                                                    {formatDate(notification.created_at)}
-                                                </span>
-                                            </div>
-                                        </Link>
-                                    ))
-                                ) : (
-                                    <div className="px-4 py-6 text-center text-sm text-slate-500 dark:text-slate-400">
-                                        {__('Aucune nouvelle notification')}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </>
-                )}
-            </div>
+                                            <Bell className="h-10 w-10 text-slate-300 mx-auto mb-3" />
+                                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                                                {__('Aucune nouvelle notification')}
+                                            </p>
+                                        </motion.div>
+                                    )}
+                                </div>
+                                <div className="border-t border-slate-100 dark:border-slate-800 p-2 bg-slate-50/50 dark:bg-slate-900/50">
+                                    <Link
+                                        href={route('notifications.index')}
+                                        onClick={() => setIsOpen(false)}
+                                        className="block w-full text-center text-xs font-medium text-cyan-600 hover:text-cyan-700 dark:text-cyan-400 py-1.5 transition-colors"
+                                    >
+                                        {__('Voir toutes les notifications')}
+                                    </Link>
+                                </div>
+                            </motion.div>
+                        </>
+                    )}
+                </AnimatePresence>
+            </motion.div>
 
             <div className="fixed right-4 top-20 z-[60] space-y-3">
-                {toasts.map((toast) => (
-                    <Link
-                        key={toast.id}
-                        href={toast.href}
-                        className="block w-80 rounded-2xl border border-cyan-200 bg-white/95 px-4 py-3 shadow-2xl backdrop-blur dark:border-cyan-800 dark:bg-slate-900/95"
-                    >
-                        <div className="flex items-start gap-3">
-                            <div className="mt-0.5 h-2.5 w-2.5 rounded-full bg-cyan-500"></div>
-                            <div className="min-w-0 flex-1">
-                                <p className="text-sm font-semibold text-slate-900 dark:text-white">{__(toast.title)}</p>
-                                <p className="mt-1 truncate text-sm text-slate-600 dark:text-slate-300">{toast.body}</p>
-                                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{toast.meta}</p>
-                            </div>
-                        </div>
-                    </Link>
-                ))}
+                <AnimatePresence>
+                    {toasts.map((toast, idx) => (
+                        <motion.div
+                            key={toast.id}
+                            initial={{ opacity: 0, x: 100, scale: 0.9 }}
+                            animate={{ opacity: 1, x: 0, scale: 1 }}
+                            exit={{ opacity: 0, x: 100, scale: 0.9 }}
+                            transition={{ duration: 0.3, delay: idx * 0.1 }}
+                        >
+                            <Link
+                                href={toast.href}
+                                className="block w-80 rounded-2xl border border-cyan-200 bg-white/95 px-4 py-3 shadow-2xl backdrop-blur dark:border-cyan-800 dark:bg-slate-900/95 hover:shadow-xl transition-all"
+                            >
+                                <div className="flex items-start gap-3">
+                                    <div className="mt-0.5">
+                                        <div className="h-2 w-2 rounded-full bg-cyan-500 animate-pulse"></div>
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <p className="text-sm font-semibold text-slate-900 dark:text-white">{__(toast.title)}</p>
+                                        <p className="mt-1 text-sm text-slate-600 dark:text-slate-300 line-clamp-1">{toast.body}</p>
+                                        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{toast.meta}</p>
+                                    </div>
+                                </div>
+                            </Link>
+                        </motion.div>
+                    ))}
+                </AnimatePresence>
             </div>
         </>
     );
 }
+
+// Helper component for Reply icon
+const Reply = (props: any) => (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M3 10h10a8 8 0 0 1 8 8v2M3 10l6 6m-6-6 6-6"/>
+    </svg>
+);
 
 export default function AuthenticatedLayout({
     title,
@@ -320,7 +442,7 @@ export default function AuthenticatedLayout({
     children,
 }: LayoutProps) {
     const { auth, current_locale } = usePage().props as {
-        auth: { user: { id: number; name: string; email: string } };
+        auth: { user: { id: number; name: string; email: string; avatar?: string; role?: string } };
         current_locale: string;
     };
     const { __, isRtl } = useTranslation();
@@ -329,14 +451,17 @@ export default function AuthenticatedLayout({
     const [darkMode, setDarkMode] = useState(false);
     const [scrolled, setScrolled] = useState(false);
     const [unreadInboxCount, setUnreadInboxCount] = useState(0);
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
     useEffect(() => {
         const storedTheme = window.localStorage.getItem('theme');
         const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const storedCollapsed = window.localStorage.getItem('sidebarCollapsed');
         const shouldUseDark = storedTheme ? storedTheme === 'dark' : prefersDark;
 
         document.documentElement.classList.toggle('dark', shouldUseDark);
         setDarkMode(shouldUseDark);
+        setIsSidebarCollapsed(storedCollapsed === 'true');
     }, []);
 
     useEffect(() => {
@@ -345,9 +470,11 @@ export default function AuthenticatedLayout({
     }, [darkMode]);
 
     useEffect(() => {
-        const handleScroll = () => {
-            setScrolled(window.scrollY > 10);
-        };
+        window.localStorage.setItem('sidebarCollapsed', String(isSidebarCollapsed));
+    }, [isSidebarCollapsed]);
+
+    useEffect(() => {
+        const handleScroll = () => setScrolled(window.scrollY > 10);
         window.addEventListener('scroll', handleScroll);
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
@@ -355,167 +482,229 @@ export default function AuthenticatedLayout({
     const navigation = useMemo<NavItem[]>(
         () => [
             {
+                label: __('Tableau de bord'),
+                routeName: 'dashboard',
+                href: route('dashboard'),
+                icon: <LayoutDashboard className="h-5 w-5" />,
+            },
+            {
                 label: __('Boîte de réception'),
                 routeName: 'messages.inbox',
                 href: route('messages.inbox'),
                 badge: unreadInboxCount > 0 ? unreadInboxCount : undefined,
-                icon: (
-                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 7.5h18v9a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 16.5v-9Z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="m3 7.5 8.47 6.352a.9.9 0 001.06 0L21 7.5" />
-                    </svg>
-                ),
+                icon: <Inbox className="h-5 w-5" />,
             },
             {
                 label: __('Messages envoyés'),
                 routeName: 'messages.sent',
                 href: route('messages.sent'),
-                icon: (
-                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M6 12 3.75 3.75 20.25 12 3.75 20.25 6 12Zm0 0h7.5" />
-                    </svg>
-                ),
+                icon: <Send className="h-5 w-5" />,
             },
             {
-                label: __('Messages groupÃ©s'),
+                label: __('Messages groupés'),
                 routeName: 'messages.group',
                 href: route('messages.group'),
-                icon: (
-                    <Users className="h-5 w-5" />
-                ),
+                icon: <UsersRound className="h-5 w-5" />,
+                isNew: true,
             },
             {
                 label: __('Brouillons'),
                 routeName: 'drafts.index',
                 href: route('drafts.index'),
-                icon: (
-                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M16.862 4.487a2.1 2.1 0 1 1 2.97 2.971L8.25 19.04 4.5 19.5l.46-3.75L16.862 4.487Z" />
-                    </svg>
-                ),
+                icon: <FileText className="h-5 w-5" />,
             },
+            ...(route().has('messages.starred')
+                ? [{
+                    label: __('Favoris'),
+                    routeName: 'messages.starred',
+                    href: route('messages.starred'),
+                    icon: <Star className="h-5 w-5" />,
+                }]
+                : []),
+            ...(route().has('messages.trash')
+                ? [{
+                    label: __('Corbeille'),
+                    routeName: 'messages.trash',
+                    href: route('messages.trash'),
+                    icon: <Trash2 className="h-5 w-5" />,
+                }]
+                : []),
+            ...(route().has('admin')
+                ? [{
+                    label: __('Administration'),
+                    routeName: 'admin',
+                    href: route('admin'),
+                    icon: <Shield className="h-5 w-5" />,
+                    isPro: true,
+                    badge: 3,
+                }]
+                : []),
             {
                 label: __('Rôles'),
                 routeName: 'roles.index',
                 href: route('roles.index'),
-                icon: (
-                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12.75 11.25 15 15 9.75" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3.75 12a8.25 8.25 0 1 0 16.5 0 8.25 8.25 0 0 0-16.5 0Z" />
-                    </svg>
-                ),
+                icon: <Users className="h-5 w-5" />,
             },
             {
                 label: __('Départements'),
                 routeName: 'departments.index',
                 href: route('departments.index'),
-                icon: (
-                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3.75 20.25h16.5" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M5.25 20.25V6.75A2.25 2.25 0 0 1 7.5 4.5h9A2.25 2.25 0 0 1 18.75 6.75v13.5" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 8.25h6M9 12h6M9 15.75h3" />
-                    </svg>
-                ),
+                icon: <FolderTree className="h-5 w-5" />,
             },
             {
                 label: __('Contacts'),
                 routeName: 'contacts.index',
                 href: route('contacts.index'),
-                icon: (
-                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M15 19.5v-.75A3.75 3.75 0 0011.25 15h-3.5A3.75 3.75 0 004 18.75v.75" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9.5 11.25a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm8.25 8.25v-.75A3.75 3.75 0 0015 15.169" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M14.25 5.339a3 3 0 1 1 0 5.822" />
-                    </svg>
-                ),
+                icon: <Users className="h-5 w-5" />,
             },
             {
                 label: __('Archives'),
                 routeName: 'messages.archive',
                 href: route('messages.archive'),
-                icon: (
-                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M20.25 7.5v10.125A2.625 2.625 0 0 1 17.625 20.25H6.375A2.625 2.625 0 0 1 3.75 17.625V7.5" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M21 5.25H3m5.25 5.25h7.5" />
-                    </svg>
-                ),
+                icon: <Archive className="h-5 w-5" />,
             },
         ],
         [__, unreadInboxCount],
     );
 
+    const userInitials = auth.user.name
+        .split(' ')
+        .map(n => n[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2);
+
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-cyan-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-cyan-950/20">
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-cyan-50/40 dark:from-slate-950 dark:via-slate-900 dark:to-cyan-950/30">
             <div className="flex min-h-screen">
                 {/* Desktop Sidebar */}
-                <aside className="fixed left-0 top-0 z-30 hidden h-full w-72 shrink-0 border-r border-slate-200/70 bg-white/80 backdrop-blur-xl dark:border-slate-800/50 dark:bg-slate-950/80 lg:flex lg:flex-col transition-all duration-300">
-                    <div className="flex flex-col h-full px-5 py-6">
+                <motion.aside
+                    initial={false}
+                    animate={{
+                        width: isSidebarCollapsed ? 80 : 288,
+                    }}
+                    transition={{ duration: 0.2, ease: "easeInOut" }}
+                    className="fixed left-0 top-0 z-30 hidden h-full shrink-0 border-r border-slate-200/70 bg-white/80 backdrop-blur-xl dark:border-slate-800/50 dark:bg-slate-950/80 lg:flex lg:flex-col overflow-hidden"
+                >
+                    <div className={`flex flex-col h-full px-3 py-5 ${isSidebarCollapsed ? 'items-center' : ''}`}>
                         {/* Logo Section */}
-                        <Link href={route('messages.inbox')} className="group mb-8 rounded-2xl border border-slate-200/80 bg-white/90 p-5 shadow-sm transition-all hover:shadow-md dark:border-slate-800 dark:bg-slate-900/90">
-                            <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                                {__('Centre hospitalier')}
-                            </div>
-                            <div className="mt-3">
-                                <img
-                                    src="/images/cmail.png"
-                                    alt="Cmail 2027"
-                                    className="h-12 w-auto object-contain"
-                                />
-                            </div>
-                            <div className="mt-2 bg-gradient-to-r from-cyan-600 to-sky-600 bg-clip-text text-2xl font-bold text-transparent dark:from-cyan-400 dark:to-sky-400">
-                                cmail2027
-                            </div>
-                            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                                {__('Plateforme de communication interne')}
-                            </p>
-                        </Link>
-
-                        <Link
-                            href={route('messages.create')}
-                            className="mb-6 inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-600 to-sky-700 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-cyan-500/20 transition-all hover:scale-[1.01] hover:shadow-xl hover:shadow-cyan-500/30"
+                        <motion.div
+                            whileHover={{ scale: 1.02 }}
+                            className={`group mb-6 rounded-2xl border border-slate-200/80 bg-white/90 p-4 shadow-sm transition-all hover:shadow-md dark:border-slate-800 dark:bg-slate-900/90 ${isSidebarCollapsed ? 'px-2' : ''}`}
                         >
-                            <PenSquare className="h-4 w-4" />
-                            {__('Nouveau message')}
-                        </Link>
+                            {!isSidebarCollapsed ? (
+                                <>
+                                    <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                                        {__('Centre hospitalier')}
+                                    </div>
+                                    <div className="mt-2">
+                                        <img
+                                            src="/images/cmail.png"
+                                            alt="Cmail 2027"
+                                            className="h-10 w-auto object-contain"
+                                        />
+                                    </div>
+                                    <div className="mt-1 bg-gradient-to-r from-cyan-600 to-sky-600 bg-clip-text text-xl font-bold text-transparent dark:from-cyan-400 dark:to-sky-400">
+                                        cmail2027
+                                    </div>
+                                    <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
+                                        {__('Communication interne')}
+                                    </p>
+                                </>
+                            ) : (
+                                <div className="flex flex-col items-center">
+                                    <img
+                                        src="/images/cmail.png"
+                                        alt="Cmail"
+                                        className="h-8 w-auto object-contain"
+                                    />
+                                </div>
+                            )}
+                        </motion.div>
+
+                        <motion.div
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            className={`mb-6 ${isSidebarCollapsed ? 'w-full flex justify-center' : ''}`}
+                        >
+                            <Link
+                                href={route('messages.create')}
+                                className={`inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-600 to-sky-700 text-sm font-semibold text-white shadow-lg shadow-cyan-500/20 transition-all hover:scale-[1.02] hover:shadow-xl hover:shadow-cyan-500/30 ${
+                                    isSidebarCollapsed ? 'h-10 w-10 p-0' : 'w-full px-4 py-3'
+                                }`}
+                            >
+                                <PenSquare className="h-4 w-4" />
+                                {!isSidebarCollapsed && __('Nouveau message')}
+                            </Link>
+                        </motion.div>
+
+                        {/* Collapse Toggle Button */}
+                        <button
+                            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                            className="absolute -right-3 top-20 hidden lg:flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-md hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400"
+                        >
+                            <ChevronRight className={`h-3 w-3 transition-transform ${isSidebarCollapsed ? 'rotate-180' : ''}`} />
+                        </button>
 
                         {/* Navigation */}
-                        <nav className="flex-1 space-y-1 overflow-y-auto">
+                        <nav className="flex-1 space-y-1 overflow-y-auto w-full">
                             {navigation.map((item) => (
-                                <SidebarLink key={item.routeName} item={item} />
+                                <SidebarLink
+                                    key={item.routeName}
+                                    item={item}
+                                    isCollapsed={isSidebarCollapsed}
+                                />
                             ))}
                         </nav>
 
                         {/* User Profile Section */}
-                        <div className="mt-6 pt-4 border-t border-slate-200/50 dark:border-slate-800/50">
-                            <div className="rounded-xl bg-gradient-to-br from-slate-50 to-cyan-50/40 p-4 dark:from-slate-900/50 dark:to-cyan-900/20">
-                                <div className="flex items-center gap-3">
+                        <motion.div
+                            whileHover={{ scale: 1.02 }}
+                            className={`mt-6 pt-4 border-t border-slate-200/50 dark:border-slate-800/50 w-full ${isSidebarCollapsed ? 'flex justify-center' : ''}`}
+                        >
+                            <div className={`rounded-xl bg-gradient-to-br from-slate-50 to-cyan-50/40 p-3 dark:from-slate-900/50 dark:to-cyan-900/20 ${isSidebarCollapsed ? 'p-2' : ''}`}>
+                                {!isSidebarCollapsed ? (
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-sky-600 text-sm font-bold text-white shadow-md">
+                                            {userInitials}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="font-semibold text-slate-900 dark:text-white truncate text-sm">
+                                                {auth.user.name}
+                                            </div>
+                                            <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                                                {auth.user.email}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : (
                                     <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-sky-600 text-sm font-bold text-white shadow-md">
-                                        {auth.user.name.charAt(0).toUpperCase()}
+                                        {userInitials}
                                     </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="font-semibold text-slate-900 dark:text-white truncate">
-                                            {auth.user.name}
-                                        </div>
-                                        <div className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                                            {auth.user.email}
-                                        </div>
-                                    </div>
-                                </div>
+                                )}
                             </div>
-                        </div>
+                        </motion.div>
                     </div>
-                </aside>
+                </motion.aside>
 
                 {/* Main Content */}
-                <div className="flex flex-1 flex-col lg:ml-72">
+                <div
+                    className="flex flex-1 flex-col transition-all duration-200"
+                    style={{ marginLeft: isSidebarCollapsed ? 80 : 288 }}
+                >
                     {/* Header */}
-                    <header className={`
-                        sticky top-0 z-20 transition-all duration-300
-                        ${scrolled 
-                            ? 'border-b border-slate-200/70 bg-white/85 backdrop-blur-xl shadow-sm dark:border-slate-800/50 dark:bg-slate-950/85' 
-                            : 'border-b border-slate-200/50 bg-white/70 backdrop-blur-sm dark:border-slate-800/30 dark:bg-slate-950/70'
-                        }
-                    `}>
+                    <motion.header
+                        initial={false}
+                        animate={{
+                            backgroundColor: darkMode
+                                ? (scrolled ? 'rgba(2,6,23,0.92)' : 'rgba(15,23,42,0.82)')
+                                : (scrolled ? 'rgba(248,250,252,0.92)' : 'rgba(255,255,255,0.82)'),
+                            borderBottomColor: darkMode
+                                ? (scrolled ? 'rgba(51,65,85,0.9)' : 'rgba(51,65,85,0.65)')
+                                : (scrolled ? 'rgba(203,213,225,0.9)' : 'rgba(226,232,240,0.75)'),
+                        }}
+                        className="sticky top-0 z-20 border-b shadow-sm shadow-slate-200/30 transition-all duration-300 backdrop-blur-xl dark:shadow-slate-950/30"
+                    >
                         <div className="px-4 py-3 sm:px-6 lg:px-8">
                             <div className="flex items-center justify-between gap-4">
                                 {/* Left Section */}
@@ -529,10 +718,13 @@ export default function AuthenticatedLayout({
                                     </button>
 
                                     <div>
-                                        <p className="text-xs font-semibold uppercase tracking-wider text-cyan-600 dark:text-cyan-400">
-                                            {__('Messagerie centrale')}
-                                        </p>
-                                        <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-2xl">
+                                        <div className="flex items-center gap-2">
+                                            <Sparkles className="h-4 w-4 text-cyan-500" />
+                                            <p className="text-xs font-semibold uppercase tracking-wider text-cyan-600 dark:text-cyan-400">
+                                                {__('Messagerie centrale')}
+                                            </p>
+                                        </div>
+                                        <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">
                                             {title}
                                         </h1>
                                         {description && (
@@ -553,45 +745,73 @@ export default function AuthenticatedLayout({
 
                                     {actions}
 
-                                    <button
+                                    <motion.button
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
                                         type="button"
                                         onClick={() => setDarkMode((value) => !value)}
-                                        className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white/80 text-slate-600 transition-all hover:border-cyan-200 hover:bg-white hover:text-cyan-600 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-300 dark:hover:border-cyan-500/30 dark:hover:bg-slate-900"
+                                        className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white/80 text-slate-600 transition-all hover:border-cyan-300 hover:bg-white hover:text-cyan-600 hover:shadow-md dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-300 dark:hover:border-cyan-500/40 dark:hover:bg-slate-900"
                                         aria-label="Toggle theme"
                                     >
-                                        {darkMode ? (
-                                            <Sun className="h-4.5 w-4.5" />
-                                        ) : (
-                                            <Moon className="h-4.5 w-4.5" />
-                                        )}
-                                    </button>
+                                        <AnimatePresence mode="wait" initial={false}>
+                                            <motion.div
+                                                key={darkMode ? 'sun' : 'moon'}
+                                                initial={{ opacity: 0, rotate: -90 }}
+                                                animate={{ opacity: 1, rotate: 0 }}
+                                                exit={{ opacity: 0, rotate: 90 }}
+                                                transition={{ duration: 0.2 }}
+                                            >
+                                                {darkMode ? (
+                                                    <Sun className="h-4.5 w-4.5" />
+                                                ) : (
+                                                    <Moon className="h-4.5 w-4.5" />
+                                                )}
+                                            </motion.div>
+                                        </AnimatePresence>
+                                    </motion.button>
 
                                     <Dropdown>
                                         <Dropdown.Trigger>
-                                            <button className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white/80 px-3 py-1.5 text-sm font-medium text-slate-700 transition-all hover:border-cyan-200 hover:bg-white dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200">
+                                            <motion.button
+                                                whileHover={{ scale: 1.02 }}
+                                                className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white/80 px-3 py-1.5 text-sm font-medium text-slate-700 transition-all hover:border-cyan-300 hover:bg-white hover:shadow-md dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200"
+                                            >
                                                 <span className="hidden sm:inline">{auth.user.name.split(' ')[0]}</span>
                                                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500 to-sky-600 text-sm font-bold text-white shadow-md">
-                                                    {auth.user.name.charAt(0).toUpperCase()}
+                                                    {userInitials}
                                                 </div>
-                                            </button>
+                                                <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+                                            </motion.button>
                                         </Dropdown.Trigger>
 
                                         <Dropdown.Content align={isRtl ? 'left' : 'right'} width="48">
                                             <div className="border-b border-slate-100 px-4 py-3 dark:border-slate-800">
-                                                <p className="text-sm font-medium text-slate-900 dark:text-white">{auth.user.name}</p>
-                                                <p className="text-xs text-slate-500 dark:text-slate-400">{auth.user.email}</p>
+                                                <div className="flex items-center gap-3">
+                                                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-sky-600 text-sm font-bold text-white">
+                                                        {userInitials}
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm font-semibold text-slate-900 dark:text-white">{auth.user.name}</p>
+                                                        <p className="text-xs text-slate-500 dark:text-slate-400">{auth.user.email}</p>
+                                                        {auth.user.role && (
+                                                            <span className="text-[10px] font-medium text-cyan-600 dark:text-cyan-400">
+                                                                {auth.user.role}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <Dropdown.Link href={route('profile.edit')}>
+                                            <Dropdown.Link href={route('profile.edit')} icon={<User className="h-4 w-4" />}>
                                                 {__('Mon profil')}
                                             </Dropdown.Link>
-                                            <Dropdown.Link href="#">
+                                            <Dropdown.Link href="#" icon={<Settings className="h-4 w-4" />}>
                                                 {__('Paramètres')}
                                             </Dropdown.Link>
-                                            <Dropdown.Link href="#">
-                                                {__('Aide')}
+                                            <Dropdown.Link href="#" icon={<HelpCircle className="h-4 w-4" />}>
+                                                {__('Aide et support')}
                                             </Dropdown.Link>
-                                            <div className="border-t border-slate-100 dark:border-slate-800">
-                                                <Dropdown.Link href={route('logout')} method="post" as="button">
+                                            <div className="border-t border-slate-100 dark:border-slate-800 mt-1 pt-1">
+                                                <Dropdown.Link href={route('logout')} method="post" as="button" icon={<LogOut className="h-4 w-4" />}>
                                                     {__('Déconnexion')}
                                                 </Dropdown.Link>
                                             </div>
@@ -600,89 +820,112 @@ export default function AuthenticatedLayout({
                                 </div>
                             </div>
                         </div>
-                    </header>
+                    </motion.header>
 
                     {/* Mobile Menu Overlay */}
-                    {mobileOpen && (
-                        <>
-                            <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm lg:hidden" onClick={() => setMobileOpen(false)} />
-                            <div className="fixed inset-y-0 left-0 z-50 w-80 max-w-[85%] overflow-y-auto bg-white shadow-2xl dark:bg-slate-950 lg:hidden animate-in slide-in-from-left">
-                                <div className="flex flex-col h-full">
-                                    <div className="flex items-center justify-between border-b border-slate-200 p-4 dark:border-slate-800">
-                                        <img src="/images/cmail.png" alt="Cmail" className="h-8 w-auto" />
-                                        <button
-                                            onClick={() => setMobileOpen(false)}
-                                            className="rounded-xl p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
-                                        >
-                                            <X className="h-5 w-5" />
-                                        </button>
-                                    </div>
-                                    
-                                    <div className="p-4 border-b border-slate-200 dark:border-slate-800">
-                                        <div className="flex items-center gap-3">
-                                            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-sky-600 text-lg font-bold text-white">
-                                                {auth.user.name.charAt(0).toUpperCase()}
+                    <AnimatePresence>
+                        {mobileOpen && (
+                            <>
+                                <motion.div
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm lg:hidden"
+                                    onClick={() => setMobileOpen(false)}
+                                />
+                                <motion.div
+                                    initial={{ x: -300, opacity: 0 }}
+                                    animate={{ x: 0, opacity: 1 }}
+                                    exit={{ x: -300, opacity: 0 }}
+                                    transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                                    className="fixed inset-y-0 left-0 z-50 w-80 max-w-[85%] overflow-y-auto bg-white shadow-2xl dark:bg-slate-950 lg:hidden"
+                                >
+                                    <div className="flex flex-col h-full">
+                                        <div className="flex items-center justify-between border-b border-slate-200 p-4 dark:border-slate-800">
+                                            <div className="flex items-center gap-2">
+                                                <img src="/images/cmail.png" alt="Cmail" className="h-8 w-auto" />
+                                                <span className="font-bold bg-gradient-to-r from-cyan-600 to-sky-600 bg-clip-text text-transparent">cmail2027</span>
                                             </div>
-                                            <div>
-                                                <div className="font-semibold text-slate-900 dark:text-white">{auth.user.name}</div>
-                                                <div className="text-sm text-slate-500 dark:text-slate-400">{auth.user.email}</div>
+                                            <button
+                                                onClick={() => setMobileOpen(false)}
+                                                className="rounded-xl p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                            >
+                                                <X className="h-5 w-5" />
+                                            </button>
+                                        </div>
+
+                                        <div className="p-4 border-b border-slate-200 dark:border-slate-800 bg-gradient-to-r from-cyan-50/30 to-transparent dark:from-cyan-950/20">
+                                            <div className="flex items-center gap-3">
+                                                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-sky-600 text-lg font-bold text-white shadow-md">
+                                                    {userInitials}
+                                                </div>
+                                                <div>
+                                                    <div className="font-semibold text-slate-900 dark:text-white">{auth.user.name}</div>
+                                                    <div className="text-sm text-slate-500 dark:text-slate-400">{auth.user.email}</div>
+                                                </div>
                                             </div>
                                         </div>
+
+                                        <nav className="flex-1 p-4 space-y-1">
+                                            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                                                <Link
+                                                    href={route('messages.create')}
+                                                    onClick={() => setMobileOpen(false)}
+                                                    className="mb-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-600 to-sky-700 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-cyan-500/20 transition-all"
+                                                >
+                                                    <PenSquare className="h-4 w-4" />
+                                                    {__('Nouveau message')}
+                                                </Link>
+                                            </motion.div>
+
+                                            {navigation.map((item) => (
+                                                <SidebarLink
+                                                    key={item.routeName}
+                                                    item={item}
+                                                    mobile
+                                                    onNavigate={() => setMobileOpen(false)}
+                                                />
+                                            ))}
+                                        </nav>
+
+                                        <div className="p-4 border-t border-slate-200 dark:border-slate-800 space-y-3">
+                                            <LanguageSwitcher />
+                                            <button
+                                                onClick={() => {
+                                                    setDarkMode(!darkMode);
+                                                }}
+                                                className="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors"
+                                            >
+                                                {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+                                                {darkMode ? __('Mode clair') : __('Mode sombre')}
+                                            </button>
+                                            <Link
+                                                href={route('logout')}
+                                                method="post"
+                                                as="button"
+                                                className="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30 transition-colors"
+                                            >
+                                                <LogOut className="h-5 w-5" />
+                                                {__('Déconnexion')}
+                                            </Link>
+                                        </div>
                                     </div>
-
-                                    <nav className="flex-1 p-4 space-y-1">
-                                        <Link
-                                            href={route('messages.create')}
-                                            onClick={() => setMobileOpen(false)}
-                                            className="mb-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-600 to-sky-700 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-cyan-500/20 transition-all"
-                                        >
-                                            <PenSquare className="h-4 w-4" />
-                                            {__('Nouveau message')}
-                                        </Link>
-
-                                        {navigation.map((item) => (
-                                            <SidebarLink
-                                                key={item.routeName}
-                                                item={item}
-                                                mobile
-                                                onNavigate={() => setMobileOpen(false)}
-                                            />
-                                        ))}
-                                    </nav>
-
-                                    <div className="p-4 border-t border-slate-200 dark:border-slate-800 space-y-3">
-                                        <LanguageSwitcher />
-                                        <button
-                                            onClick={() => {
-                                                setDarkMode(!darkMode);
-                                                setMobileOpen(false);
-                                            }}
-                                            className="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
-                                        >
-                                            {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-                                            {darkMode ? __('Mode clair') : __('Mode sombre')}
-                                        </button>
-                                        <Link
-                                            href={route('logout')}
-                                            method="post"
-                                            as="button"
-                                            className="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30"
-                                        >
-                                            <LogOut className="h-5 w-5" />
-                                            {__('Déconnexion')}
-                                        </Link>
-                                    </div>
-                                </div>
-                            </div>
-                        </>
-                    )}
+                                </motion.div>
+                            </>
+                        )}
+                    </AnimatePresence>
 
                     {/* Main Content Area */}
-                    <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
+                    <motion.main
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3 }}
+                        className="flex-1 px-4 py-6 sm:px-6 lg:px-8"
+                    >
                         <div className="mx-auto max-w-7xl">
                             {children}
                         </div>
-                    </main>
+                    </motion.main>
                 </div>
             </div>
         </div>

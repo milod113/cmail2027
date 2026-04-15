@@ -73,10 +73,10 @@ export default function Inbox({
 
     return (
         <AuthenticatedLayout
-            title={__('BoÃ®te de rÃ©ception')}
-            description={__('Consultez les messages reÃ§us et leur Ã©tat de lecture.')}
+            title={__('Boîte de réception')}
+            description={__('Consultez les messages reçus et leur état de lecture.')}
         >
-            <Head title={__('BoÃ®te de rÃ©ception')} />
+            <Head title={__('Boîte de réception')} />
 
             <div className="space-y-6">
                 <section className="grid gap-4 md:grid-cols-3">
@@ -93,9 +93,9 @@ export default function Inbox({
                 <section className="rounded-[2rem] border border-white/70 bg-white/80 p-6 shadow-xl shadow-slate-200/40 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/80">
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                         <div>
-                            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{__('Messages reÃ§us')}</h2>
+                            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{__('Messages reçus')}</h2>
                             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                                {__('Les messages les plus rÃ©cents apparaissent en premier.')}
+                                {__('Les messages les plus récents apparaissent en premier.')}
                             </p>
                         </div>
 
@@ -117,14 +117,14 @@ export default function Inbox({
                             <label className="block">
                                 <span className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
                                     <Filter className="h-4 w-4 text-cyan-500" />
-                                    {__('Filtrer par rÃ´le')}
+                                    {__('Filtrer par rôle')}
                                 </span>
                                 <select
                                     value={filters.role}
                                     onChange={(event) => applyFilters({ role: event.target.value })}
                                     className="block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                                 >
-                                    <option value="">{__('Tous les rÃ´les')}</option>
+                                    <option value="">{__('Tous les rôles')}</option>
                                     {roles.map((role) => (
                                         <option key={role.id} value={role.id}>
                                             {role.nom_role}
@@ -173,7 +173,7 @@ export default function Inbox({
 
                                         <div className="flex flex-col items-end gap-3">
                                             <div className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                                                {message.sent_at ? formatDate(message.sent_at) : __('PlanifiÃ©')}
+                                                {message.sent_at ? formatDate(message.sent_at) : __('Planifié')}
                                             </div>
                                             <Link
                                                 href={route('messages.show', message.id)}
@@ -194,7 +194,7 @@ export default function Inbox({
                             ))
                         ) : (
                             <div className="rounded-3xl border border-dashed border-slate-300 bg-white/60 px-6 py-12 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-400">
-                                {__('Aucun message trouvÃ© avec ce filtre.')}
+                                {__('Aucun message trouvé avec ce filtre.')}
                             </div>
                         )}
                     </div>

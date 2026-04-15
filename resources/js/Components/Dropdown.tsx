@@ -4,6 +4,7 @@ import {
     createContext,
     Dispatch,
     PropsWithChildren,
+    ReactNode,
     SetStateAction,
     useContext,
     useState,
@@ -108,8 +109,9 @@ const Content = ({
 const DropdownLink = ({
     className = '',
     children,
+    icon,
     ...props
-}: InertiaLinkProps) => {
+}: InertiaLinkProps & { icon?: ReactNode }) => {
     return (
         <Link
             {...props}
@@ -118,7 +120,10 @@ const DropdownLink = ({
                 className
             }
         >
-            {children}
+            <span className="flex items-center gap-2">
+                {icon ? <span className="shrink-0">{icon}</span> : null}
+                <span>{children}</span>
+            </span>
         </Link>
     );
 };
