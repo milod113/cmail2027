@@ -237,7 +237,7 @@ export default function Show({ message }: { message: MessageDetail }) {
                             </div>
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-3">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
                             {message.can_forward && (
                                 <Link
                                     href={route('messages.create', { forward: message.id })}
@@ -258,9 +258,9 @@ export default function Show({ message }: { message: MessageDetail }) {
                     </div>
                 </div>
 
-                <div className="grid gap-6 lg:grid-cols-3">
+                <div className="grid gap-6 xl:grid-cols-3">
                     {/* Main Content - Original Message */}
-                    <div className="lg:col-span-2 space-y-6">
+                    <div className="space-y-6 xl:col-span-2">
                         {/* Original Message Card */}
                         <div className="rounded-3xl border border-slate-200/70 bg-white/80 p-6 shadow-lg backdrop-blur-sm dark:border-slate-800/50 dark:bg-slate-900/80 lg:p-8">
                             <div className="flex items-center gap-2 border-b border-slate-200/50 pb-4 dark:border-slate-800/50">
@@ -499,7 +499,7 @@ export default function Show({ message }: { message: MessageDetail }) {
                                             )}
                                         </div>
 
-                                        <div className="flex flex-wrap items-center gap-4">
+                                        <div className="flex flex-col items-start gap-3 sm:flex-row sm:flex-wrap sm:items-center">
                                             <button
                                                 type="submit"
                                                 disabled={processing}

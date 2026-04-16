@@ -115,6 +115,11 @@ class User extends Authenticatable
         return $this->hasOne(Profile::class);
     }
 
+    public function userSetting(): HasOne
+    {
+        return $this->hasOne(UserSetting::class);
+    }
+
     public function publications(): HasMany
     {
         return $this->hasMany(Publication::class);

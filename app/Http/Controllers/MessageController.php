@@ -8,6 +8,7 @@ use App\Models\Message;
 use App\Models\MessageDraft;
 use App\Models\Role;
 use App\Models\User;
+use App\Models\UserSetting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -32,6 +33,7 @@ class MessageController extends Controller
                 'sender' => fn ($query) => $query
                     ->with('role:id,nom_role')
                     ->select('id', 'name', 'email', 'role_id'),
+                'originalReceiver:id,name,email',
             ])
             ->where('receiver_id', $user->id)
             ->where('archived', false)
@@ -56,6 +58,7 @@ class MessageController extends Controller
                 'id',
                 'sender_id',
                 'receiver_id',
+                'original_receiver_id',
                 'sujet',
                 'contenu',
                 'important',
@@ -95,6 +98,7 @@ class MessageController extends Controller
                     'receiver' => fn ($query) => $query
                         ->with('role:id,nom_role')
                         ->select('id', 'name', 'email', 'role_id'),
+                    'originalReceiver:id,name,email',
                 ])
                 ->where('sender_id', $user->id)
                 ->where('archived', false)
@@ -119,6 +123,7 @@ class MessageController extends Controller
                     'id',
                     'sender_id',
                     'receiver_id',
+                    'original_receiver_id',
                     'sujet',
                     'contenu',
                     'important',
@@ -634,8 +639,9 @@ class MessageController extends Controller
         $storedFile = $this->resolveAttachmentPath($request, 'messages');
 
         $createdMessages = $this->createMessagesFromPayload($validated, $request->user()->id, $storedFile);
+        $followUpMessages = $this->handleOutOfOfficeActions($createdMessages);
 
-        foreach ($createdMessages as $message) {
+        foreach (array_merge($createdMessages, $followUpMessages) as $message) {
             broadcast(new NotificationCreated((int) $message->receiver_id, 'message', (int) $message->id))->toOthers();
         }
 
@@ -714,8 +720,9 @@ class MessageController extends Controller
         $storedFile = $this->storeOrReuseDraftFile($request, $draft);
 
         $createdMessages = $this->createMessagesFromPayload($validated, $request->user()->id, $storedFile);
+        $followUpMessages = $this->handleOutOfOfficeActions($createdMessages);
 
-        foreach ($createdMessages as $message) {
+        foreach (array_merge($createdMessages, $followUpMessages) as $message) {
             broadcast(new NotificationCreated((int) $message->receiver_id, 'message', (int) $message->id))->toOthers();
         }
 
@@ -877,8 +884,9 @@ class MessageController extends Controller
             'scheduled_at' => ['nullable', 'date'],
             'type_message' => ['nullable', 'string', 'max:100'],
             'deadline_reponse' => ['nullable', 'date'],
-            'can_be_redirected' => ['required', 'boolean'],
-            'forwarded_from_message_id' => ['nullable', 'integer', 'exists:messages,id'],
+                'can_be_redirected' => ['required', 'boolean'],
+                'forwarded_from_message_id' => ['nullable', 'integer', 'exists:messages,id'],
+                'original_receiver_id' => ['nullable', 'integer', 'exists:users,id'],
         ]);
     }
 
@@ -896,8 +904,9 @@ class MessageController extends Controller
             'scheduled_at' => ['nullable', 'date'],
             'type_message' => ['nullable', 'string', 'max:100'],
             'deadline_reponse' => ['nullable', 'date'],
-            'can_be_redirected' => ['required', 'boolean'],
-            'forwarded_from_message_id' => ['nullable', 'integer', 'exists:messages,id'],
+                'can_be_redirected' => ['required', 'boolean'],
+                'forwarded_from_message_id' => ['nullable', 'integer', 'exists:messages,id'],
+                'original_receiver_id' => ['nullable', 'integer', 'exists:users,id'],
         ]);
     }
 
@@ -916,6 +925,7 @@ class MessageController extends Controller
             $payload = [
                 'sender_id' => $senderId,
                 'receiver_id' => $receiverId,
+                'original_receiver_id' => $validated['original_receiver_id'] ?? null,
                 'sujet' => $validated['sujet'],
                 'contenu' => $validated['contenu'],
                 'fichier' => $storedFile,
@@ -944,6 +954,130 @@ class MessageController extends Controller
         }
 
         return $messages;
+    }
+
+    private function handleOutOfOfficeActions(array $messages): array
+    {
+        $messages = collect($messages)
+            ->filter(fn ($message) => $message instanceof Message)
+            ->values();
+
+        if ($messages->isEmpty()) {
+            return [];
+        }
+
+        $messages->loadMissing([
+            'sender:id,name,email',
+            'receiver' => fn ($query) => $query
+                ->with([
+                    'userSetting.delegateUser:id,name,email',
+                ])
+                ->select('id', 'name', 'email'),
+        ]);
+
+        $generatedMessages = [];
+
+        foreach ($messages as $message) {
+            $settings = $message->receiver?->userSetting;
+
+            if (! $settings?->is_out_of_office) {
+                continue;
+            }
+
+            $autoReply = $this->createOutOfOfficeReply($message, $settings);
+
+            if ($autoReply) {
+                $generatedMessages[] = $autoReply;
+            }
+
+            $delegatedCopy = $this->createDelegatedCopy($message, $settings);
+
+            if ($delegatedCopy) {
+                $generatedMessages[] = $delegatedCopy;
+            }
+        }
+
+        return $generatedMessages;
+    }
+
+    private function createOutOfOfficeReply(Message $message, UserSetting $settings): ?Message
+    {
+        if (! $settings->ooo_message || (int) $message->sender_id === (int) $message->receiver_id) {
+            return null;
+        }
+
+        $payload = [
+            'sender_id' => $message->receiver_id,
+            'receiver_id' => $message->sender_id,
+            'original_receiver_id' => null,
+            'sujet' => $this->replySubject($message->sujet),
+            'contenu' => $settings->ooo_message,
+            'fichier' => null,
+            'lu_le' => null,
+            'lu' => false,
+            'spam' => false,
+            'important' => false,
+            'sent_at' => now(),
+            'requires_receipt' => false,
+            'receipt_requested_at' => null,
+            'scheduled_at' => null,
+            'archived' => false,
+            'type_message' => 'out_of_office',
+            'envoye' => true,
+            'deadline_reponse' => null,
+            'can_be_redirected' => false,
+            'message_group_uuid' => null,
+            'parent_id' => null,
+            'forwarded_from_message_id' => $message->id,
+        ];
+
+        if (Schema::hasColumn('messages', 'receiver_ids')) {
+            $payload['receiver_ids'] = [$message->sender_id];
+        }
+
+        return Message::create($payload);
+    }
+
+    private function createDelegatedCopy(Message $message, UserSetting $settings): ?Message
+    {
+        if (! $settings->redirect_messages || ! $settings->delegate_user_id) {
+            return null;
+        }
+
+        if ((int) $settings->delegate_user_id === (int) $message->sender_id) {
+            return null;
+        }
+
+        $payload = [
+            'sender_id' => $message->sender_id,
+            'receiver_id' => $settings->delegate_user_id,
+            'original_receiver_id' => $message->receiver_id,
+            'sujet' => $message->sujet,
+            'contenu' => $message->contenu,
+            'fichier' => $message->fichier,
+            'lu_le' => null,
+            'lu' => false,
+            'spam' => false,
+            'important' => $message->important,
+            'sent_at' => now(),
+            'requires_receipt' => $message->requires_receipt,
+            'receipt_requested_at' => $message->requires_receipt ? now() : null,
+            'scheduled_at' => null,
+            'archived' => false,
+            'type_message' => 'delegated',
+            'envoye' => true,
+            'deadline_reponse' => $message->deadline_reponse,
+            'can_be_redirected' => false,
+            'message_group_uuid' => null,
+            'parent_id' => null,
+            'forwarded_from_message_id' => $message->id,
+        ];
+
+        if (Schema::hasColumn('messages', 'receiver_ids')) {
+            $payload['receiver_ids'] = [$settings->delegate_user_id];
+        }
+
+        return Message::create($payload);
     }
 
     private function authorizeMessageAccess(int $userId, Message $message): void

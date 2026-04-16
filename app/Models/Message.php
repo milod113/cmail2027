@@ -14,6 +14,7 @@ class Message extends Model
     protected $fillable = [
         'sender_id',
         'receiver_id',
+        'original_receiver_id',
         'receiver_ids',
         'sujet',
         'contenu',
@@ -60,6 +61,11 @@ class Message extends Model
     public function receiver(): BelongsTo
     {
         return $this->belongsTo(User::class, 'receiver_id');
+    }
+
+    public function originalReceiver(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'original_receiver_id');
     }
 
     public function forwardedFrom(): BelongsTo

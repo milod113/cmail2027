@@ -304,7 +304,7 @@ function NotificationBell({
                                 animate={{ opacity: 1, y: 0, scale: 1 }}
                                 exit={{ opacity: 0, y: -10, scale: 0.95 }}
                                 transition={{ duration: 0.15 }}
-                                className="absolute right-0 mt-2 w-80 origin-top-right rounded-2xl border border-slate-200 bg-white shadow-2xl backdrop-blur-xl dark:border-slate-700 dark:bg-slate-900/95 z-50 overflow-hidden"
+                                className="absolute right-0 z-50 mt-2 w-[min(20rem,calc(100vw-1rem))] max-w-sm origin-top-right overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl backdrop-blur-xl dark:border-slate-700 dark:bg-slate-900/95"
                             >
                                 <div className="border-b border-slate-100 px-4 py-3 dark:border-slate-800 bg-gradient-to-r from-cyan-50/50 to-transparent dark:from-cyan-950/30">
                                     <div className="flex items-center justify-between gap-3">
@@ -452,6 +452,7 @@ export default function AuthenticatedLayout({
     const [scrolled, setScrolled] = useState(false);
     const [unreadInboxCount, setUnreadInboxCount] = useState(0);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const [isDesktopViewport, setIsDesktopViewport] = useState(false);
 
     useEffect(() => {
         const storedTheme = window.localStorage.getItem('theme');
@@ -462,6 +463,26 @@ export default function AuthenticatedLayout({
         document.documentElement.classList.toggle('dark', shouldUseDark);
         setDarkMode(shouldUseDark);
         setIsSidebarCollapsed(storedCollapsed === 'true');
+        setIsDesktopViewport(window.matchMedia('(min-width: 1024px)').matches);
+    }, []);
+
+    useEffect(() => {
+        const mediaQuery = window.matchMedia('(min-width: 1024px)');
+        const handleViewportChange = (event: MediaQueryListEvent | MediaQueryList) => {
+            setIsDesktopViewport(event.matches);
+        };
+
+        handleViewportChange(mediaQuery);
+
+        if (mediaQuery.addEventListener) {
+            mediaQuery.addEventListener('change', handleViewportChange);
+
+            return () => mediaQuery.removeEventListener('change', handleViewportChange);
+        }
+
+        mediaQuery.addListener(handleViewportChange);
+
+        return () => mediaQuery.removeListener(handleViewportChange);
     }, []);
 
     useEffect(() => {
@@ -690,7 +711,7 @@ export default function AuthenticatedLayout({
                 {/* Main Content */}
                 <div
                     className="flex flex-1 flex-col transition-all duration-200"
-                    style={{ marginLeft: isSidebarCollapsed ? 80 : 288 }}
+                    style={{ marginLeft: isDesktopViewport ? (isSidebarCollapsed ? 80 : 288) : 0 }}
                 >
                     {/* Header */}
                     <motion.header
@@ -706,29 +727,29 @@ export default function AuthenticatedLayout({
                         className="sticky top-0 z-20 border-b shadow-sm shadow-slate-200/30 transition-all duration-300 backdrop-blur-xl dark:shadow-slate-950/30"
                     >
                         <div className="px-4 py-3 sm:px-6 lg:px-8">
-                            <div className="flex items-center justify-between gap-4">
+                            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                                 {/* Left Section */}
-                                <div className="flex items-center gap-3">
+                                <div className="flex min-w-0 items-start gap-3">
                                     <button
                                         type="button"
                                         onClick={() => setMobileOpen(true)}
-                                        className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 lg:hidden"
+                                        className="mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 lg:hidden"
                                     >
                                         <Menu className="h-5 w-5" />
                                     </button>
 
-                                    <div>
-                                        <div className="flex items-center gap-2">
+                                    <div className="min-w-0">
+                                        <div className="flex flex-wrap items-center gap-2">
                                             <Sparkles className="h-4 w-4 text-cyan-500" />
                                             <p className="text-xs font-semibold uppercase tracking-wider text-cyan-600 dark:text-cyan-400">
                                                 {__('Messagerie centrale')}
                                             </p>
                                         </div>
-                                        <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">
+                                        <h1 className="truncate bg-gradient-to-r from-slate-900 to-slate-600 bg-clip-text text-xl font-bold tracking-tight text-transparent dark:from-white dark:to-slate-300 sm:text-2xl">
                                             {title}
                                         </h1>
                                         {description && (
-                                            <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">
+                                            <p className="mt-0.5 max-w-2xl text-sm text-slate-500 dark:text-slate-400">
                                                 {description}
                                             </p>
                                         )}
@@ -736,7 +757,7 @@ export default function AuthenticatedLayout({
                                 </div>
 
                                 {/* Right Section */}
-                                <div className="flex items-center gap-2">
+                                <div className="flex flex-wrap items-center justify-end gap-2">
                                     <div className="hidden lg:block">
                                         <LanguageSwitcher />
                                     </div>
@@ -774,7 +795,7 @@ export default function AuthenticatedLayout({
                                         <Dropdown.Trigger>
                                             <motion.button
                                                 whileHover={{ scale: 1.02 }}
-                                                className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white/80 px-3 py-1.5 text-sm font-medium text-slate-700 transition-all hover:border-cyan-300 hover:bg-white hover:shadow-md dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200"
+                                                className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white/80 px-2.5 py-1.5 text-sm font-medium text-slate-700 transition-all hover:border-cyan-300 hover:bg-white hover:shadow-md dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200 sm:px-3"
                                             >
                                                 <span className="hidden sm:inline">{auth.user.name.split(' ')[0]}</span>
                                                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500 to-sky-600 text-sm font-bold text-white shadow-md">
@@ -838,7 +859,7 @@ export default function AuthenticatedLayout({
                                     animate={{ x: 0, opacity: 1 }}
                                     exit={{ x: -300, opacity: 0 }}
                                     transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                                    className="fixed inset-y-0 left-0 z-50 w-80 max-w-[85%] overflow-y-auto bg-white shadow-2xl dark:bg-slate-950 lg:hidden"
+                                    className="fixed inset-y-0 left-0 z-50 w-80 max-w-[88vw] overflow-y-auto bg-white shadow-2xl dark:bg-slate-950 lg:hidden"
                                 >
                                     <div className="flex flex-col h-full">
                                         <div className="flex items-center justify-between border-b border-slate-200 p-4 dark:border-slate-800">
@@ -920,9 +941,9 @@ export default function AuthenticatedLayout({
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.3 }}
-                        className="flex-1 px-4 py-6 sm:px-6 lg:px-8"
+                        className="flex-1 px-3 py-5 sm:px-6 lg:px-8"
                     >
-                        <div className="mx-auto max-w-7xl">
+                        <div className="mx-auto min-w-0 max-w-7xl">
                             {children}
                         </div>
                     </motion.main>

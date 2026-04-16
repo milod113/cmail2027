@@ -250,13 +250,13 @@ export default function Compose({
                     </div>
                 )}
 
-                <div className="grid gap-6 lg:grid-cols-3">
+                <div className="grid gap-6 xl:grid-cols-3">
                     {/* Main Content - Left Column (2/3) */}
-                    <div className="lg:col-span-2 space-y-6">
+                    <div className="space-y-6 xl:col-span-2">
                         {/* Recipients Section */}
                         <div className="rounded-3xl border border-slate-200/70 bg-white/80 p-6 shadow-lg backdrop-blur-sm dark:border-slate-800/50 dark:bg-slate-900/80">
-                            <div className="flex items-center justify-between mb-6">
-                                <div className="flex items-center gap-3">
+                            <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                                <div className="flex min-w-0 items-center gap-3">
                                     <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-sky-600 shadow-md">
                                         <Users className="h-5 w-5 text-white" />
                                     </div>
@@ -301,7 +301,7 @@ export default function Compose({
                             )}
 
                             {showRecipientList && (
-                                <div className="grid gap-4 lg:grid-cols-[1fr,1.5fr]">
+                                <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr),minmax(0,1.5fr)]">
                                     {/* Filters */}
                                     <div className="space-y-4">
                                         <div>
@@ -338,14 +338,14 @@ export default function Compose({
 
                                     {/* Recipients List */}
                                     <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-3 dark:border-slate-800 dark:bg-slate-950/30">
-                                        <div className="mb-2 flex items-center justify-between px-2">
-                                            <div>
+                                        <div className="mb-2 flex flex-col gap-3 px-2 sm:flex-row sm:items-center sm:justify-between">
+                                            <div className="min-w-0">
                                                 <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
                                                     {__('Liste des destinataires')}
                                                 </p>
                                                 <p className="text-xs text-slate-400">{filteredRecipients.length} {__('contacts')}</p>
                                             </div>
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex flex-wrap items-center gap-2">
                                                 <button
                                                     type="button"
                                                     onClick={selectAllFilteredRecipients}
@@ -601,7 +601,7 @@ export default function Compose({
                         </div>
 
                         {/* Action Buttons Card */}
-                        <div className="rounded-3xl bg-gradient-to-br from-cyan-700 via-cyan-800 to-slate-900 p-6 text-white shadow-xl">
+                        <div className="rounded-3xl bg-gradient-to-br from-cyan-700 via-cyan-800 to-slate-900 p-5 text-white shadow-xl sm:p-6">
                             <div className="flex items-center gap-2 mb-4">
                                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10">
                                     <Send className="h-5 w-5" />

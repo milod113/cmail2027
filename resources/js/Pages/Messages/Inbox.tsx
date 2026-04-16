@@ -16,6 +16,12 @@ type InboxMessage = {
     lu: boolean;
     sent_at: string | null;
     type_message: string | null;
+    original_receiver_id?: number | null;
+    original_receiver?: {
+        id: number;
+        name: string;
+        email: string;
+    } | null;
     sender?: {
         id: number;
         name: string;
@@ -160,6 +166,11 @@ export default function Inbox({
                                                 {message.sender?.role?.nom_role ? (
                                                     <span className="rounded-full bg-cyan-100 px-2.5 py-1 text-xs font-semibold text-cyan-800 dark:bg-cyan-500/15 dark:text-cyan-300">
                                                         {message.sender.role.nom_role}
+                                                    </span>
+                                                ) : null}
+                                                {message.original_receiver ? (
+                                                    <span className="rounded-full bg-violet-100 px-2.5 py-1 text-xs font-semibold text-violet-800 dark:bg-violet-500/15 dark:text-violet-300">
+                                                        {__('Delegue pour')} {message.original_receiver.name}
                                                     </span>
                                                 ) : null}
                                             </div>

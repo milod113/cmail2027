@@ -18,6 +18,12 @@ type SentMessage = {
     scheduled_at: string | null;
     type_message: string | null;
     requires_receipt: boolean;
+    original_receiver_id?: number | null;
+    original_receiver?: {
+        id: number;
+        name: string;
+        email: string;
+    } | null;
     receiver?: {
         id: number;
         name: string;
@@ -325,6 +331,12 @@ export default function Sent({
                                                             <StatusBadge type="default">
                                                                 <Users className="h-3 w-3" />
                                                                 {message.receiver.role.nom_role}
+                                                            </StatusBadge>
+                                                        )}
+                                                        {message.original_receiver && (
+                                                            <StatusBadge type="info">
+                                                                <AlertCircle className="h-3 w-3" />
+                                                                {__('Delegue pour')} {message.original_receiver.name}
                                                             </StatusBadge>
                                                         )}
                                                         {isScheduled && (
