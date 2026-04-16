@@ -8,7 +8,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
 
 class Publication extends Model
 {
@@ -76,6 +75,15 @@ class Publication extends Model
             return null;
         }
 
-        return Storage::disk('public')->url($this->photo_path);
+        $path = ltrim((string) $this->photo_path, '/');
+
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return $path;
+        }
+
+        // Normalize legacy values like "public/..." or "storage/..."
+        $path = preg_replace('#^(public/|storage/)#', '', $path) ?? $path;
+
+        return '/storage/'.$path;
     }
 }

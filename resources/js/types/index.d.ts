@@ -10,6 +10,7 @@ export interface User {
     } | null;
     department_id?: number | null;
     role_id?: number | null;
+    department_name?: string | null;
     is_online?: boolean;
     is_super_admin?: boolean;
     email_verified_at?: string;

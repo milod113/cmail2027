@@ -1,4 +1,5 @@
 import { router } from '@inertiajs/react';
+import { Globe } from 'lucide-react';
 import { useTranslation } from '@/Hooks/useTranslation';
 import type { ChangeEvent } from 'react';
 
@@ -41,11 +42,19 @@ export default function LanguageSwitcher() {
             </label>
 
             <div className="relative">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center gap-2 pl-3 text-slate-500">
+                    <Globe className="h-5 w-5" />
+                    <span className="flex items-center gap-1 text-base">
+                        <span aria-label="France">🇫🇷</span>
+                        <span aria-label="Algérie">🇩🇿</span>
+                    </span>
+                </div>
+
                 <select
                     id="language-switcher"
                     value={locale}
                     onChange={handleChange}
-                    className="block w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200 text-start"
+                    className="block w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 pl-16 text-sm text-slate-900 shadow-sm outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200 text-start"
                 >
                     {locales.map((item) => (
                         <option key={item.value} value={item.value}>

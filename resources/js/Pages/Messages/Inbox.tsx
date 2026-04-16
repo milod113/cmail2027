@@ -1,7 +1,8 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { useTranslation } from '@/Hooks/useTranslation';
 import { Head, Link, router } from '@inertiajs/react';
-import { Filter, Search } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Archive, CalendarDays, Filter, Search, Star, Zap } from 'lucide-react';
 
 type RoleOption = {
     id: number;
@@ -48,10 +49,12 @@ export default function Inbox({
     filters: {
         search: string;
         role: string;
+        quick: string;
     };
     roles: RoleOption[];
 }) {
     const { __, locale } = useTranslation();
+    const [selectedMessageIds, setSelectedMessageIds] = useState<number[]>([]);
 
     const cards = [
         { label: __('Non lus'), value: String(stats.unread), tone: 'from-emerald-500 to-teal-600' },
@@ -59,12 +62,13 @@ export default function Inbox({
         { label: __('Total'), value: String(stats.total), tone: 'from-sky-500 to-cyan-600' },
     ];
 
-    const applyFilters = (nextFilters: { search?: string; role?: string }) => {
+    const applyFilters = (nextFilters: { search?: string; role?: string; quick?: string }) => {
         router.get(
             route('messages.inbox'),
             {
                 search: nextFilters.search ?? filters.search,
                 role: nextFilters.role ?? filters.role,
+                quick: nextFilters.quick ?? filters.quick,
             },
             {
                 preserveState: true,
@@ -74,8 +78,53 @@ export default function Inbox({
         );
     };
 
+    const toggleMessageSelection = (messageId: number) => {
+        setSelectedMessageIds((current) =>
+            current.includes(messageId)
+                ? current.filter((id) => id !== messageId)
+                : [...current, messageId],
+        );
+    };
+
+    const visibleMessageIds = useMemo(() => messages.map((message) => message.id), [messages]);
+
+    const allVisibleSelected = visibleMessageIds.length > 0 && visibleMessageIds.every((id) => selectedMessageIds.includes(id));
+
+    const selectAllVisible = () => {
+        setSelectedMessageIds(Array.from(new Set([...selectedMessageIds, ...visibleMessageIds])));
+    };
+
+    const deselectAllVisible = () => {
+        const visibleIds = new Set(visibleMessageIds);
+        setSelectedMessageIds((current) => current.filter((id) => !visibleIds.has(id)));
+    };
+
+    const archiveSelected = () => {
+        if (selectedMessageIds.length === 0) {
+            return;
+        }
+
+        router.post(
+            route('messages.archive.bulk'),
+            { message_ids: selectedMessageIds },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setSelectedMessageIds([]);
+                },
+            },
+        );
+    };
+
     const formatDate = (value: string) =>
         new Date(value).toLocaleString(locale === 'ar' ? 'ar-DZ' : 'fr-FR');
+
+    const quickFilterOptions = [
+        { value: '', label: __('Tous'), icon: Filter },
+        { value: 'yesterday', label: __('Hier'), icon: CalendarDays },
+        { value: 'important', label: __('Important'), icon: Star },
+        { value: 'urgent', label: __('Urgent'), icon: Zap },
+    ];
 
     return (
         <AuthenticatedLayout
@@ -141,17 +190,101 @@ export default function Inbox({
                         </div>
                     </div>
 
+                    <div className="mt-4 flex flex-wrap items-center gap-2">
+                        {quickFilterOptions.map((option) => {
+                            const isActive = filters.quick === option.value;
+                            const Icon = option.icon;
+
+                            return (
+                                <button
+                                    key={option.value || 'all'}
+                                    type="button"
+                                    onClick={() => applyFilters({ quick: option.value })}
+                                    className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                                        isActive
+                                            ? 'border-cyan-400 bg-cyan-50 text-cyan-700 dark:border-cyan-500/60 dark:bg-cyan-500/15 dark:text-cyan-200'
+                                            : 'border-slate-200 bg-white text-slate-600 hover:border-cyan-300 hover:text-cyan-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-cyan-500 dark:hover:text-cyan-300'
+                                    }`}
+                                >
+                                    <Icon className="h-3.5 w-3.5" />
+                                    {option.label}
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap items-center gap-3">
+                        <button
+                            type="button"
+                            onClick={allVisibleSelected ? deselectAllVisible : selectAllVisible}
+                            className="rounded-xl border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold text-cyan-700 transition hover:border-cyan-300 hover:bg-cyan-100 dark:border-cyan-500/20 dark:bg-cyan-500/10 dark:text-cyan-300 dark:hover:border-cyan-500/40 dark:hover:bg-cyan-500/20"
+                        >
+                            {allVisibleSelected ? __('Désélectionner tout') : __('Sélectionner tout')}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={deselectAllVisible}
+                            disabled={selectedMessageIds.length === 0}
+                            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-800"
+                        >
+                            {__('Effacer la sélection')}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={archiveSelected}
+                            disabled={selectedMessageIds.length === 0}
+                            className="rounded-xl bg-gradient-to-r from-cyan-600 to-sky-700 px-4 py-2 text-sm font-semibold text-white transition hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            {__('Archiver la sélection')} ({selectedMessageIds.length})
+                        </button>
+                    </div>
+
                     <div className="mt-6 grid gap-4">
                         {messages.length > 0 ? (
                             messages.map((message) => (
                                 <div key={message.id} className="rounded-3xl border border-slate-200/70 bg-slate-50/80 px-5 py-4 dark:border-slate-800 dark:bg-slate-950/40">
                                     <div className="flex items-start justify-between gap-4">
                                         <div className="min-w-0 flex-1">
+                                            <div className="mb-3 flex items-center gap-3">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedMessageIds.includes(message.id)}
+                                                    onChange={() => toggleMessageSelection(message.id)}
+                                                    className="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500/30 dark:border-slate-600 dark:bg-slate-900"
+                                                />
+                                                <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                                                    {selectedMessageIds.includes(message.id) ? __('Sélectionné') : __('Sélectionner')}
+                                                </span>
+                                            </div>
                                             <div className="flex flex-wrap items-center gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        router.post(
+                                                            route('messages.important.toggle', message.id),
+                                                            {},
+                                                            { preserveScroll: true, preserveState: true },
+                                                        )
+                                                    }
+                                                    className={`inline-flex h-7 w-7 items-center justify-center rounded-full border transition ${
+                                                        message.important
+                                                            ? 'border-amber-300 bg-amber-50 text-amber-600 hover:border-amber-400 hover:bg-amber-100 dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-300'
+                                                            : 'border-slate-200 bg-white text-slate-400 hover:border-amber-300 hover:text-amber-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-500 dark:hover:border-amber-500/40 dark:hover:text-amber-300'
+                                                    }`}
+                                                    aria-label={message.important ? __('Retirer important') : __('Marquer important')}
+                                                    title={message.important ? __('Retirer important') : __('Marquer important')}
+                                                >
+                                                    <Star className={`h-3.5 w-3.5 ${message.important ? 'fill-current' : ''}`} />
+                                                </button>
                                                 <p className="font-semibold text-slate-900 dark:text-white">{message.sujet}</p>
                                                 {message.important ? (
                                                     <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800 dark:bg-amber-500/15 dark:text-amber-300">
                                                         {__('Important')}
+                                                    </span>
+                                                ) : null}
+                                                {message.type_message === 'urgent' ? (
+                                                    <span className="rounded-full bg-rose-100 px-2.5 py-1 text-xs font-semibold text-rose-800 dark:bg-rose-500/15 dark:text-rose-300">
+                                                        {__('Urgent')}
                                                     </span>
                                                 ) : null}
                                                 <span
@@ -197,6 +330,7 @@ export default function Inbox({
                                                 onClick={() => router.post(route('messages.archive.store', message.id))}
                                                 className="rounded-full border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-700 transition hover:border-cyan-400 hover:text-cyan-700 dark:border-slate-700 dark:text-slate-300 dark:hover:border-cyan-500 dark:hover:text-cyan-300"
                                             >
+                                                <Archive className="mr-1 inline h-3 w-3" />
                                                 {__('Archiver')}
                                             </button>
                                         </div>

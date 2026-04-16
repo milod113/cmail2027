@@ -68,6 +68,13 @@ function initials(name: string): string {
         .join('');
 }
 
+function splitIntoParagraphs(content: string): string[] {
+    return content
+        .split(/\n{2,}/)
+        .map((paragraph) => paragraph.trim())
+        .filter(Boolean);
+}
+
 function PublicationComments({ publication }: { publication: FeedPublication }) {
     const form = useForm({
         content: '',
@@ -306,12 +313,17 @@ export default function PublicationsFeed({ publications }: PublicationsFeedProps
             {/* Posts Feed */}
             <section className="space-y-6">
                 {publications.length > 0 ? (
-                    publications.map((publication, index) => (
-                        <article
-                            key={publication.id}
-                            className="group animate-fadeInUp relative overflow-hidden rounded-3xl bg-white/80 shadow-xl shadow-slate-200/50 backdrop-blur-xl transition-all hover:shadow-2xl dark:bg-slate-800/50 dark:shadow-slate-900/30"
-                            style={{ animationDelay: `${index * 100}ms` }}
-                        >
+                    publications.map((publication, index) => {
+                        const isExpanded = expandedPost === publication.id;
+                        const paragraphs = splitIntoParagraphs(publication.content);
+                        const hasLongContent = publication.content.length > 200 || paragraphs.length > 2;
+
+                        return (
+                            <article
+                                key={publication.id}
+                                className="group animate-fadeInUp relative overflow-hidden rounded-3xl bg-white/80 shadow-xl shadow-slate-200/50 backdrop-blur-xl transition-all hover:shadow-2xl dark:bg-slate-800/50 dark:shadow-slate-900/30"
+                                style={{ animationDelay: `${index * 100}ms` }}
+                            >
                             {/* Decorative gradient line */}
                             <div className="absolute left-0 top-0 h-1 w-0 bg-gradient-to-r from-cyan-500 to-sky-500 transition-all duration-700 group-hover:w-full"></div>
                             
@@ -350,19 +362,34 @@ export default function PublicationsFeed({ publications }: PublicationsFeedProps
                                             {publication.title}
                                         </h4>
                                     )}
-                                    
-                                    <p className={`whitespace-pre-line text-base leading-relaxed text-slate-700 dark:text-slate-300 ${
-                                        expandedPost === publication.id ? '' : 'line-clamp-3'
-                                    }`}>
-                                        {publication.content}
-                                    </p>
-                                    
-                                    {publication.content.length > 200 && (
+
+                                    <div className="mt-4">
+                                        {isExpanded ? (
+                                            <div className="max-w-3xl space-y-4 text-base leading-8 text-slate-700 dark:text-slate-300">
+                                                {(paragraphs.length > 0 ? paragraphs : [publication.content]).map((paragraph, paragraphIndex) => (
+                                                    <p key={`${publication.id}-paragraph-${paragraphIndex}`} className="whitespace-pre-line">
+                                                        {paragraph}
+                                                    </p>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="relative">
+                                                <p className="line-clamp-4 whitespace-pre-line text-base leading-7 text-slate-700 dark:text-slate-300">
+                                                    {publication.content}
+                                                </p>
+                                                {hasLongContent && (
+                                                    <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-white/95 to-transparent dark:from-slate-800/95"></div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {hasLongContent && (
                                         <button
-                                            onClick={() => setExpandedPost(expandedPost === publication.id ? null : publication.id)}
-                                            className="mt-2 text-sm font-medium text-cyan-600 hover:text-cyan-700 dark:text-cyan-400"
+                                            onClick={() => setExpandedPost(isExpanded ? null : publication.id)}
+                                            className="mt-3 inline-flex items-center rounded-full border border-cyan-200 bg-cyan-50/80 px-3 py-1 text-sm font-semibold text-cyan-700 transition hover:border-cyan-300 hover:bg-cyan-100 dark:border-cyan-500/30 dark:bg-cyan-500/10 dark:text-cyan-300 dark:hover:border-cyan-500/50 dark:hover:bg-cyan-500/15"
                                         >
-                                            {expandedPost === publication.id ? 'Voir moins' : 'Lire la suite'}
+                                            {isExpanded ? 'Voir moins' : 'Lire la suite'}
                                         </button>
                                     )}
                                 </div>
@@ -417,8 +444,9 @@ export default function PublicationsFeed({ publications }: PublicationsFeedProps
                                     <PublicationComments publication={publication} />
                                 </div>
                             </div>
-                        </article>
-                    ))
+                            </article>
+                        );
+                    })
                 ) : (
                     <div className="animate-fadeIn rounded-3xl border border-dashed border-slate-300 bg-white/80 p-16 text-center backdrop-blur-sm dark:border-slate-700 dark:bg-slate-800/30">
                         <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800">

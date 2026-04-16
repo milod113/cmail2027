@@ -1,5 +1,6 @@
 import Dropdown from '@/Components/Dropdown';
 import LanguageSwitcher from '@/Components/LanguageSwitcher';
+import SupportDrawer from '@/Components/SupportDrawer';
 import { useTranslation } from '@/Hooks/useTranslation';
 import { Link, usePage } from '@inertiajs/react';
 import {
@@ -442,7 +443,24 @@ export default function AuthenticatedLayout({
     children,
 }: LayoutProps) {
     const { auth, current_locale } = usePage().props as {
-        auth: { user: { id: number; name: string; email: string; avatar?: string; role?: string } };
+        auth: {
+            user: {
+                id: number;
+                name: string;
+                email: string;
+                avatar?: string;
+                role?: string;
+                department_name?: string | null;
+                delegation_reminder?: {
+                    is_active: boolean;
+                    delegate_user?: {
+                        id: number;
+                        name: string;
+                        email: string;
+                    } | null;
+                } | null;
+            };
+        };
         current_locale: string;
     };
     const { __, isRtl } = useTranslation();
@@ -452,7 +470,7 @@ export default function AuthenticatedLayout({
     const [scrolled, setScrolled] = useState(false);
     const [unreadInboxCount, setUnreadInboxCount] = useState(0);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-    const [isDesktopViewport, setIsDesktopViewport] = useState(false);
+    const [supportDrawerOpen, setSupportDrawerOpen] = useState(false);
 
     useEffect(() => {
         const storedTheme = window.localStorage.getItem('theme');
@@ -463,26 +481,6 @@ export default function AuthenticatedLayout({
         document.documentElement.classList.toggle('dark', shouldUseDark);
         setDarkMode(shouldUseDark);
         setIsSidebarCollapsed(storedCollapsed === 'true');
-        setIsDesktopViewport(window.matchMedia('(min-width: 1024px)').matches);
-    }, []);
-
-    useEffect(() => {
-        const mediaQuery = window.matchMedia('(min-width: 1024px)');
-        const handleViewportChange = (event: MediaQueryListEvent | MediaQueryList) => {
-            setIsDesktopViewport(event.matches);
-        };
-
-        handleViewportChange(mediaQuery);
-
-        if (mediaQuery.addEventListener) {
-            mediaQuery.addEventListener('change', handleViewportChange);
-
-            return () => mediaQuery.removeEventListener('change', handleViewportChange);
-        }
-
-        mediaQuery.addListener(handleViewportChange);
-
-        return () => mediaQuery.removeListener(handleViewportChange);
     }, []);
 
     useEffect(() => {
@@ -594,6 +592,8 @@ export default function AuthenticatedLayout({
         .join('')
         .toUpperCase()
         .slice(0, 2);
+    const delegationReminder = auth.user.delegation_reminder;
+    const showDelegationReminder = Boolean(delegationReminder?.is_active);
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-cyan-50/40 dark:from-slate-950 dark:via-slate-900 dark:to-cyan-950/30">
@@ -605,9 +605,9 @@ export default function AuthenticatedLayout({
                         width: isSidebarCollapsed ? 80 : 288,
                     }}
                     transition={{ duration: 0.2, ease: "easeInOut" }}
-                    className="fixed left-0 top-0 z-30 hidden h-full shrink-0 border-r border-slate-200/70 bg-white/80 backdrop-blur-xl dark:border-slate-800/50 dark:bg-slate-950/80 lg:flex lg:flex-col overflow-hidden"
+                    className="relative z-30 hidden shrink-0 border-r border-slate-200/70 bg-white/80 backdrop-blur-xl dark:border-slate-800/50 dark:bg-slate-950/80 lg:flex lg:flex-col"
                 >
-                    <div className={`flex flex-col h-full px-3 py-5 ${isSidebarCollapsed ? 'items-center' : ''}`}>
+                    <div className={`flex flex-col min-h-screen px-3 py-5 ${isSidebarCollapsed ? 'items-center' : ''}`}>
                         {/* Logo Section */}
                         <motion.div
                             whileHover={{ scale: 1.02 }}
@@ -618,27 +618,18 @@ export default function AuthenticatedLayout({
                                     <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                                         {__('Centre hospitalier')}
                                     </div>
-                                    <div className="mt-2">
-                                        <img
-                                            src="/images/cmail.png"
-                                            alt="Cmail 2027"
-                                            className="h-10 w-auto object-contain"
-                                        />
-                                    </div>
                                     <div className="mt-1 bg-gradient-to-r from-cyan-600 to-sky-600 bg-clip-text text-xl font-bold text-transparent dark:from-cyan-400 dark:to-sky-400">
                                         cmail2027
                                     </div>
-                                    <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
-                                        {__('Communication interne')}
+                                    <p className="mt-2 text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                                        {__('Plateforme de messagerie interne, delegation intelligente et suivi des notifications.')}
                                     </p>
                                 </>
                             ) : (
                                 <div className="flex flex-col items-center">
-                                    <img
-                                        src="/images/cmail.png"
-                                        alt="Cmail"
-                                        className="h-8 w-auto object-contain"
-                                    />
+                                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500 to-sky-600 text-xs font-bold text-white shadow">
+                                        CM
+                                    </span>
                                 </div>
                             )}
                         </motion.div>
@@ -668,7 +659,7 @@ export default function AuthenticatedLayout({
                         </button>
 
                         {/* Navigation */}
-                        <nav className="flex-1 space-y-1 overflow-y-auto w-full">
+                        <nav className="space-y-1 w-full">
                             {navigation.map((item) => (
                                 <SidebarLink
                                     key={item.routeName}
@@ -709,10 +700,7 @@ export default function AuthenticatedLayout({
                 </motion.aside>
 
                 {/* Main Content */}
-                <div
-                    className="flex flex-1 flex-col transition-all duration-200"
-                    style={{ marginLeft: isDesktopViewport ? (isSidebarCollapsed ? 80 : 288) : 0 }}
-                >
+                <div className="flex flex-1 flex-col transition-all duration-200">
                     {/* Header */}
                     <motion.header
                         initial={false}
@@ -828,9 +816,16 @@ export default function AuthenticatedLayout({
                                             <Dropdown.Link href="#" icon={<Settings className="h-4 w-4" />}>
                                                 {__('Paramètres')}
                                             </Dropdown.Link>
-                                            <Dropdown.Link href="#" icon={<HelpCircle className="h-4 w-4" />}>
-                                                {__('Aide et support')}
-                                            </Dropdown.Link>
+                                            <button
+                                                type="button"
+                                                onClick={() => setSupportDrawerOpen(true)}
+                                                className="block w-full px-4 py-2 text-start text-sm leading-5 text-gray-700 transition duration-150 ease-in-out hover:bg-gray-100 focus:bg-gray-100 focus:outline-none dark:text-slate-200 dark:hover:bg-slate-800"
+                                            >
+                                                <span className="flex items-center gap-2">
+                                                    <HelpCircle className="h-4 w-4 shrink-0" />
+                                                    <span>{__('Aide et support')}</span>
+                                                </span>
+                                            </button>
                                             <div className="border-t border-slate-100 dark:border-slate-800 mt-1 pt-1">
                                                 <Dropdown.Link href={route('logout')} method="post" as="button" icon={<LogOut className="h-4 w-4" />}>
                                                     {__('Déconnexion')}
@@ -842,6 +837,30 @@ export default function AuthenticatedLayout({
                             </div>
                         </div>
                     </motion.header>
+
+                    {showDelegationReminder && (
+                        <div className="border-b border-amber-200/70 bg-amber-50/90 dark:border-amber-500/30 dark:bg-amber-500/10">
+                            <div className="px-4 py-2.5 sm:px-6 lg:px-8">
+                                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                    <p className="flex items-start gap-2 text-sm text-amber-900 dark:text-amber-100">
+                                        <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                                        <span>
+                                            {__('Rappel: votre delegation automatique est active.')}
+                                            {delegationReminder?.delegate_user?.name
+                                                ? ` ${__('Remplacant')}: ${delegationReminder.delegate_user.name}.`
+                                                : ''}
+                                        </span>
+                                    </p>
+                                    <Link
+                                        href={route('profile.edit')}
+                                        className="inline-flex w-fit items-center gap-1 rounded-full border border-amber-300/80 bg-white px-3 py-1 text-xs font-semibold text-amber-800 transition hover:bg-amber-100 dark:border-amber-400/40 dark:bg-slate-900 dark:text-amber-200 dark:hover:bg-amber-500/20"
+                                    >
+                                        {__('Modifier mes parametres')}
+                                    </Link>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Mobile Menu Overlay */}
                     <AnimatePresence>
@@ -863,9 +882,11 @@ export default function AuthenticatedLayout({
                                 >
                                     <div className="flex flex-col h-full">
                                         <div className="flex items-center justify-between border-b border-slate-200 p-4 dark:border-slate-800">
-                                            <div className="flex items-center gap-2">
-                                                <img src="/images/cmail.png" alt="Cmail" className="h-8 w-auto" />
+                                            <div className="min-w-0">
                                                 <span className="font-bold bg-gradient-to-r from-cyan-600 to-sky-600 bg-clip-text text-transparent">cmail2027</span>
+                                                <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                                                    {__('Messagerie interne et gestion de delegation.')}
+                                                </p>
                                             </div>
                                             <button
                                                 onClick={() => setMobileOpen(false)}
@@ -949,6 +970,18 @@ export default function AuthenticatedLayout({
                     </motion.main>
                 </div>
             </div>
+
+            <SupportDrawer
+                open={supportDrawerOpen}
+                onClose={() => setSupportDrawerOpen(false)}
+                user={{
+                    id: auth.user.id,
+                    name: auth.user.name,
+                    email: auth.user.email,
+                    role: auth.user.role ?? null,
+                    department_name: auth.user.department_name ?? null,
+                }}
+            />
         </div>
     );
 }

@@ -124,6 +124,7 @@ export default function Show({ message }: { message: MessageDetail }) {
     const { __, locale, isRtl } = useTranslation();
     const [isReplying, setIsReplying] = useState(false);
     const [fileInputKey, setFileInputKey] = useState(0);
+    const [quickReplySendingKey, setQuickReplySendingKey] = useState<string | null>(null);
     const originalDate = formatDate(message.created_at, locale);
     const originalRelative = formatRelativeDate(message.created_at, locale);
 
@@ -181,6 +182,57 @@ export default function Show({ message }: { message: MessageDetail }) {
     };
 
     const hasAttachment = !!resolveAttachmentUrl(message.fichier, message.attachment_url);
+    const quickReplyTemplates = useMemo(
+        () => [
+            {
+                key: 'received',
+                label: __('Bien reçu'),
+                contenu: __('Bien reçu, merci pour votre message.'),
+            },
+            {
+                key: 'working',
+                label: __('Je traite'),
+                contenu: __('Merci, je prends en charge ce point et je vous fais un retour rapidement.'),
+            },
+            {
+                key: 'need-clarification',
+                label: __('Besoin de précision'),
+                contenu: __('Merci. Pouvez-vous préciser davantage pour que je puisse traiter la demande ?'),
+            },
+            {
+                key: 'urgent',
+                label: __('Action immédiate'),
+                contenu: __('Reçu. Action immédiate lancée de mon côté.'),
+            },
+        ],
+        [__],
+    );
+    const isQuickReplySending = quickReplySendingKey !== null;
+
+    const sendQuickReply = (templateKey: string, contenu: string) => {
+        if (isQuickReplySending || processing) {
+            return;
+        }
+
+        setQuickReplySendingKey(templateKey);
+
+        router.post(
+            route('replies.store', message.id),
+            { contenu },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    clearErrors();
+                    router.reload({
+                        only: ['message'],
+                    });
+                },
+                onFinish: () => {
+                    setQuickReplySendingKey(null);
+                },
+            },
+        );
+    };
 
     return (
         <AuthenticatedLayout
@@ -425,6 +477,46 @@ export default function Show({ message }: { message: MessageDetail }) {
                                         </p>
                                     </div>
                                 )}
+                            </div>
+
+                            <div className="mt-8 rounded-2xl border border-cyan-200/70 bg-gradient-to-br from-cyan-50/70 to-sky-50/40 p-5 dark:border-cyan-500/20 dark:from-cyan-500/10 dark:to-sky-500/5">
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                    <div>
+                                        <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+                                            {__('Réponses rapides')}
+                                        </h3>
+                                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                                            {__('Un clic envoie directement une réponse.')}
+                                        </p>
+                                    </div>
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-2.5 py-1 text-[11px] font-medium text-cyan-700 dark:bg-slate-900/70 dark:text-cyan-300">
+                                        <Send className="h-3 w-3" />
+                                        {__('Envoi instantané')}
+                                    </span>
+                                </div>
+
+                                <div className="mt-4 flex flex-wrap gap-2">
+                                    {quickReplyTemplates.map((template) => {
+                                        const isSendingThis = quickReplySendingKey === template.key;
+
+                                        return (
+                                            <button
+                                                key={template.key}
+                                                type="button"
+                                                onClick={() => sendQuickReply(template.key, template.contenu)}
+                                                disabled={isQuickReplySending || processing}
+                                                className="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-white px-3 py-1.5 text-xs font-semibold text-cyan-700 transition-all hover:border-cyan-300 hover:bg-cyan-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-cyan-500/30 dark:bg-slate-900/70 dark:text-cyan-300 dark:hover:border-cyan-500/50 dark:hover:bg-cyan-500/10"
+                                            >
+                                                {isSendingThis ? (
+                                                    <span className="h-3 w-3 animate-spin rounded-full border-2 border-cyan-500 border-t-transparent dark:border-cyan-300 dark:border-t-transparent" />
+                                                ) : (
+                                                    <CornerDownLeft className="h-3.5 w-3.5" />
+                                                )}
+                                                {template.label}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
                             </div>
 
                             {/* Reply Form Section */}

@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\UserSetting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 use Inertia\Middleware;
@@ -38,15 +39,7 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'auth' => [
-                'user' => fn () => $request->user()
-                    ? [
-                        ...$request->user()->toArray(),
-                        'role' => $request->user()->role?->nom_role,
-                        'role_details' => $request->user()->role
-                            ? $request->user()->role->only(['id', 'nom_role'])
-                            : null,
-                    ]
-                    : null,
+                'user' => fn () => $this->resolveAuthUser($request),
             ],
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
@@ -70,5 +63,57 @@ class HandleInertiaRequests extends Middleware
         }
         
         return $content;
+    }
+
+    /**
+     * Resolve authenticated user payload shared with Inertia.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function resolveAuthUser(Request $request): ?array
+    {
+        $user = $request->user();
+
+        if (! $user) {
+            return null;
+        }
+
+        $user->loadMissing([
+            'role:id,nom_role',
+            'department:id,name',
+        ]);
+
+        $settings = UserSetting::query()
+            ->with('delegateUser:id,name,email')
+            ->select('id', 'user_id', 'is_out_of_office', 'redirect_messages', 'delegate_user_id')
+            ->where('user_id', $user->id)
+            ->first();
+
+        $hasActiveDelegation = (bool) (
+            $settings?->is_out_of_office
+            && $settings?->redirect_messages
+            && $settings?->delegate_user_id
+        );
+
+        return [
+            ...$user->toArray(),
+            'role' => $user->role?->nom_role,
+            'role_details' => $user->role
+                ? $user->role->only(['id', 'nom_role'])
+                : null,
+            'department_name' => $user->department?->name,
+            'delegation_reminder' => $hasActiveDelegation
+                ? [
+                    'is_active' => true,
+                    'delegate_user' => $settings?->delegateUser
+                        ? [
+                            'id' => $settings->delegateUser->id,
+                            'name' => $settings->delegateUser->name,
+                            'email' => $settings->delegateUser->email,
+                        ]
+                        : null,
+                ]
+                : null,
+        ];
     }
 }

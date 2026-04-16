@@ -27,6 +27,12 @@ class MessageController extends Controller
         $user = $request->user();
         $search = trim((string) $request->string('search'));
         $roleId = $request->integer('role');
+        $quickFilter = (string) $request->string('quick');
+        $allowedQuickFilters = ['', 'yesterday', 'important', 'urgent'];
+
+        if (! in_array($quickFilter, $allowedQuickFilters, true)) {
+            $quickFilter = '';
+        }
 
         $messages = Message::query()
             ->with([
@@ -51,6 +57,15 @@ class MessageController extends Controller
             })
             ->when($roleId > 0, function ($query) use ($roleId) {
                 $query->whereHas('sender', fn ($userQuery) => $userQuery->where('role_id', $roleId));
+            })
+            ->when($quickFilter === 'yesterday', function ($query) {
+                $query->whereDate(DB::raw('COALESCE(sent_at, created_at)'), Carbon::yesterday()->toDateString());
+            })
+            ->when($quickFilter === 'important', function ($query) {
+                $query->where('important', true);
+            })
+            ->when($quickFilter === 'urgent', function ($query) {
+                $query->where('type_message', 'urgent');
             })
             ->latest('sent_at')
             ->latest()
@@ -77,6 +92,7 @@ class MessageController extends Controller
             'filters' => [
                 'search' => $search,
                 'role' => $roleId > 0 ? (string) $roleId : '',
+                'quick' => $quickFilter,
             ],
             'roles' => Role::query()
                 ->select('id', 'nom_role')
@@ -84,6 +100,19 @@ class MessageController extends Controller
                 ->get(),
             'messages' => $messages,
         ]);
+    }
+
+    public function toggleImportant(Request $request, Message $message): RedirectResponse
+    {
+        $this->authorizeMessageAccess($request->user()->id, $message);
+
+        $message->update([
+            'important' => ! $message->important,
+        ]);
+
+        return back()->with('success', $message->important
+            ? 'Message marque comme important.'
+            : 'Message retire des importants.');
     }
 
     public function sent(Request $request): Response
@@ -966,14 +995,16 @@ class MessageController extends Controller
             return [];
         }
 
-        $messages->loadMissing([
-            'sender:id,name,email',
-            'receiver' => fn ($query) => $query
-                ->with([
-                    'userSetting.delegateUser:id,name,email',
-                ])
-                ->select('id', 'name', 'email'),
-        ]);
+        $messages->each(function (Message $message): void {
+            $message->loadMissing([
+                'sender:id,name,email',
+                'receiver' => fn ($query) => $query
+                    ->with([
+                        'userSetting.delegateUser:id,name,email',
+                    ])
+                    ->select('id', 'name', 'email'),
+            ]);
+        });
 
         $generatedMessages = [];
 
@@ -1052,8 +1083,8 @@ class MessageController extends Controller
             'sender_id' => $message->sender_id,
             'receiver_id' => $settings->delegate_user_id,
             'original_receiver_id' => $message->receiver_id,
-            'sujet' => $message->sujet,
-            'contenu' => $message->contenu,
+            'sujet' => $this->delegatedSubject($message->sujet),
+            'contenu' => $this->delegatedBody($message),
             'fichier' => $message->fichier,
             'lu_le' => null,
             'lu' => false,
@@ -1078,6 +1109,35 @@ class MessageController extends Controller
         }
 
         return Message::create($payload);
+    }
+
+    private function delegatedSubject(?string $subject): string
+    {
+        $subject = trim((string) $subject);
+
+        if ($subject === '') {
+            return '[AUTO] Message redirige';
+        }
+
+        if (str_starts_with(mb_strtolower($subject), '[auto]')) {
+            return $subject;
+        }
+
+        return "[AUTO] {$subject}";
+    }
+
+    private function delegatedBody(Message $message): string
+    {
+        $receiverName = $message->receiver?->name ?? 'Inconnu';
+        $receiverEmail = $message->receiver?->email ? " <{$message->receiver->email}>" : '';
+        $sentAt = optional($message->sent_at ?? $message->created_at)?->format('d/m/Y H:i') ?? 'Date inconnue';
+
+        return trim(
+            "Ce message vous a ete redirige automatiquement (absence/delegation).\n".
+            "Destinataire initial : {$receiverName}{$receiverEmail}\n".
+            "Date du message initial : {$sentAt}\n\n".
+            trim((string) $message->contenu)
+        );
     }
 
     private function authorizeMessageAccess(int $userId, Message $message): void
@@ -1378,11 +1438,48 @@ class MessageController extends Controller
     {
         return [
             'recipients' => User::query()
-                ->with('role:id,nom_role')
+                ->with([
+                    'role:id,nom_role',
+                    'userSetting:id,user_id,is_out_of_office,redirect_messages,delegate_user_id',
+                    'userSetting.delegateUser:id,name,email',
+                ])
                 ->select('id', 'name', 'email', 'role_id')
                 ->whereKeyNot($userId)
                 ->orderBy('name')
-                ->get(),
+                ->get()
+                ->map(function (User $recipient): array {
+                    $settings = $recipient->userSetting;
+                    $delegateUser = $settings?->delegateUser;
+                    $hasAutoDelegation = (bool) (
+                        $settings?->is_out_of_office
+                        && $settings?->redirect_messages
+                        && $settings?->delegate_user_id
+                    );
+
+                    return [
+                        'id' => $recipient->id,
+                        'name' => $recipient->name,
+                        'email' => $recipient->email,
+                        'role_id' => $recipient->role_id,
+                        'role' => $recipient->role
+                            ? [
+                                'id' => $recipient->role->id,
+                                'nom_role' => $recipient->role->nom_role,
+                            ]
+                            : null,
+                        'is_out_of_office' => (bool) ($settings?->is_out_of_office ?? false),
+                        'redirect_messages' => (bool) ($settings?->redirect_messages ?? false),
+                        'has_auto_delegation' => $hasAutoDelegation,
+                        'delegate_user' => $delegateUser
+                            ? [
+                                'id' => $delegateUser->id,
+                                'name' => $delegateUser->name,
+                                'email' => $delegateUser->email,
+                            ]
+                            : null,
+                    ];
+                })
+                ->values(),
             'roles' => Role::query()
                 ->select('id', 'nom_role')
                 ->orderBy('nom_role')

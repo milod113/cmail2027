@@ -5,6 +5,7 @@ use App\Http\Controllers\CommentController;
 use App\Http\Controllers\LikeController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\PublicationController;
+use App\Http\Controllers\SupportTicketController;
 use App\Models\Department;
 use App\Models\Establishment;
 use App\Models\Publication;
@@ -40,6 +41,7 @@ Route::post('/language', function (Request $request) {
 
 Route::middleware(['auth'])->group(function () {
     Route::post('/publications', [PublicationController::class, 'store'])->name('publications.store');
+    Route::post('/support/tickets', [SupportTicketController::class, 'store'])->name('support-tickets.store');
     Route::post('/publications/{publication}/like', [LikeController::class, 'toggle'])->name('publications.like.toggle');
     Route::post('/publications/{publication}/comments', [CommentController::class, 'store'])->name('publications.comments.store');
     Route::get('/inbox', [MessageController::class, 'inbox'])->name('messages.inbox');
@@ -135,6 +137,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/messages/archive/bulk', [MessageController::class, 'bulkArchive'])->name('messages.archive.bulk');
     Route::post('/messages/{message}/archive', [MessageController::class, 'archive'])->name('messages.archive.store');
     Route::post('/messages/{message}/unarchive', [MessageController::class, 'unarchive'])->name('messages.archive.restore');
+    Route::post('/messages/{message}/important', [MessageController::class, 'toggleImportant'])->name('messages.important.toggle');
     Route::get('/notifications', [MessageController::class, 'notifications'])->name('notifications.index');
     Route::post('/notifications/read', [MessageController::class, 'markNotificationsRead'])->name('notifications.read');
     Route::resource('departments', DepartmentController::class)->except(['show']);
