@@ -11,6 +11,7 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -153,6 +154,7 @@ class MessageController extends Controller
             'created_at',
             'sent_at',
             'type_message',
+            'message_group_uuid',
         ];
 
         if ($hasReceiverIdsColumn) {
@@ -165,6 +167,7 @@ class MessageController extends Controller
                     ->with('role:id,nom_role')
                     ->select('id', 'name', 'email', 'role_id'),
             ])
+            ->whereNull('parent_id')
             ->where(function ($query) use ($user) {
                 $query
                     ->where('sender_id', $user->id)
@@ -178,6 +181,10 @@ class MessageController extends Controller
             ->orderByDesc('created_at')
             ->get($columns)
             ->groupBy(function (Message $message) {
+                if (filled($message->message_group_uuid)) {
+                    return 'uuid:'.$message->message_group_uuid;
+                }
+
                 $receiverIds = collect($message->receiver_ids ?? [])
                     ->filter()
                     ->map(fn ($id) => (int) $id)
@@ -345,6 +352,12 @@ class MessageController extends Controller
 
     public function show(Request $request, Message $message): Response
     {
+        $threadRoot = $this->resolveThreadRootMessage($message);
+
+        if ($this->shouldRenderGroupThreadView($request->user()->id, $threadRoot)) {
+            return $this->renderGroupThreadView($request, $threadRoot);
+        }
+
         $this->authorizeMessageAccess($request->user()->id, $message);
 
         if ($message->receiver_id === $request->user()->id && ! $message->lu) {
@@ -414,6 +427,67 @@ class MessageController extends Controller
                 'has_unread_replies' => false,
             ],
         ]);
+    }
+
+    public function replyAll(Request $request, Message $message): RedirectResponse
+    {
+        $rootMessage = $this->resolveThreadRootMessage($message);
+        $this->authorizeDirectorThreadReply($request->user()->id, $rootMessage);
+
+        $validated = $this->validateTrackedReply($request);
+        $storedFile = $this->resolveAttachmentPath($request, 'messages');
+
+        $recipientMessages = $this->groupRecipientMessages($rootMessage);
+        $receiverIds = $recipientMessages
+            ->pluck('receiver_id')
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+
+        foreach ($recipientMessages as $recipientMessage) {
+            $reply = $this->createTrackedReplyMessage(
+                $rootMessage,
+                $request->user()->id,
+                (int) $recipientMessage->receiver_id,
+                $validated['contenu'],
+                $storedFile,
+                $receiverIds,
+            );
+
+            broadcast(new NotificationCreated((int) $reply->receiver_id, 'message', (int) $reply->id))->toOthers();
+        }
+
+        return back()->with('success', 'Réponse envoyée à tous les destinataires.');
+    }
+
+    public function replyRecipient(Request $request, Message $message, User $recipient): RedirectResponse
+    {
+        $rootMessage = $this->resolveThreadRootMessage($message);
+        $this->authorizeDirectorThreadReply($request->user()->id, $rootMessage);
+
+        $recipientMessages = $this->groupRecipientMessages($rootMessage);
+        abort_unless(
+            $recipientMessages->contains(fn (Message $recipientMessage) => (int) $recipientMessage->receiver_id === (int) $recipient->id),
+            404
+        );
+
+        $validated = $this->validateTrackedReply($request);
+        $storedFile = $this->resolveAttachmentPath($request, 'messages');
+
+        $reply = $this->createTrackedReplyMessage(
+            $rootMessage,
+            $request->user()->id,
+            (int) $recipient->id,
+            $validated['contenu'],
+            $storedFile,
+            [$recipient->id],
+        );
+
+        broadcast(new NotificationCreated((int) $reply->receiver_id, 'message', (int) $reply->id))->toOthers();
+
+        return back()->with('success', 'Réponse envoyée au destinataire sélectionné.');
     }
 
     public function storeReply(Request $request, Message $message): RedirectResponse
@@ -667,6 +741,32 @@ class MessageController extends Controller
         return back()->with('success', 'Message archivé avec succès.');
     }
 
+    public function bulkArchive(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'message_ids' => ['required', 'array', 'min:1'],
+            'message_ids.*' => ['required', 'integer', 'exists:messages,id'],
+        ]);
+
+        $messages = Message::query()
+            ->whereIn('id', $validated['message_ids'])
+            ->get();
+
+        abort_if($messages->count() !== count($validated['message_ids']), 404);
+
+        foreach ($messages as $message) {
+            $this->authorizeMessageAccess($request->user()->id, $message);
+        }
+
+        Message::query()
+            ->whereIn('id', $messages->pluck('id'))
+            ->update([
+                'archived' => true,
+            ]);
+
+        return back()->with('success', 'Messages archivés avec succès.');
+    }
+
     public function unarchive(Request $request, Message $message): RedirectResponse
     {
         $this->authorizeMessageAccess($request->user()->id, $message);
@@ -807,6 +907,9 @@ class MessageController extends Controller
             ? Carbon::parse($validated['scheduled_at'])
             : null;
         $isScheduled = $scheduledAt !== null && $scheduledAt->isFuture();
+        $sentAt = $isScheduled ? null : now();
+        $receiptRequestedAt = $validated['requires_receipt'] ? now() : null;
+        $messageGroupUuid = count($validated['receiver_ids']) > 1 ? (string) Str::uuid() : null;
         $messages = [];
 
         foreach ($validated['receiver_ids'] as $receiverId) {
@@ -820,15 +923,16 @@ class MessageController extends Controller
                 'lu' => false,
                 'spam' => false,
                 'important' => $validated['important'],
-                'sent_at' => $isScheduled ? null : now(),
+                'sent_at' => $sentAt,
                 'requires_receipt' => $validated['requires_receipt'],
-                'receipt_requested_at' => $validated['requires_receipt'] ? now() : null,
+                'receipt_requested_at' => $receiptRequestedAt,
                 'scheduled_at' => $scheduledAt,
                 'archived' => false,
                 'type_message' => $validated['type_message'] ?? 'normal',
                 'envoye' => ! $isScheduled,
                 'deadline_reponse' => $validated['deadline_reponse'] ?? null,
                 'can_be_redirected' => $validated['can_be_redirected'],
+                'message_group_uuid' => $messageGroupUuid,
                 'forwarded_from_message_id' => $validated['forwarded_from_message_id'] ?? null,
             ];
 
@@ -853,6 +957,272 @@ class MessageController extends Controller
                 || $hasJsonRecipient,
             403
         );
+    }
+
+    private function shouldRenderGroupThreadView(int $userId, Message $message): bool
+    {
+        return (int) $message->sender_id === (int) $userId
+            && collect($message->receiver_ids ?? [])->filter()->count() > 1;
+    }
+
+    private function resolveThreadRootMessage(Message $message): Message
+    {
+        if ($message->parent_id) {
+            return Message::query()->findOrFail($message->parent_id);
+        }
+
+        if (filled($message->message_group_uuid)) {
+            return Message::query()
+                ->where('message_group_uuid', $message->message_group_uuid)
+                ->whereNull('parent_id')
+                ->orderBy('id')
+                ->first() ?? $message;
+        }
+
+        return $message;
+    }
+
+    private function renderGroupThreadView(Request $request, Message $rootMessage): Response
+    {
+        $rootMessage->load([
+            'sender:id,name,email',
+            'replies',
+        ]);
+
+        $recipientMessages = $this->groupRecipientMessages($rootMessage);
+        $legacyRepliesByMessageId = $this->groupLegacyRepliesByMessageId($recipientMessages->pluck('id')->all(), (int) $rootMessage->sender_id);
+        $replies = $rootMessage->replies;
+
+        $recipientStatuses = $recipientMessages->map(function (Message $recipientMessage) use ($replies, $rootMessage, $legacyRepliesByMessageId) {
+            $recipient = $recipientMessage->receiver;
+
+            $trackedReplies = $replies
+                ->filter(function (Message $reply) use ($rootMessage, $recipientMessage) {
+                    $participants = collect([$rootMessage->sender_id, $recipientMessage->receiver_id])
+                        ->map(fn ($id) => (int) $id)
+                        ->sort()
+                        ->values()
+                        ->all();
+
+                    $replyParticipants = collect([$reply->sender_id, $reply->receiver_id])
+                        ->map(fn ($id) => (int) $id)
+                        ->sort()
+                        ->values()
+                        ->all();
+
+                    return $participants === $replyParticipants;
+                })
+                ->values();
+
+            $legacyReplies = collect($legacyRepliesByMessageId->get($recipientMessage->id, []));
+
+            $threadItems = collect([
+                [
+                    'id' => "original-{$recipientMessage->id}",
+                    'type' => 'original',
+                    'contenu' => $rootMessage->contenu,
+                    'created_at' => optional($recipientMessage->sent_at ?? $recipientMessage->created_at)?->toIso8601String(),
+                    'sender' => $rootMessage->sender
+                        ? [
+                            'id' => $rootMessage->sender->id,
+                            'name' => $rootMessage->sender->name,
+                            'email' => $rootMessage->sender->email,
+                        ]
+                        : null,
+                    'receiver' => $recipient
+                        ? [
+                            'id' => $recipient->id,
+                            'name' => $recipient->name,
+                            'email' => $recipient->email,
+                        ]
+                        : null,
+                ],
+            ])
+                ->concat($legacyReplies)
+                ->concat(
+                $trackedReplies->map(function (Message $reply) {
+                    return [
+                        'id' => "tracked-{$reply->id}",
+                        'type' => 'reply',
+                        'contenu' => $reply->contenu,
+                        'created_at' => optional($reply->sent_at ?? $reply->created_at)?->toIso8601String(),
+                        'sender' => $reply->sender
+                            ? [
+                                'id' => $reply->sender->id,
+                                'name' => $reply->sender->name,
+                                'email' => $reply->sender->email,
+                            ]
+                            : null,
+                        'receiver' => $reply->receiver
+                            ? [
+                                'id' => $reply->receiver->id,
+                                'name' => $reply->receiver->name,
+                                'email' => $reply->receiver->email,
+                        ]
+                        : null,
+                    ];
+                })
+            )->sortBy('created_at')->values();
+
+            $lastReply = $threadItems
+                ->filter(fn (array $item) => $item['type'] === 'reply')
+                ->sortBy('created_at')
+                ->last();
+
+            return [
+                'recipient' => $recipient
+                    ? [
+                        'id' => $recipient->id,
+                        'name' => $recipient->name,
+                        'email' => $recipient->email,
+                        ]
+                    : null,
+                'read_status' => [
+                    'is_read' => (bool) $recipientMessage->lu,
+                    'read_at' => optional($recipientMessage->lu_le)?->toIso8601String(),
+                ],
+                'reply_date' => $lastReply['created_at'] ?? null,
+                'reply_excerpt' => $lastReply ? Str::limit((string) $lastReply['contenu'], 90) : null,
+                'thread' => $threadItems->all(),
+            ];
+        })->filter(fn (array $status) => $status['recipient'] !== null)->values();
+
+        return Inertia::render('Messages/MessageView', [
+            'message' => [
+                'id' => $rootMessage->id,
+                'sujet' => $rootMessage->sujet,
+                'contenu' => $rootMessage->contenu,
+                'created_at' => optional($rootMessage->sent_at ?? $rootMessage->created_at)?->toIso8601String(),
+                'sender' => $rootMessage->sender
+                    ? [
+                        'id' => $rootMessage->sender->id,
+                        'name' => $rootMessage->sender->name,
+                        'email' => $rootMessage->sender->email,
+                    ]
+                    : null,
+                'recipient_count' => $recipientStatuses->count(),
+                'recipients' => $recipientStatuses,
+            ],
+        ]);
+    }
+
+    private function groupLegacyRepliesByMessageId(array $messageIds, int $directorId)
+    {
+        if (empty($messageIds) || ! Schema::hasTable('reponses')) {
+            return collect();
+        }
+
+        return DB::table('reponses')
+            ->leftJoin('users', 'users.id', '=', 'reponses.user_id')
+            ->whereIn('reponses.message_id', $messageIds)
+            ->orderBy('reponses.created_at')
+            ->get([
+                'reponses.id',
+                'reponses.message_id',
+                'reponses.user_id',
+                'reponses.contenu',
+                'reponses.created_at',
+                'users.name as user_name',
+                'users.email as user_email',
+            ])
+            ->groupBy('message_id')
+            ->map(function ($items) use ($directorId) {
+                return collect($items)->map(function ($reply) use ($directorId) {
+                    $senderId = (int) $reply->user_id;
+
+                    return [
+                        'id' => "legacy-{$reply->id}",
+                        'type' => 'reply',
+                        'contenu' => $reply->contenu,
+                        'created_at' => $reply->created_at ? Carbon::parse($reply->created_at)->toIso8601String() : null,
+                        'sender' => [
+                            'id' => $senderId,
+                            'name' => $reply->user_name,
+                            'email' => $reply->user_email,
+                        ],
+                        'receiver' => null,
+                    ];
+                })->all();
+            });
+    }
+
+    private function groupRecipientMessages(Message $rootMessage)
+    {
+        return Message::query()
+            ->with('receiver:id,name,email')
+            ->when(
+                filled($rootMessage->message_group_uuid),
+                fn ($query) => $query->where('message_group_uuid', $rootMessage->message_group_uuid),
+                fn ($query) => $query->whereKey($rootMessage->id),
+            )
+            ->whereNull('parent_id')
+            ->orderBy('receiver_id')
+            ->get([
+                'id',
+                'sender_id',
+                'receiver_id',
+                'receiver_ids',
+                'sujet',
+                'contenu',
+                'lu',
+                'lu_le',
+                'sent_at',
+                'created_at',
+                'message_group_uuid',
+            ]);
+    }
+
+    private function authorizeDirectorThreadReply(int $userId, Message $rootMessage): void
+    {
+        $this->authorizeMessageAccess($userId, $rootMessage);
+        abort_unless((int) $rootMessage->sender_id === (int) $userId, 403);
+    }
+
+    private function validateTrackedReply(Request $request): array
+    {
+        return $request->validate([
+            'contenu' => ['required', 'string'],
+            'fichier' => ['nullable', 'file', 'max:10240'],
+        ]);
+    }
+
+    private function createTrackedReplyMessage(
+        Message $rootMessage,
+        int $senderId,
+        int $receiverId,
+        string $content,
+        ?string $storedFile,
+        array $receiverIds
+    ): Message {
+        $payload = [
+            'sender_id' => $senderId,
+            'receiver_id' => $receiverId,
+            'sujet' => $this->replySubject($rootMessage->sujet),
+            'contenu' => $content,
+            'fichier' => $storedFile,
+            'lu_le' => null,
+            'lu' => false,
+            'spam' => false,
+            'important' => false,
+            'sent_at' => now(),
+            'requires_receipt' => false,
+            'receipt_requested_at' => null,
+            'scheduled_at' => null,
+            'archived' => false,
+            'type_message' => 'reply',
+            'envoye' => true,
+            'deadline_reponse' => null,
+            'can_be_redirected' => false,
+            'message_group_uuid' => $rootMessage->message_group_uuid,
+            'parent_id' => $rootMessage->id,
+            'forwarded_from_message_id' => null,
+        ];
+
+        if (Schema::hasColumn('messages', 'receiver_ids')) {
+            $payload['receiver_ids'] = array_values($receiverIds);
+        }
+
+        return Message::create($payload);
     }
 
     private function storeOrReuseDraftFile(Request $request, MessageDraft $draft): ?string
@@ -951,6 +1321,21 @@ class MessageController extends Controller
         }
 
         return "TR: {$subject}";
+    }
+
+    private function replySubject(?string $subject): string
+    {
+        $subject = trim((string) $subject);
+
+        if ($subject === '') {
+            return 'RE: Message sans sujet';
+        }
+
+        if (str_starts_with(mb_strtolower($subject), 're:')) {
+            return $subject;
+        }
+
+        return "RE: {$subject}";
     }
 
     private function forwardBody(Message $message): string

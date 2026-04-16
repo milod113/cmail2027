@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Message extends Model
 {
@@ -30,6 +31,8 @@ class Message extends Model
         'envoye',
         'deadline_reponse',
         'can_be_redirected',
+        'message_group_uuid',
+        'parent_id',
         'forwarded_from_message_id',
     ];
 
@@ -62,5 +65,17 @@ class Message extends Model
     public function forwardedFrom(): BelongsTo
     {
         return $this->belongsTo(self::class, 'forwarded_from_message_id');
+    }
+
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'parent_id');
+    }
+
+    public function replies(): HasMany
+    {
+        return $this->hasMany(self::class, 'parent_id')
+            ->with(['sender:id,name,email', 'receiver:id,name,email'])
+            ->orderBy('created_at');
     }
 }

@@ -148,6 +148,21 @@ export default function Compose({
         );
     };
 
+    const selectAllFilteredRecipients = () => {
+        const visibleRecipientIds = filteredRecipients.map((recipient) => recipient.id);
+
+        setData('receiver_ids', Array.from(new Set([...data.receiver_ids, ...visibleRecipientIds])));
+    };
+
+    const deselectAllFilteredRecipients = () => {
+        const visibleRecipientIds = new Set(filteredRecipients.map((recipient) => recipient.id));
+
+        setData(
+            'receiver_ids',
+            data.receiver_ids.filter((recipientId) => !visibleRecipientIds.has(recipientId)),
+        );
+    };
+
     const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0] ?? null;
         setData('fichier', file);
@@ -324,10 +339,30 @@ export default function Compose({
                                     {/* Recipients List */}
                                     <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-3 dark:border-slate-800 dark:bg-slate-950/30">
                                         <div className="mb-2 flex items-center justify-between px-2">
-                                            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                                                {__('Liste des destinataires')}
-                                            </p>
-                                            <p className="text-xs text-slate-400">{filteredRecipients.length} {__('contacts')}</p>
+                                            <div>
+                                                <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                                                    {__('Liste des destinataires')}
+                                                </p>
+                                                <p className="text-xs text-slate-400">{filteredRecipients.length} {__('contacts')}</p>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={selectAllFilteredRecipients}
+                                                    disabled={filteredRecipients.length === 0}
+                                                    className="rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-700 transition hover:border-cyan-300 hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-cyan-500/20 dark:bg-cyan-500/10 dark:text-cyan-300 dark:hover:border-cyan-500/40 dark:hover:bg-cyan-500/20"
+                                                >
+                                                    {__('Sélectionner tout')}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={deselectAllFilteredRecipients}
+                                                    disabled={filteredRecipients.length === 0}
+                                                    className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-800"
+                                                >
+                                                    {__('Désélectionner tout')}
+                                                </button>
+                                            </div>
                                         </div>
                                         <div className="max-h-80 space-y-1.5 overflow-y-auto pr-1">
                                             {filteredRecipients.length > 0 ? (

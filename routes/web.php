@@ -1,9 +1,13 @@
 <?php
 
 use App\Http\Controllers\DepartmentController;
+use App\Http\Controllers\CommentController;
+use App\Http\Controllers\LikeController;
 use App\Http\Controllers\MessageController;
+use App\Http\Controllers\PublicationController;
 use App\Models\Department;
 use App\Models\Establishment;
+use App\Models\Publication;
 use App\Models\Role;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RoleController;
@@ -18,7 +22,9 @@ Route::get('/', function () {
 });
 
 Route::get('/dashboard', function () {
-    return redirect()->route('messages.inbox');
+    return Inertia::render('Dashboard', [
+        'publications' => Publication::query()->feed()->get(),
+    ]);
 })->middleware(['auth'])->name('dashboard');
 
 Route::post('/language', function (Request $request) {
@@ -32,11 +38,16 @@ Route::post('/language', function (Request $request) {
 })->name('language.switch');
 
 Route::middleware(['auth'])->group(function () {
+    Route::post('/publications', [PublicationController::class, 'store'])->name('publications.store');
+    Route::post('/publications/{publication}/like', [LikeController::class, 'toggle'])->name('publications.like.toggle');
+    Route::post('/publications/{publication}/comments', [CommentController::class, 'store'])->name('publications.comments.store');
     Route::get('/inbox', [MessageController::class, 'inbox'])->name('messages.inbox');
     Route::get('/messages/group', [MessageController::class, 'groupMessages'])->name('messages.group');
     Route::get('/messages/create', [MessageController::class, 'create'])->name('messages.create');
     Route::post('/messages', [MessageController::class, 'store'])->name('messages.store');
     Route::get('/messages/{message}', [MessageController::class, 'show'])->name('messages.show');
+    Route::post('/messages/{message}/reply-all', [MessageController::class, 'replyAll'])->name('messages.reply_all');
+    Route::post('/messages/{message}/reply-recipient/{recipient}', [MessageController::class, 'replyRecipient'])->name('messages.reply_recipient');
     Route::post('/messages/{message}/replies', [MessageController::class, 'storeReply'])->name('replies.store');
     Route::get('/sent', [MessageController::class, 'sent'])->name('messages.sent');
     Route::get('/sent/{message}', [MessageController::class, 'showSent'])->name('messages.sent.show');
@@ -120,6 +131,7 @@ Route::middleware(['auth'])->group(function () {
     })->name('contacts.index');
     Route::get('/contacts/{user}', [ProfileController::class, 'show'])->name('contacts.show');
     Route::get('/archive', [MessageController::class, 'archiveIndex'])->name('messages.archive');
+    Route::post('/messages/archive/bulk', [MessageController::class, 'bulkArchive'])->name('messages.archive.bulk');
     Route::post('/messages/{message}/archive', [MessageController::class, 'archive'])->name('messages.archive.store');
     Route::post('/messages/{message}/unarchive', [MessageController::class, 'unarchive'])->name('messages.archive.restore');
     Route::get('/notifications', [MessageController::class, 'notifications'])->name('notifications.index');

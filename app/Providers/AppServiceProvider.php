@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Models\User;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
 
@@ -21,5 +23,11 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Vite::prefetch(concurrency: 3);
+
+        Gate::define('create-publication', function (User $user): bool {
+            $roleName = strtolower((string) optional($user->role)->nom_role);
+
+            return in_array($roleName, ['admin', 'superadmin', 'directeur'], true);
+        });
     }
 }

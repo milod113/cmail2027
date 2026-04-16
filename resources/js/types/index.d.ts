@@ -3,6 +3,11 @@ export interface User {
     name: string;
     username?: string;
     email: string;
+    role?: string | null;
+    role_details?: {
+        id: number;
+        nom_role: string;
+    } | null;
     department_id?: number | null;
     role_id?: number | null;
     is_online?: boolean;

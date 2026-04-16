@@ -1,6 +1,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { useTranslation } from '@/Hooks/useTranslation';
 import { Head, Link, router } from '@inertiajs/react';
+import { useMemo, useState } from 'react';
 import { Filter, Search, Send, Calendar, Clock, Flag, Receipt, Archive, Users, ChevronRight, Inbox, AlertCircle } from 'lucide-react';
 
 type RoleOption = {
@@ -74,6 +75,7 @@ export default function Sent({
     roles: RoleOption[];
 }) {
     const { __, locale } = useTranslation();
+    const [selectedMessageIds, setSelectedMessageIds] = useState<number[]>([]);
 
     const formatDate = (value: string) =>
         new Date(value).toLocaleString(locale === 'ar' ? 'ar-DZ' : 'fr-FR', {
@@ -94,6 +96,44 @@ export default function Sent({
                 preserveState: true,
                 preserveScroll: true,
                 replace: true,
+            },
+        );
+    };
+
+    const toggleMessageSelection = (messageId: number) => {
+        setSelectedMessageIds((current) =>
+            current.includes(messageId)
+                ? current.filter((id) => id !== messageId)
+                : [...current, messageId],
+        );
+    };
+
+    const visibleMessageIds = useMemo(() => messages.map((message) => message.id), [messages]);
+
+    const allVisibleSelected = visibleMessageIds.length > 0 && visibleMessageIds.every((id) => selectedMessageIds.includes(id));
+
+    const selectAllVisible = () => {
+        setSelectedMessageIds(Array.from(new Set([...selectedMessageIds, ...visibleMessageIds])));
+    };
+
+    const deselectAllVisible = () => {
+        const visibleIds = new Set(visibleMessageIds);
+        setSelectedMessageIds((current) => current.filter((id) => !visibleIds.has(id)));
+    };
+
+    const archiveSelected = () => {
+        if (selectedMessageIds.length === 0) {
+            return;
+        }
+
+        router.post(
+            route('messages.archive.bulk'),
+            { message_ids: selectedMessageIds },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setSelectedMessageIds([]);
+                },
             },
         );
     };
@@ -198,6 +238,32 @@ export default function Sent({
                                 </div>
                             </div>
                         </div>
+
+                        <div className="mt-4 flex flex-wrap items-center gap-3">
+                            <button
+                                type="button"
+                                onClick={allVisibleSelected ? deselectAllVisible : selectAllVisible}
+                                className="rounded-xl border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold text-cyan-700 transition hover:border-cyan-300 hover:bg-cyan-100 dark:border-cyan-500/20 dark:bg-cyan-500/10 dark:text-cyan-300 dark:hover:border-cyan-500/40 dark:hover:bg-cyan-500/20"
+                            >
+                                {allVisibleSelected ? __('Désélectionner tout') : __('Sélectionner tout')}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={deselectAllVisible}
+                                disabled={selectedMessageIds.length === 0}
+                                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-800"
+                            >
+                                {__('Effacer la sélection')}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={archiveSelected}
+                                disabled={selectedMessageIds.length === 0}
+                                className="rounded-xl bg-gradient-to-r from-cyan-600 to-sky-700 px-4 py-2 text-sm font-semibold text-white transition hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                {__('Archiver la sélection')} ({selectedMessageIds.length})
+                            </button>
+                        </div>
                     </div>
 
                     {/* Messages List */}
@@ -222,6 +288,22 @@ export default function Sent({
                                         >
                                             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                                                 <div className="min-w-0 flex-1">
+                                                    <div className="mb-3 flex items-center gap-3">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={selectedMessageIds.includes(message.id)}
+                                                            onChange={(event) => {
+                                                                event.stopPropagation();
+                                                                toggleMessageSelection(message.id);
+                                                            }}
+                                                            onClick={(event) => event.stopPropagation()}
+                                                            className="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500/30 dark:border-slate-600 dark:bg-slate-900"
+                                                        />
+                                                        <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                                                            {selectedMessageIds.includes(message.id) ? __('Sélectionné') : __('Sélectionner')}
+                                                        </span>
+                                                    </div>
+
                                                     {/* Header with badges */}
                                                     <div className="flex flex-wrap items-center gap-2">
                                                         <h3 className="text-base font-semibold text-slate-900 dark:text-white">
