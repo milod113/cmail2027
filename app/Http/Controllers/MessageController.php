@@ -455,6 +455,12 @@ class MessageController extends Controller
                 'id' => $message->id,
                 'sujet' => $message->sujet,
                 'contenu' => $message->contenu,
+                'important' => (bool) ($message->is_important || $message->important),
+                'requires_receipt' => $message->requires_receipt,
+                'receipt_requested_at' => optional($message->receipt_requested_at)?->toIso8601String(),
+                'deadline_reponse' => optional($message->deadline_reponse)?->toIso8601String(),
+                'acknowledged_at' => optional($message->acknowledged_at)?->toIso8601String(),
+                'type_message' => $message->type_message,
                 'fichier' => $message->fichier,
                 'attachment_url' => $message->fichier ? Storage::disk('public')->url($message->fichier) : null,
                 'created_at' => optional($message->sent_at ?? $message->created_at)?->toIso8601String(),
@@ -470,6 +476,13 @@ class MessageController extends Controller
                         'id' => $message->sender->id,
                         'name' => $message->sender->name,
                         'email' => $message->sender->email,
+                    ]
+                    : null,
+                'receiver' => $message->receiver
+                    ? [
+                        'id' => $message->receiver->id,
+                        'name' => $message->receiver->name,
+                        'email' => $message->receiver->email,
                     ]
                     : null,
                 'replies' => $replies->values()->all(),

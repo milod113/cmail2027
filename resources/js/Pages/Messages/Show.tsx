@@ -8,6 +8,7 @@ import {
   Paperclip,
   Calendar,
   Clock,
+  Receipt,
   Users,
   Mail,
   Flag,
@@ -46,9 +47,16 @@ type MessageDetail = {
     id: number;
     sujet: string;
     contenu: string;
+    important: boolean;
+    requires_receipt: boolean;
+    receipt_requested_at: string | null;
+    deadline_reponse: string | null;
+    acknowledged_at: string | null;
+    type_message: string | null;
     fichier: string | null;
     attachment_url?: string | null;
     sender: MessageUser | null;
+    receiver?: MessageUser | null;
     created_at: string | null;
     can_be_redirected: boolean;
     can_forward: boolean;
@@ -122,6 +130,35 @@ function StatusBadge({ type, children }: { type: 'info' | 'warning' | 'success' 
     );
 }
 
+function InfoCard({
+    icon: Icon,
+    label,
+    value,
+    tone = 'default',
+}: {
+    icon: React.ComponentType<{ className?: string }>;
+    label: string;
+    value: string;
+    tone?: 'default' | 'warning' | 'info' | 'success';
+}) {
+    const styles = {
+        default: 'bg-white/5 text-white',
+        warning: 'bg-amber-400/15 text-amber-50',
+        info: 'bg-cyan-400/15 text-cyan-50',
+        success: 'bg-emerald-400/15 text-emerald-50',
+    };
+
+    return (
+        <div className={`rounded-xl p-3 ${styles[tone]}`}>
+            <div className="flex items-center gap-2 text-xs text-cyan-100/70">
+                <Icon className="h-3.5 w-3.5" />
+                <span>{label}</span>
+            </div>
+            <p className="mt-1 text-sm font-medium">{value}</p>
+        </div>
+    );
+}
+
 export default function Show({ message }: { message: MessageDetail }) {
     const { __, locale, isRtl } = useTranslation();
     const [isReplying, setIsReplying] = useState(false);
@@ -130,6 +167,9 @@ export default function Show({ message }: { message: MessageDetail }) {
     const [quickReplySendingKey, setQuickReplySendingKey] = useState<string | null>(null);
     const originalDate = formatDate(message.created_at, locale);
     const originalRelative = formatRelativeDate(message.created_at, locale);
+    const receiptRequestedAt = formatDate(message.receipt_requested_at, locale);
+    const deadline = formatDate(message.deadline_reponse, locale);
+    const acknowledgedAt = formatDate(message.acknowledged_at, locale);
 
     const { data, setData, post, processing, reset, errors, clearErrors } = useForm<{
         contenu: string;
@@ -257,6 +297,21 @@ export default function Show({ message }: { message: MessageDetail }) {
                                     <Mail className="h-3 w-3" />
                                     {__('Message reçu')}
                                 </span>
+                                {message.important && (
+                                    <StatusBadge type="warning">
+                                        <Flag className="h-3 w-3" />
+                                        {__('Important')}
+                                    </StatusBadge>
+                                )}
+                                {message.requires_receipt && (
+                                    <StatusBadge type="info">
+                                        <Receipt className="h-3 w-3" />
+                                        {__('Accusé de réception demandé')}
+                                    </StatusBadge>
+                                )}
+                                <StatusBadge type="default">
+                                    {message.type_message ?? __('Normal')}
+                                </StatusBadge>
                                 {unreadRepliesCount > 0 && (
                                     <StatusBadge type="warning">
                                         <Eye className="h-3 w-3" />
@@ -343,6 +398,75 @@ export default function Show({ message }: { message: MessageDetail }) {
                             <div className="mt-6 rounded-2xl bg-gradient-to-br from-slate-50 to-white p-6 text-sm leading-7 text-slate-700 shadow-inner dark:from-slate-950/50 dark:to-slate-900/30 dark:text-slate-200 lg:text-base">
                                 <p className="whitespace-pre-wrap text-start">{message.contenu}</p>
                             </div>
+
+                            {(message.important || message.requires_receipt || message.deadline_reponse || message.acknowledged_at) && (
+                                <div className="mt-6 rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50/80 via-white to-cyan-50/40 p-5 dark:border-slate-800 dark:from-slate-950/40 dark:via-slate-900/50 dark:to-cyan-950/10">
+                                    <div className="flex flex-wrap items-center justify-between gap-3">
+                                        <div>
+                                            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+                                                {__('Details du message')}
+                                            </h3>
+                                            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                                {__('Les informations prioritaires et les contraintes associees a ce message.')}
+                                            </p>
+                                        </div>
+                                        {message.important && (
+                                            <span className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300">
+                                                <Flag className="h-3.5 w-3.5" />
+                                                {__('Traitement prioritaire')}
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                                        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
+                                            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
+                                                <Flag className="h-3.5 w-3.5 text-amber-500" />
+                                                {__('Priorite')}
+                                            </div>
+                                            <p className="mt-3 text-sm font-semibold text-slate-900 dark:text-white">
+                                                {message.important ? __('Message important') : __('Standard')}
+                                            </p>
+                                        </div>
+
+                                        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
+                                            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
+                                                <Receipt className="h-3.5 w-3.5 text-cyan-500" />
+                                                {__('Accuse')}
+                                            </div>
+                                            <p className="mt-3 text-sm font-semibold text-slate-900 dark:text-white">
+                                                {message.requires_receipt ? __('Demande active') : __('Non demande')}
+                                            </p>
+                                            {receiptRequestedAt && (
+                                                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{receiptRequestedAt}</p>
+                                            )}
+                                        </div>
+
+                                        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
+                                            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
+                                                <AlertCircle className="h-3.5 w-3.5 text-rose-500" />
+                                                {__('Date limite')}
+                                            </div>
+                                            <p className="mt-3 text-sm font-semibold text-slate-900 dark:text-white">
+                                                {deadline ?? __('Aucune date limite')}
+                                            </p>
+                                        </div>
+
+                                        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
+                                            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
+                                                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                                                {__('Validation')}
+                                            </div>
+                                            <p className="mt-3 text-sm font-semibold text-slate-900 dark:text-white">
+                                                {acknowledgedAt ? __('Reception validee') : __('En attente')}
+                                            </p>
+                                            {acknowledgedAt && (
+                                                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{acknowledgedAt}</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
 
                             {hasAttachment && (
                                 <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50/50 p-4 dark:border-slate-800 dark:bg-slate-950/30">
@@ -642,32 +766,43 @@ export default function Show({ message }: { message: MessageDetail }) {
                             </div>
                             
                             <div className="mt-4 space-y-3">
-                                <div className="rounded-xl p-3 bg-white/5">
-                                    <div className="flex items-center gap-2 text-xs text-cyan-100/70">
-                                        <Calendar className="h-3.5 w-3.5" />
-                                        <span>{__('Date de réception')}</span>
-                                    </div>
-                                    <p className="mt-1 text-sm font-medium text-white">
-                                        {originalDate ?? __('Date inconnue')}
-                                    </p>
-                                </div>
-                                
-                                <div className="rounded-xl p-3 bg-white/5">
-                                    <div className="flex items-center gap-2 text-xs text-cyan-100/70">
-                                        <MessageSquare className="h-3.5 w-3.5" />
-                                        <span>{__('Statut des réponses')}</span>
-                                    </div>
-                                    <div className="mt-1 flex items-center gap-2">
-                                        <span className="text-sm font-medium text-white">
-                                            {message.replies.length} {__('réponse(s)')}
-                                        </span>
-                                        {unreadRepliesCount > 0 && (
-                                            <span className="rounded-full bg-amber-500/30 px-2 py-0.5 text-xs font-semibold text-amber-100">
-                                                {unreadRepliesCount} {__('non lue(s)')}
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
+                                <InfoCard
+                                    icon={Calendar}
+                                    label={__('Date de réception')}
+                                    value={originalDate ?? __('Date inconnue')}
+                                    tone="info"
+                                />
+
+                                <InfoCard
+                                    icon={MessageSquare}
+                                    label={__('Statut des réponses')}
+                                    value={`${message.replies.length} ${__('réponse(s)')}`}
+                                />
+
+                                {message.requires_receipt && (
+                                    <InfoCard
+                                        icon={Receipt}
+                                        label={__('Accusé demandé')}
+                                        value={receiptRequestedAt ?? __('En attente')}
+                                        tone="warning"
+                                    />
+                                )}
+
+                                {message.deadline_reponse && (
+                                    <InfoCard
+                                        icon={AlertCircle}
+                                        label={__('Date limite de réponse')}
+                                        value={deadline ?? __('Aucune')}
+                                        tone="warning"
+                                    />
+                                )}
+
+                                <InfoCard
+                                    icon={CheckCircle2}
+                                    label={__('Reception')}
+                                    value={acknowledgedAt ? __('Validee') : __('Pas encore validee')}
+                                    tone={acknowledgedAt ? 'success' : 'default'}
+                                />
                             </div>
                         </div>
 
@@ -699,14 +834,34 @@ export default function Show({ message }: { message: MessageDetail }) {
                                         {__('Pièce jointe')}
                                     </div>
                                 </div>
+                                <div className="rounded-xl bg-gradient-to-br from-amber-50 to-amber-100/50 p-3 text-center dark:from-amber-950/30 dark:to-amber-900/20">
+                                    <div className="text-2xl font-bold text-amber-700 dark:text-amber-400">
+                                        {message.important ? '1' : '0'}
+                                    </div>
+                                    <div className="mt-1 text-xs text-amber-600 dark:text-amber-400/70">
+                                        {__('Priorité')}
+                                    </div>
+                                </div>
+                                <div className="rounded-xl bg-gradient-to-br from-rose-50 to-rose-100/50 p-3 text-center dark:from-rose-950/30 dark:to-rose-900/20">
+                                    <div className="text-2xl font-bold text-rose-700 dark:text-rose-400">
+                                        {message.deadline_reponse ? '1' : '0'}
+                                    </div>
+                                    <div className="mt-1 text-xs text-rose-600 dark:text-rose-400/70">
+                                        {__('Deadline')}
+                                    </div>
+                                </div>
                             </div>
                             
                             <div className="mt-4 rounded-xl bg-gradient-to-r from-slate-100 to-slate-50 p-3 dark:from-slate-800/50 dark:to-slate-900/30">
                                 <div className="flex items-center justify-between text-sm">
                                     <span className="text-slate-500 dark:text-slate-400">{__('Statut')}</span>
-                                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">
+                                    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
+                                        acknowledgedAt
+                                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300'
+                                            : 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300'
+                                    }`}>
                                         <CheckCircle2 className="h-3 w-3" />
-                                        {__('Actif')}
+                                        {acknowledgedAt ? __('Reception validee') : __('Suivi en cours')}
                                     </span>
                                 </div>
                             </div>
