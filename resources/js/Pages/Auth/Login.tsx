@@ -3,7 +3,7 @@ import InputError from '@/Components/InputError';
 import LanguageSwitcher from '@/Components/LanguageSwitcher';
 import { useTranslation } from '@/Hooks/useTranslation';
 import { Head, Link, useForm } from '@inertiajs/react';
-import { Lock, LogIn, Mail, MessageCircleMore, Shield } from 'lucide-react';
+import { AlertTriangle, Lock, LogIn, Mail, MessageCircleMore, Shield } from 'lucide-react';
 import { FormEventHandler } from 'react';
 
 export default function Login({
@@ -14,11 +14,13 @@ export default function Login({
     canResetPassword: boolean;
 }) {
     const { __ } = useTranslation();
+    const blockedAccountMessage = __('Votre compte est bloque. Veuillez contacter le support technique.');
     const { data, setData, post, processing, errors, reset } = useForm({
         email: '',
         password: '',
         remember: false as boolean,
     });
+    const isBlockedAccountError = errors.email === blockedAccountMessage;
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
@@ -99,6 +101,13 @@ export default function Login({
                                             </div>
                                         )}
 
+                                        {isBlockedAccountError && (
+                                            <div className="mb-6 flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300">
+                                                <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
+                                                <span>{blockedAccountMessage}</span>
+                                            </div>
+                                        )}
+
                                         <form onSubmit={submit} className="space-y-6">
                                             <div>
                                                 <label htmlFor="email" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200">
@@ -114,10 +123,14 @@ export default function Login({
                                                         autoComplete="username"
                                                         autoFocus
                                                         onChange={(e) => setData('email', e.target.value)}
-                                                        className="block w-full rounded-2xl border border-cyan-100 bg-cyan-50/40 py-3.5 pe-4 ps-12 text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-cyan-600 focus:ring-cyan-600 dark:border-slate-700 dark:bg-slate-950/70 dark:text-slate-100 dark:focus:border-cyan-300 dark:focus:ring-cyan-300"
+                                                        className={`block w-full rounded-2xl border py-3.5 pe-4 ps-12 text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:ring-cyan-600 dark:bg-slate-950/70 dark:text-slate-100 dark:focus:ring-cyan-300 ${
+                                                            isBlockedAccountError
+                                                                ? 'border-red-300 bg-red-50 focus:border-red-500 dark:border-red-500/50 dark:bg-red-500/10 dark:focus:border-red-400'
+                                                                : 'border-cyan-100 bg-cyan-50/40 focus:border-cyan-600 dark:border-slate-700 dark:focus:border-cyan-300'
+                                                        }`}
                                                     />
                                                 </div>
-                                                <InputError message={errors.email} className="mt-2" />
+                                                <InputError message={isBlockedAccountError ? undefined : errors.email} className="mt-2" />
                                             </div>
 
                                             <div>

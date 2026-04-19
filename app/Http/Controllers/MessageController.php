@@ -108,8 +108,11 @@ class MessageController extends Controller
     {
         $this->authorizeMessageAccess($request->user()->id, $message);
 
+        $isImportant = ! $message->important;
+
         $message->update([
-            'important' => ! $message->important,
+            'important' => $isImportant,
+            'is_important' => $isImportant,
         ]);
 
         return back()->with('success', $message->important
@@ -1241,6 +1244,7 @@ class MessageController extends Controller
                 'lu' => false,
                 'spam' => false,
                 'important' => $validated['important'],
+                'is_important' => $validated['important'],
                 'sent_at' => $sentAt,
                 'requires_receipt' => $validated['requires_receipt'],
                 'is_tracked' => $validated['is_tracked'],

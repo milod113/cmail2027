@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -24,11 +25,14 @@ class Message extends Model
         'lu',
         'spam',
         'important',
+        'is_important',
         'sent_at',
+        'acknowledged_at',
         'requires_receipt',
         'is_tracked',
         'receipt_requested_at',
         'scheduled_at',
+        'status',
         'is_delivered',
         'archived',
         'type_message',
@@ -43,6 +47,7 @@ class Message extends Model
     protected $casts = [
         'sent_at' => 'datetime',
         'scheduled_at' => 'datetime',
+        'acknowledged_at' => 'datetime',
         'lu_le' => 'datetime',
         'read_at' => 'datetime',
         'receipt_requested_at' => 'datetime',
@@ -51,6 +56,7 @@ class Message extends Model
         'lu' => 'boolean',
         'spam' => 'boolean',
         'important' => 'boolean',
+        'is_important' => 'boolean',
         'is_tracked' => 'boolean',
         'is_delivered' => 'boolean',
         'requires_receipt' => 'boolean',
@@ -58,6 +64,30 @@ class Message extends Model
         'envoye' => 'boolean',
         'can_be_redirected' => 'boolean',
     ];
+
+    public function scopePendingAcknowledge(Builder $query): Builder
+    {
+        return $query
+            ->where(function (Builder $importanceQuery) {
+                $importanceQuery
+                    ->where('is_important', true)
+                    ->orWhere('important', true);
+            })
+            ->whereNull('acknowledged_at');
+    }
+
+    public function scopeRequiresActionFrom(Builder $query, int $userId): Builder
+    {
+        return $query
+            ->pendingAcknowledge()
+            ->where(function (Builder $recipientQuery) use ($userId) {
+                $recipientQuery->where('receiver_id', $userId);
+
+                if ($this->hasCast('receiver_ids', 'array')) {
+                    $recipientQuery->orWhereJsonContains('receiver_ids', $userId);
+                }
+            });
+    }
 
     public function sender(): BelongsTo
     {

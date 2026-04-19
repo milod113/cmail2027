@@ -1,4 +1,6 @@
+import ActionRequiredWidget from '@/Components/ActionRequiredWidget';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import PendingRequestsWidget from '@/Components/PendingRequestsWidget';
 import PublicationsFeed from '@/Components/PublicationsFeed';
 import { Head, Link } from '@inertiajs/react';
 import { Bell, CalendarDays, FileText, Mail } from 'lucide-react';
@@ -36,6 +38,32 @@ type DashboardProps = {
         unread_notifications: number;
         publications_count: number;
     };
+    pendingSentRequests: Array<{
+        id: number;
+        subject: string;
+        body: string;
+        excerpt: string;
+        sent_at: string | null;
+        created_at: string | null;
+        receiver: {
+            id: number;
+            name: string;
+            email?: string | null;
+        } | null;
+    }>;
+    actionRequiredMessages: Array<{
+        id: number;
+        subject: string;
+        body: string;
+        excerpt: string;
+        sent_at: string | null;
+        created_at: string | null;
+        sender: {
+            id: number;
+            name: string;
+            email?: string | null;
+        } | null;
+    }>;
 };
 
 function statCards(stats: DashboardProps['stats']) {
@@ -67,7 +95,7 @@ function statCards(stats: DashboardProps['stats']) {
     ];
 }
 
-export default function Dashboard({ publications, stats }: DashboardProps) {
+export default function Dashboard({ publications, stats, pendingSentRequests, actionRequiredMessages }: DashboardProps) {
     return (
         <AuthenticatedLayout
             title="Dashboard"
@@ -135,6 +163,10 @@ export default function Dashboard({ publications, stats }: DashboardProps) {
                         </article>
                     ))}
                 </section>
+
+                <ActionRequiredWidget actionRequiredMessages={actionRequiredMessages} />
+
+                <PendingRequestsWidget pendingSentRequests={pendingSentRequests} />
 
                 <PublicationsFeed publications={publications} />
             </div>

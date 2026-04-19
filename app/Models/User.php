@@ -125,6 +125,21 @@ class User extends Authenticatable
         return $this->hasMany(Message::class, 'receiver_id');
     }
 
+    public function recurringMessages(): HasMany
+    {
+        return $this->hasMany(RecurringMessage::class);
+    }
+
+    public function receivedRecurringMessages(): HasMany
+    {
+        return $this->hasMany(RecurringMessage::class, 'receiver_id');
+    }
+
+    public function personalReminders(): HasMany
+    {
+        return $this->hasMany(PersonalReminder::class);
+    }
+
     public function profile(): HasOne
     {
         return $this->hasOne(Profile::class);

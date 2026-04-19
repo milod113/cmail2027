@@ -546,6 +546,14 @@ export default function AuthenticatedLayout({
                 href: route('drafts.index'),
                 icon: <FileText className="h-5 w-5" />,
             },
+            ...(route().has('planifications.index')
+                ? [{
+                    label: __('Planifications'),
+                    routeName: 'planifications.*',
+                    href: route('planifications.index'),
+                    icon: <CalendarDays className="h-5 w-5" />,
+                }]
+                : []),
             ...(route().has('events.invitations')
                 ? [{
                     label: __('Invitations'),

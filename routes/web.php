@@ -3,18 +3,18 @@
 use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\CommentController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EventInvitationController;
 use App\Http\Controllers\LikeController;
+use App\Http\Controllers\MessageActionController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\PublicationController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\ScheduledMessageController;
 use App\Http\Controllers\SupportTicketController;
 use App\Models\Department;
 use App\Models\Establishment;
-use App\Models\EventInvitation;
 use App\Models\Message;
-use App\Models\MessageDraft;
-use App\Models\Publication;
 use App\Models\Role;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RoleController;
@@ -29,28 +29,7 @@ Route::get('/', function () {
     return Inertia::render('Welcome');
 });
 
-Route::get('/dashboard', function (Request $request) {
-    return Inertia::render('Dashboard', [
-        'publications' => Publication::query()->feed()->get(),
-        'stats' => [
-            'unread_messages' => Message::query()
-                ->where('receiver_id', $request->user()->id)
-                ->where('is_delivered', true)
-                ->where('lu', false)
-                ->where('archived', false)
-                ->count(),
-            'pending_invitations' => EventInvitation::query()
-                ->where('user_id', $request->user()->id)
-                ->where('status', 'pending')
-                ->count(),
-            'drafts' => MessageDraft::query()
-                ->where('sender_id', $request->user()->id)
-                ->count(),
-            'unread_notifications' => $request->user()->unreadNotifications()->count(),
-            'publications_count' => Publication::query()->count(),
-        ],
-    ]);
-})->middleware(['auth'])->name('dashboard');
+Route::get('/dashboard', [DashboardController::class, 'index'])->middleware(['auth'])->name('dashboard');
 
 Route::post('/language', function (Request $request) {
     $validated = $request->validate([
@@ -80,8 +59,21 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/messages/create', [MessageController::class, 'create'])->name('messages.create');
     Route::get('/messages/composeparam', [MessageController::class, 'composeParam'])->name('messages.composeparam');
     Route::get('/messages/tracked', [MessageController::class, 'trackedIndex'])->name('messages.tracked');
+    Route::get('/planifications', [ScheduledMessageController::class, 'index'])->name('planifications.index');
+    Route::post('/planifications/messages', [ScheduledMessageController::class, 'storeScheduledMessage'])->name('planifications.messages.store');
+    Route::post('/planifications/messages/{message}/send-now', [ScheduledMessageController::class, 'sendScheduledMessageNow'])->name('planifications.messages.send-now');
+    Route::put('/planifications/messages/{message}', [ScheduledMessageController::class, 'updateScheduledMessage'])->name('planifications.messages.update');
+    Route::delete('/planifications/messages/{message}', [ScheduledMessageController::class, 'destroyScheduledMessage'])->name('planifications.messages.destroy');
+    Route::post('/planifications/recurrents', [ScheduledMessageController::class, 'storeRecurringMessage'])->name('planifications.recurrents.store');
+    Route::put('/planifications/recurrents/{recurringMessage}', [ScheduledMessageController::class, 'updateRecurringMessage'])->name('planifications.recurrents.update');
+    Route::delete('/planifications/recurrents/{recurringMessage}', [ScheduledMessageController::class, 'destroyRecurringMessage'])->name('planifications.recurrents.destroy');
+    Route::post('/planifications/rappels', [ScheduledMessageController::class, 'storePersonalReminder'])->name('planifications.reminders.store');
+    Route::put('/planifications/rappels/{personalReminder}', [ScheduledMessageController::class, 'updatePersonalReminder'])->name('planifications.reminders.update');
+    Route::delete('/planifications/rappels/{personalReminder}', [ScheduledMessageController::class, 'destroyPersonalReminder'])->name('planifications.reminders.destroy');
     Route::post('/messages', [MessageController::class, 'store'])->name('messages.store');
     Route::get('/messages/{message}', [MessageController::class, 'show'])->name('messages.show');
+    Route::post('/messages/{message}/acknowledge', [MessageActionController::class, 'acknowledge'])->name('messages.acknowledge');
+    Route::post('/messages/{message}/ping', [MessageActionController::class, 'ping'])->name('messages.ping');
     Route::post('/messages/{message}/report', [ReportController::class, 'store'])->name('messages.reports.store');
     Route::post('/messages/{message}/reply-all', [MessageController::class, 'replyAll'])->name('messages.reply_all');
     Route::post('/messages/{message}/reply-recipient/{recipient}', [MessageController::class, 'replyRecipient'])->name('messages.reply_recipient');

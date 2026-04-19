@@ -80,7 +80,7 @@ export default function TrackedMessages({ messages }: { messages: TrackedMessage
     return (
         <AuthenticatedLayout
             title={__('Suivi des messages')}
-            description={__('Consultez le statut de lecture des messages envoyés avec suivi activé.')}
+            description={__('Consultez le statut de lecture des messages envoyés avec suivi de lecture.')}
         >
             <Head title={__('Suivi des messages')} />
 
@@ -193,10 +193,10 @@ export default function TrackedMessages({ messages }: { messages: TrackedMessage
                                 <Activity className="h-10 w-10 text-slate-400 dark:text-slate-600" />
                             </div>
                             <h3 className="mt-4 text-lg font-semibold text-slate-900 dark:text-white">
-                            {__('Aucun message avec suivi')}
+                                {__('Aucun message avec suivi')}
                             </h3>
                             <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                                {__('Activez le suivi lors de l’envoi d’un message pour voir son statut ici.')}
+                                {__('Demandez un suivi de lecture lors de l’envoi d’un message pour voir son statut ici.')}
                             </p>
                             <Link
                                 href={route('messages.create')}
