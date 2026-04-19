@@ -16,11 +16,14 @@ class UserSetting extends Model
         'ooo_message',
         'redirect_messages',
         'delegate_user_id',
+        'custom_signature',
+        'use_auto_signature',
     ];
 
     protected $casts = [
         'is_out_of_office' => 'boolean',
         'redirect_messages' => 'boolean',
+        'use_auto_signature' => 'boolean',
     ];
 
     public function user(): BelongsTo

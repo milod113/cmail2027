@@ -57,11 +57,11 @@ class HandleInertiaRequests extends Middleware
     private function ensureUtf8(string $content): string
     {
         $encoding = mb_detect_encoding($content, mb_detect_order(), true);
-        
+
         if ($encoding === false || $encoding !== 'UTF-8') {
             return mb_convert_encoding($content, 'UTF-8', $encoding ?: 'Windows-1252');
         }
-        
+
         return $content;
     }
 
@@ -81,13 +81,10 @@ class HandleInertiaRequests extends Middleware
         $user->loadMissing([
             'role:id,nom_role',
             'department:id,name',
+            'userSetting.delegateUser:id,name,email',
         ]);
 
-        $settings = UserSetting::query()
-            ->with('delegateUser:id,name,email')
-            ->select('id', 'user_id', 'is_out_of_office', 'redirect_messages', 'delegate_user_id')
-            ->where('user_id', $user->id)
-            ->first();
+        $settings = $user->userSetting;
 
         $hasActiveDelegation = (bool) (
             $settings?->is_out_of_office
@@ -102,6 +99,25 @@ class HandleInertiaRequests extends Middleware
                 ? $user->role->only(['id', 'nom_role'])
                 : null,
             'department_name' => $user->department?->name,
+            'settings' => $settings
+                ? [
+                    'id' => $settings->id,
+                    'custom_signature' => $settings->custom_signature,
+                    'use_auto_signature' => $settings->use_auto_signature,
+                    'is_out_of_office' => $settings->is_out_of_office,
+                    'ooo_message' => $settings->ooo_message,
+                    'redirect_messages' => $settings->redirect_messages,
+                    'delegate_user_id' => $settings->delegate_user_id,
+                    'delegate_user' => $settings->delegateUser
+                        ? [
+                            'id' => $settings->delegateUser->id,
+                            'name' => $settings->delegateUser->name,
+                            'email' => $settings->delegateUser->email,
+                        ]
+                        : null,
+                ]
+                : null,
+            'signature' => $user->formatted_signature,
             'delegation_reminder' => $hasActiveDelegation
                 ? [
                     'is_active' => true,

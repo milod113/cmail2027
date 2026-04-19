@@ -6,9 +6,9 @@ import { Link, usePage } from '@inertiajs/react';
 import {
     Moon, Sun, Bell, Search, Menu, X, ChevronRight, LogOut, User,
     Settings, HelpCircle, PenSquare, Users, Inbox, Send, Archive,
-    FileText, FolderTree, UsersRound, Star, Trash2, AlertCircle,
+    FileText, UsersRound, Star, Trash2, AlertCircle,
     Sparkles, CreditCard, Shield, Activity, Circle, CheckCircle2,
-    Clock, Plus, Zap, MessageSquare, ChevronDown, LayoutDashboard
+    Clock, Plus, Zap, MessageSquare, ChevronDown, LayoutDashboard, CalendarDays
 } from 'lucide-react';
 import { PropsWithChildren, ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -31,7 +31,7 @@ type NavItem = {
 
 type NotificationItem = {
     id: string;
-    type: 'message' | 'reply' | 'system' | 'alert';
+    type: 'message' | 'reply' | 'system' | 'alert' | 'event';
     title: string;
     body: string;
     meta: string;
@@ -174,6 +174,8 @@ function NotificationBell({
                 return <MessageSquare className="h-4 w-4 text-blue-500" />;
             case 'reply':
                 return <Reply className="h-4 w-4 text-emerald-500" />;
+            case 'event':
+                return <CalendarDays className="h-4 w-4 text-cyan-500" />;
             case 'alert':
                 return <AlertCircle className="h-4 w-4 text-red-500" />;
             default:
@@ -450,6 +452,8 @@ export default function AuthenticatedLayout({
                 email: string;
                 avatar?: string;
                 role?: string;
+                is_super_admin?: boolean;
+                can_organize_event?: boolean;
                 department_name?: string | null;
                 delegation_reminder?: {
                     is_active: boolean;
@@ -498,6 +502,10 @@ export default function AuthenticatedLayout({
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
+    const normalizedRole = (auth.user.role ?? '').toLowerCase();
+    const canAccessAdmin = Boolean(auth.user.is_super_admin)
+        || ['admin', 'superadmin'].includes(normalizedRole);
+
     const navigation = useMemo<NavItem[]>(
         () => [
             {
@@ -520,6 +528,12 @@ export default function AuthenticatedLayout({
                 icon: <Send className="h-5 w-5" />,
             },
             {
+                label: __('Suivi des messages'),
+                routeName: 'messages.tracked',
+                href: route('messages.tracked'),
+                icon: <Activity className="h-5 w-5" />,
+            },
+            {
                 label: __('Messages groupés'),
                 routeName: 'messages.group',
                 href: route('messages.group'),
@@ -532,6 +546,14 @@ export default function AuthenticatedLayout({
                 href: route('drafts.index'),
                 icon: <FileText className="h-5 w-5" />,
             },
+            ...(route().has('events.invitations')
+                ? [{
+                    label: __('Invitations'),
+                    routeName: 'events.*',
+                    href: route('events.invitations'),
+                    icon: <CalendarDays className="h-5 w-5" />,
+                }]
+                : []),
             ...(route().has('messages.starred')
                 ? [{
                     label: __('Favoris'),
@@ -548,28 +570,16 @@ export default function AuthenticatedLayout({
                     icon: <Trash2 className="h-5 w-5" />,
                 }]
                 : []),
-            ...(route().has('admin')
+            ...(canAccessAdmin && route().has('admin.dashboard')
                 ? [{
                     label: __('Administration'),
-                    routeName: 'admin',
-                    href: route('admin'),
+                    routeName: 'admin.dashboard',
+                    href: route('admin.dashboard'),
                     icon: <Shield className="h-5 w-5" />,
                     isPro: true,
                     badge: 3,
                 }]
                 : []),
-            {
-                label: __('Rôles'),
-                routeName: 'roles.index',
-                href: route('roles.index'),
-                icon: <Users className="h-5 w-5" />,
-            },
-            {
-                label: __('Départements'),
-                routeName: 'departments.index',
-                href: route('departments.index'),
-                icon: <FolderTree className="h-5 w-5" />,
-            },
             {
                 label: __('Contacts'),
                 routeName: 'contacts.index',
@@ -583,7 +593,7 @@ export default function AuthenticatedLayout({
                 icon: <Archive className="h-5 w-5" />,
             },
         ],
-        [__, unreadInboxCount],
+        [__, unreadInboxCount, canAccessAdmin],
     );
 
     const userInitials = auth.user.name

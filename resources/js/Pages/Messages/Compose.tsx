@@ -1,7 +1,7 @@
 ﻿import InputError from '@/Components/InputError';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { useTranslation } from '@/Hooks/useTranslation';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import {
   Calendar,
   Filter,
@@ -50,6 +50,7 @@ type Recipient = {
     id: number;
     name: string;
     email: string;
+    is_favorite: boolean;
     role_id?: number | null;
     role?: { id: number; nom_role: string } | null;
     is_out_of_office: boolean;
@@ -71,6 +72,7 @@ type DraftData = {
     contenu: string;
     important: boolean;
     requires_receipt: boolean;
+    is_tracked?: boolean;
     scheduled_at: string;
     type_message: string;
     deadline_reponse: string;
@@ -97,6 +99,7 @@ type ComposeForm = {
     existing_attachment_path: string;
     important: boolean;
     requires_receipt: boolean;
+    is_tracked: boolean;
     scheduled_at: string;
     type_message: string;
     deadline_reponse: string;
@@ -143,19 +146,85 @@ function Checkbox({ checked, onChange, label, icon: Icon, description }: { check
     );
 }
 
+// Enhanced Signature Preview Component
+function SignaturePreview({ signature, onInsert, onEdit }: { signature: string; onInsert?: () => void; onEdit?: () => void }) {
+    const [isExpanded, setIsExpanded] = useState(false);
+
+    if (!signature) return null;
+
+    return (
+        <div className="group relative">
+            <div className={`overflow-hidden transition-all duration-300 ${isExpanded ? 'max-h-96' : 'max-h-20'}`}>
+                <div className="rounded-2xl border border-gradient-to-r from-purple-100 to-pink-100 bg-gradient-to-br from-purple-50/80 via-pink-50/80 to-rose-50/80 p-4 shadow-lg backdrop-blur-sm dark:from-purple-950/30 dark:via-pink-950/30 dark:to-rose-950/30 dark:border-purple-800/30">
+                    <div className="mb-3 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-pink-600 shadow-md">
+                                <Sparkles className="h-4 w-4 text-white" />
+                            </div>
+                            <div>
+                                <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                                    Signature professionnelle
+                                </p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400">
+                                    Sera ajoutée automatiquement
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex gap-1">
+                            <button
+                                type="button"
+                                onClick={() => setIsExpanded(!isExpanded)}
+                                className="rounded-lg p-1.5 text-slate-500 transition-all hover:bg-white/50 hover:text-purple-600 dark:hover:bg-slate-800/50"
+                            >
+                                <ChevronRight className={`h-4 w-4 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} />
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="relative">
+                        <pre className="whitespace-pre-wrap rounded-xl bg-white/60 p-3 text-sm leading-6 text-slate-700 backdrop-blur-sm dark:bg-slate-900/60 dark:text-slate-200">
+                            {signature}
+                        </pre>
+                        <div className="absolute bottom-2 right-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                            <button
+                                type="button"
+                                onClick={onEdit}
+                                className="rounded-lg bg-white p-1.5 text-slate-600 shadow-md transition-all hover:scale-110 hover:bg-purple-50 hover:text-purple-600 dark:bg-slate-800 dark:text-slate-300"
+                                title="Modifier la signature"
+                            >
+                                <Edit3 className="h-3 w-3" />
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="mt-3 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                        <span>La signature sera ajoutée à la fin de votre message</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export default function Compose({
     recipients,
     roles,
     draft = null,
+    hideRecipientPicker = false,
 }: {
     recipients: Recipient[];
     roles: RoleOption[];
     draft?: DraftData | null;
+    hideRecipientPicker?: boolean;
 }) {
     const { __ } = useTranslation();
+    const { auth } = usePage().props as any;
+    const signature = auth?.user?.signature ?? '';
     const [roleFilter, setRoleFilter] = useState('');
     const [search, setSearch] = useState('');
-    const [showRecipientList, setShowRecipientList] = useState(true);
+    const [favoritesOnly, setFavoritesOnly] = useState(false);
+    const [showRecipientList, setShowRecipientList] = useState(!hideRecipientPicker);
     const [activeTab, setActiveTab] = useState<'compose' | 'settings' | 'preview'>('compose');
     const [charCount, setCharCount] = useState(0);
     const [isFocused, setIsFocused] = useState(false);
@@ -163,7 +232,9 @@ export default function Compose({
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const isDraft = typeof draft?.id === 'number';
 
-    const { data, setData, post, processing, errors, progress } = useForm<ComposeForm>({
+    const [showScheduledAt, setShowScheduledAt] = useState(Boolean(draft?.scheduled_at));
+
+    const { data, setData, post, processing, errors, progress, transform } = useForm<ComposeForm>({
         receiver_ids: draft?.receiver_ids ?? [],
         sujet: draft?.sujet ?? '',
         contenu: draft?.contenu ?? '',
@@ -171,12 +242,24 @@ export default function Compose({
         existing_attachment_path: draft?.existing_attachment_path ?? '',
         important: draft?.important ?? false,
         requires_receipt: draft?.requires_receipt ?? false,
+        is_tracked: draft?.is_tracked ?? false,
         scheduled_at: draft?.scheduled_at ?? '',
         type_message: draft?.type_message ?? 'normal',
         deadline_reponse: draft?.deadline_reponse ?? '',
         can_be_redirected: draft?.can_be_redirected ?? false,
         forwarded_from_message_id: draft?.forwarded_from_message_id ?? null,
     });
+
+    useEffect(() => {
+        if (!isDraft) {
+            setTimeout(() => {
+                if (textareaRef.current) {
+                    textareaRef.current.focus();
+                    textareaRef.current.setSelectionRange(0, 0);
+                }
+            }, 0);
+        }
+    }, [isDraft]);
 
     // Auto-resize textarea
     useEffect(() => {
@@ -199,10 +282,11 @@ export default function Compose({
                 term === '' ||
                 recipient.name.toLowerCase().includes(term) ||
                 recipient.email.toLowerCase().includes(term);
+            const matchesFavorites = !favoritesOnly || recipient.is_favorite;
 
-            return matchesRole && matchesSearch;
+            return matchesRole && matchesSearch && matchesFavorites;
         });
-    }, [recipients, roleFilter, search]);
+    }, [favoritesOnly, recipients, roleFilter, search]);
 
     const selectedRecipients = useMemo(
         () => recipients.filter((recipient) => data.receiver_ids.includes(recipient.id)),
@@ -263,6 +347,14 @@ export default function Compose({
     };
 
     const submitWithAction = (action: 'draft' | 'send') => {
+        transform((formData) => {
+            const { scheduled_at, ...payload } = formData;
+
+            return scheduled_at
+                ? { ...payload, scheduled_at }
+                : payload;
+        });
+
         const options = { forceFormData: true, preserveScroll: true };
         if (isDraft && draft?.id) {
             post(action === 'send' ? route('drafts.send', draft.id) : route('drafts.update', draft.id), options);
@@ -289,6 +381,7 @@ export default function Compose({
     const currentTypeOption = messageTypeOptions.find(opt => opt.value === data.type_message) || messageTypeOptions[0];
     const CurrentIcon = currentTypeOption.icon;
     const forwardedSource = draft?.forwarded_from ?? null;
+    const lockedRecipient = hideRecipientPicker ? selectedRecipients[0] ?? null : null;
 
     // Get recipient count display
     const recipientCountText = data.receiver_ids.length === 0
@@ -296,11 +389,21 @@ export default function Compose({
         : data.receiver_ids.length === 1
             ? __('1 destinataire')
             : `${data.receiver_ids.length} ${__('destinataires')}`;
+    const pageTitle = isDraft
+        ? __('Modifier le brouillon')
+        : hideRecipientPicker
+            ? __('Contacter ce contact')
+            : __('Nouveau message');
+    const pageDescription = isDraft
+        ? __('Mettez à jour votre brouillon puis envoyez-le quand vous êtes prêt.')
+        : hideRecipientPicker
+            ? __('Rédigez votre message pour le contact sélectionné.')
+            : __('Rédigez un message et envoyez-le à un ou plusieurs destinataires.');
 
     return (
         <AuthenticatedLayout
-            title={isDraft ? __('Modifier le brouillon') : __('Nouveau message')}
-            description={isDraft ? __('Mettez à jour votre brouillon puis envoyez-le quand vous êtes prêt.') : __('Rédigez un message et envoyez-le à un ou plusieurs destinataires.')}
+            title={pageTitle}
+            description={pageDescription}
             actions={
                 isDraft && (
                     <Link
@@ -313,7 +416,7 @@ export default function Compose({
                 )
             }
         >
-            <Head title={isDraft ? __('Modifier le brouillon') : __('Nouveau message')} />
+            <Head title={pageTitle} />
 
             <form onSubmit={submit} className="space-y-6 pb-20 md:pb-0">
                 {/* Mobile Tab Navigation */}
@@ -387,228 +490,306 @@ export default function Compose({
                 <div className="grid gap-6 lg:gap-8 xl:grid-cols-3">
                     {/* Main Content - Left Column (2/3) */}
                     <div className={`space-y-6 xl:col-span-2 ${activeTab !== 'compose' ? 'hidden xl:block' : ''}`}>
-                        {/* Recipients Section - Modern Card Design */}
-                        <div className="group rounded-3xl border border-slate-200/70 bg-white/80 p-5 shadow-lg backdrop-blur-sm transition-all duration-300 hover:shadow-xl dark:border-slate-800/50 dark:bg-slate-900/80 sm:p-6">
-                            <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                                <div className="flex items-center gap-3">
+                        {!hideRecipientPicker ? (
+                            <div className="group rounded-3xl border border-slate-200/70 bg-white/80 p-5 shadow-lg backdrop-blur-sm transition-all duration-300 hover:shadow-xl dark:border-slate-800/50 dark:bg-slate-900/80 sm:p-6">
+                                <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-sky-600 shadow-md">
+                                            <Users className="h-5 w-5 text-white" />
+                                        </div>
+                                        <div>
+                                            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
+                                                {__('Destinataires')}
+                                            </h2>
+                                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                                                {recipientCountText}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowRecipientList(!showRecipientList)}
+                                        className="inline-flex items-center gap-1 text-sm font-medium text-cyan-600 transition-all hover:gap-2 hover:text-cyan-700 dark:text-cyan-400"
+                                    >
+                                        {showRecipientList ? (
+                                            <>Masquer <ChevronRight className="h-4 w-4 rotate-90" /></>
+                                        ) : (
+                                            <>Afficher <ChevronRight className="h-4 w-4" /></>
+                                        )}
+                                    </button>
+                                </div>
+
+                                {/* Selected Recipients Tags - Modern Chips */}
+                                {selectedRecipients.length > 0 && (
+                                    <div className="mb-5 rounded-2xl bg-gradient-to-r from-cyan-50/80 to-sky-50/80 p-4 backdrop-blur-sm dark:from-cyan-950/30 dark:to-sky-950/30">
+                                        <div className="mb-3 flex items-center justify-between">
+                                            <p className="text-sm font-semibold text-cyan-800 dark:text-cyan-200">
+                                                {__('Sélectionnés')} ({selectedRecipients.length})
+                                            </p>
+                                            <button
+                                                type="button"
+                                                onClick={() => setData('receiver_ids', [])}
+                                                className="text-xs text-red-500 transition-colors hover:text-red-600"
+                                            >
+                                                {__('Tout effacer')}
+                                            </button>
+                                        </div>
+                                        {selectedOutOfOfficeRecipients.length > 0 && (
+                                            <div className="mb-3 rounded-xl border border-amber-200/80 bg-amber-50/80 px-3 py-2 dark:border-amber-500/30 dark:bg-amber-500/10">
+                                                <p className="flex items-center gap-1.5 text-xs font-semibold text-amber-800 dark:text-amber-200">
+                                                    <AlertCircle className="h-3.5 w-3.5" />
+                                                    {__('Attention: certains destinataires selectionnes sont absents.')}
+                                                </p>
+                                                <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
+                                                    {selectedOutOfOfficeRecipients.slice(0, 4).map(recipientAbsenceNote).join(', ')}
+                                                    {selectedOutOfOfficeRecipients.length > 4
+                                                        ? ` ${__('et')} ${selectedOutOfOfficeRecipients.length - 4} ${__('autre(s)')}`
+                                                        : ''}
+                                                </p>
+                                            </div>
+                                        )}
+                                        <div className="flex flex-wrap gap-2">
+                                            {selectedRecipients.map((recipient) => (
+                                                <button
+                                                    key={recipient.id}
+                                                    type="button"
+                                                    onClick={() => toggleRecipient(recipient.id)}
+                                                    className={`group inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium shadow-sm transition-all duration-200 hover:scale-105 ${
+                                                        recipient.is_out_of_office
+                                                            ? 'bg-gradient-to-r from-amber-100 to-orange-100 text-amber-800 hover:from-red-100 hover:to-rose-100 dark:from-amber-500/20 dark:to-orange-500/20 dark:text-amber-200'
+                                                            : 'bg-white text-slate-700 shadow-sm hover:bg-red-50 hover:text-red-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-red-950/30'
+                                                    }`}
+                                                >
+                                                    {recipient.is_out_of_office && <AlertCircle className="h-3.5 w-3.5" />}
+                                                    <span className="max-w-[150px] truncate">{recipient.name}</span>
+                                                    <X className="h-3 w-3 opacity-60 transition-opacity group-hover:opacity-100" />
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {showRecipientList && (
+                                    <div className="grid gap-5 lg:grid-cols-[280px,1fr]">
+                                        {/* Filters - Modern Inputs */}
+                                        <div className="space-y-4">
+                                            <div>
+                                                <label className="mb-2 flex items-center gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-300">
+                                                    <Filter className="h-4 w-4 text-cyan-500" />
+                                                    {__('Filtrer par rôle')}
+                                                </label>
+                                                <select
+                                                    value={roleFilter}
+                                                    onChange={(event) => setRoleFilter(event.target.value)}
+                                                    className="block w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm transition-all focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                                                >
+                                                    <option value="">{__('Tous les rôles')}</option>
+                                                    {roles.map((role) => (
+                                                        <option key={role.id} value={role.id}>{role.nom_role}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+
+                                            <div>
+                                                <label className="mb-2 flex items-center gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-300">
+                                                    <Search className="h-4 w-4 text-cyan-500" />
+                                                    {__('Rechercher')}
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={search}
+                                                    onChange={(event) => setSearch(event.target.value)}
+                                                    placeholder={__('Nom ou email...')}
+                                                    className="block w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm transition-all focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                                                />
+                                            </div>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => setFavoritesOnly((value) => !value)}
+                                                className={`inline-flex w-full items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${
+                                                    favoritesOnly
+                                                        ? 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200'
+                                                        : 'border-slate-200 bg-white text-slate-600 hover:border-amber-200 hover:text-amber-600 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300'
+                                                }`}
+                                            >
+                                                <Star className={`h-4 w-4 ${favoritesOnly ? 'fill-current' : ''}`} />
+                                                {favoritesOnly ? __('Tous les contacts') : __('Favoris seulement')}
+                                            </button>
+                                        </div>
+
+                                        {/* Recipients List - Modern Card Grid */}
+                                        <div className="rounded-xl border border-slate-200 bg-slate-50/30 p-3 dark:border-slate-800 dark:bg-slate-950/20">
+                                            <div className="mb-3 flex flex-wrap items-center justify-between gap-3 px-2">
+                                                <div>
+                                                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                                                        {__('Liste des destinataires')}
+                                                    </p>
+                                                    <p className="text-xs text-slate-400">{filteredRecipients.length} {__('contacts')}</p>
+                                                </div>
+                                                <div className="flex flex-wrap gap-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={selectAllFilteredRecipients}
+                                                        disabled={filteredRecipients.length === 0}
+                                                        className="inline-flex items-center gap-1 rounded-full border border-cyan-200 bg-gradient-to-r from-cyan-50 to-sky-50 px-3 py-1.5 text-xs font-semibold text-cyan-700 transition-all hover:scale-105 hover:border-cyan-300 disabled:opacity-50 dark:border-cyan-500/20 dark:from-cyan-500/10 dark:to-sky-500/10 dark:text-cyan-300"
+                                                    >
+                                                        <UserPlus className="h-3 w-3" />
+                                                        {__('Tout')}
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={deselectAllFilteredRecipients}
+                                                        disabled={filteredRecipients.length === 0}
+                                                        className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition-all hover:scale-105 hover:border-slate-300 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+                                                    >
+                                                        <UserMinus className="h-3 w-3" />
+                                                        {__('Aucun')}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            {filteredOutOfOfficeRecipients.length > 0 && (
+                                                <div className="mx-2 mb-3 rounded-xl border border-amber-200/80 bg-amber-50/80 px-3 py-2 dark:border-amber-500/30 dark:bg-amber-500/10">
+                                                    <p className="flex items-center gap-1.5 text-xs font-semibold text-amber-800 dark:text-amber-200">
+                                                        <AlertCircle className="h-3.5 w-3.5" />
+                                                        {__('Absents')}: {filteredOutOfOfficeRecipients.length}
+                                                    </p>
+                                                    <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
+                                                        {filteredOutOfOfficeRecipients.slice(0, 5).map(recipientAbsenceNote).join(', ')}
+                                                        {filteredOutOfOfficeRecipients.length > 5
+                                                            ? ` ${__('et')} ${filteredOutOfOfficeRecipients.length - 5} ${__('autre(s)')}`
+                                                            : ''}
+                                                    </p>
+                                                </div>
+                                            )}
+                                            <div className="max-h-80 space-y-1.5 overflow-y-auto pr-1">
+                                                {filteredRecipients.length > 0 ? (
+                                                    filteredRecipients.map((recipient) => {
+                                                        const checked = data.receiver_ids.includes(recipient.id);
+                                                        return (
+                                                            <label
+                                                                key={recipient.id}
+                                                                className={`flex cursor-pointer items-start gap-3 rounded-xl p-3 transition-all duration-200 ${
+                                                                    checked
+                                                                        ? 'bg-gradient-to-r from-cyan-50 to-sky-50 ring-1 ring-cyan-300 dark:from-cyan-950/30 dark:to-sky-950/30 dark:ring-cyan-500/50'
+                                                                        : 'hover:bg-slate-100 dark:hover:bg-slate-800/50'
+                                                                }`}
+                                                            >
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={checked}
+                                                                    onChange={() => toggleRecipient(recipient.id)}
+                                                                    className="mt-0.5 h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-2 focus:ring-cyan-500/20 dark:border-slate-600"
+                                                                />
+                                                                <div className="min-w-0 flex-1">
+                                                                    <p className="text-sm font-medium text-slate-800 dark:text-slate-100">
+                                                                        {recipient.name}
+                                                                    </p>
+                                                                    <p className="truncate text-xs text-slate-500 dark:text-slate-400">
+                                                                        {recipient.email}
+                                                                    </p>
+                                                                <div className="mt-0.5 flex flex-wrap items-center gap-2">
+                                                                    <p className="text-xs text-cyan-600 dark:text-cyan-400">
+                                                                        {recipient.role?.nom_role ?? __('Sans rôle')}
+                                                                    </p>
+                                                                    {recipient.is_favorite && (
+                                                                        <StatusBadge type="warning">
+                                                                            <Star className="h-3 w-3 fill-current" />
+                                                                            {__('Favori')}
+                                                                        </StatusBadge>
+                                                                    )}
+                                                                </div>
+                                                                    {recipient.is_out_of_office && (
+                                                                        <div className="mt-2 flex flex-wrap gap-2">
+                                                                            <StatusBadge type="warning">
+                                                                                <AlertCircle className="h-3 w-3" />
+                                                                                {__("Absent")}
+                                                                            </StatusBadge>
+                                                                            {recipient.has_auto_delegation && recipient.delegate_user ? (
+                                                                                <StatusBadge type="info">
+                                                                                    <CornerDownRight className="h-3 w-3" />
+                                                                                    {recipient.delegate_user.name}
+                                                                                </StatusBadge>
+                                                                            ) : (
+                                                                                <StatusBadge type="default">
+                                                                                    {__("Sans delegation")}
+                                                                                </StatusBadge>
+                                                                            )}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </label>
+                                                        );
+                                                    })
+                                                ) : (
+                                                    <div className="py-12 text-center text-sm text-slate-500 dark:text-slate-400">
+                                                        {__('Aucun destinataire trouvé')}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                </div>
+                            )}
+
+                                <InputError message={errors.receiver_ids || (errors as Record<string, string | undefined>)['receiver_ids.0']} className="mt-4" />
+                            </div>
+                        ) : (
+                            <div className="group rounded-3xl border border-slate-200/70 bg-white/80 p-5 shadow-lg backdrop-blur-sm transition-all duration-300 hover:shadow-xl dark:border-slate-800/50 dark:bg-slate-900/80 sm:p-6">
+                                <div className="mb-5 flex items-center gap-3">
                                     <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-sky-600 shadow-md">
                                         <Users className="h-5 w-5 text-white" />
                                     </div>
                                     <div>
                                         <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
-                                            {__('Destinataires')}
+                                            {__('Destinataire')}
                                         </h2>
                                         <p className="text-sm text-slate-500 dark:text-slate-400">
-                                            {recipientCountText}
+                                            {__('Ce message sera envoyé au contact sélectionné.')}
                                         </p>
                                     </div>
                                 </div>
-                                <button
-                                    type="button"
-                                    onClick={() => setShowRecipientList(!showRecipientList)}
-                                    className="inline-flex items-center gap-1 text-sm font-medium text-cyan-600 transition-all hover:gap-2 hover:text-cyan-700 dark:text-cyan-400"
-                                >
-                                    {showRecipientList ? (
-                                        <>Masquer <ChevronRight className="h-4 w-4 rotate-90" /></>
-                                    ) : (
-                                        <>Afficher <ChevronRight className="h-4 w-4" /></>
-                                    )}
-                                </button>
-                            </div>
 
-                            {/* Selected Recipients Tags - Modern Chips */}
-                            {selectedRecipients.length > 0 && (
-                                <div className="mb-5 rounded-2xl bg-gradient-to-r from-cyan-50/80 to-sky-50/80 p-4 backdrop-blur-sm dark:from-cyan-950/30 dark:to-sky-950/30">
-                                    <div className="mb-3 flex items-center justify-between">
-                                        <p className="text-sm font-semibold text-cyan-800 dark:text-cyan-200">
-                                            {__('Sélectionnés')} ({selectedRecipients.length})
-                                        </p>
-                                        <button
-                                            type="button"
-                                            onClick={() => setData('receiver_ids', [])}
-                                            className="text-xs text-red-500 transition-colors hover:text-red-600"
-                                        >
-                                            {__('Tout effacer')}
-                                        </button>
-                                    </div>
-                                    {selectedOutOfOfficeRecipients.length > 0 && (
-                                        <div className="mb-3 rounded-xl border border-amber-200/80 bg-amber-50/80 px-3 py-2 dark:border-amber-500/30 dark:bg-amber-500/10">
-                                            <p className="flex items-center gap-1.5 text-xs font-semibold text-amber-800 dark:text-amber-200">
-                                                <AlertCircle className="h-3.5 w-3.5" />
-                                                {__('Attention: certains destinataires selectionnes sont absents.')}
-                                            </p>
-                                            <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
-                                                {selectedOutOfOfficeRecipients.slice(0, 4).map(recipientAbsenceNote).join(', ')}
-                                                {selectedOutOfOfficeRecipients.length > 4
-                                                    ? ` ${__('et')} ${selectedOutOfOfficeRecipients.length - 4} ${__('autre(s)')}`
-                                                    : ''}
-                                            </p>
-                                        </div>
-                                    )}
-                                    <div className="flex flex-wrap gap-2">
-                                        {selectedRecipients.map((recipient) => (
-                                            <button
-                                                key={recipient.id}
-                                                type="button"
-                                                onClick={() => toggleRecipient(recipient.id)}
-                                                className={`group inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium shadow-sm transition-all duration-200 hover:scale-105 ${
-                                                    recipient.is_out_of_office
-                                                        ? 'bg-gradient-to-r from-amber-100 to-orange-100 text-amber-800 hover:from-red-100 hover:to-rose-100 dark:from-amber-500/20 dark:to-orange-500/20 dark:text-amber-200'
-                                                        : 'bg-white text-slate-700 shadow-sm hover:bg-red-50 hover:text-red-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-red-950/30'
-                                                }`}
-                                            >
-                                                {recipient.is_out_of_office && <AlertCircle className="h-3.5 w-3.5" />}
-                                                <span className="max-w-[150px] truncate">{recipient.name}</span>
-                                                <X className="h-3 w-3 opacity-60 transition-opacity group-hover:opacity-100" />
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            {showRecipientList && (
-                                <div className="grid gap-5 lg:grid-cols-[280px,1fr]">
-                                    {/* Filters - Modern Inputs */}
-                                    <div className="space-y-4">
-                                        <div>
-                                            <label className="mb-2 flex items-center gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-300">
-                                                <Filter className="h-4 w-4 text-cyan-500" />
-                                                {__('Filtrer par rôle')}
-                                            </label>
-                                            <select
-                                                value={roleFilter}
-                                                onChange={(event) => setRoleFilter(event.target.value)}
-                                                className="block w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm transition-all focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
-                                            >
-                                                <option value="">{__('Tous les rôles')}</option>
-                                                {roles.map((role) => (
-                                                    <option key={role.id} value={role.id}>{role.nom_role}</option>
-                                                ))}
-                                            </select>
-                                        </div>
-
-                                        <div>
-                                            <label className="mb-2 flex items-center gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-300">
-                                                <Search className="h-4 w-4 text-cyan-500" />
-                                                {__('Rechercher')}
-                                            </label>
-                                            <input
-                                                type="text"
-                                                value={search}
-                                                onChange={(event) => setSearch(event.target.value)}
-                                                placeholder={__('Nom ou email...')}
-                                                className="block w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm transition-all focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {/* Recipients List - Modern Card Grid */}
-                                    <div className="rounded-xl border border-slate-200 bg-slate-50/30 p-3 dark:border-slate-800 dark:bg-slate-950/20">
-                                        <div className="mb-3 flex flex-wrap items-center justify-between gap-3 px-2">
-                                            <div>
-                                                <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                                                    {__('Liste des destinataires')}
-                                                </p>
-                                                <p className="text-xs text-slate-400">{filteredRecipients.length} {__('contacts')}</p>
-                                            </div>
-                                            <div className="flex flex-wrap gap-2">
-                                                <button
-                                                    type="button"
-                                                    onClick={selectAllFilteredRecipients}
-                                                    disabled={filteredRecipients.length === 0}
-                                                    className="inline-flex items-center gap-1 rounded-full border border-cyan-200 bg-gradient-to-r from-cyan-50 to-sky-50 px-3 py-1.5 text-xs font-semibold text-cyan-700 transition-all hover:scale-105 hover:border-cyan-300 disabled:opacity-50 dark:border-cyan-500/20 dark:from-cyan-500/10 dark:to-sky-500/10 dark:text-cyan-300"
-                                                >
-                                                    <UserPlus className="h-3 w-3" />
-                                                    {__('Tout')}
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={deselectAllFilteredRecipients}
-                                                    disabled={filteredRecipients.length === 0}
-                                                    className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition-all hover:scale-105 hover:border-slate-300 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
-                                                >
-                                                    <UserMinus className="h-3 w-3" />
-                                                    {__('Aucun')}
-                                                </button>
-                                            </div>
-                                        </div>
-                                        {filteredOutOfOfficeRecipients.length > 0 && (
-                                            <div className="mx-2 mb-3 rounded-xl border border-amber-200/80 bg-amber-50/80 px-3 py-2 dark:border-amber-500/30 dark:bg-amber-500/10">
-                                                <p className="flex items-center gap-1.5 text-xs font-semibold text-amber-800 dark:text-amber-200">
-                                                    <AlertCircle className="h-3.5 w-3.5" />
-                                                    {__('Absents')}: {filteredOutOfOfficeRecipients.length}
-                                                </p>
-                                                <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
-                                                    {filteredOutOfOfficeRecipients.slice(0, 5).map(recipientAbsenceNote).join(', ')}
-                                                    {filteredOutOfOfficeRecipients.length > 5
-                                                        ? ` ${__('et')} ${filteredOutOfOfficeRecipients.length - 5} ${__('autre(s)')}`
-                                                        : ''}
-                                                </p>
-                                            </div>
-                                        )}
-                                        <div className="max-h-80 space-y-1.5 overflow-y-auto pr-1">
-                                            {filteredRecipients.length > 0 ? (
-                                                filteredRecipients.map((recipient) => {
-                                                    const checked = data.receiver_ids.includes(recipient.id);
-                                                    return (
-                                                        <label
-                                                            key={recipient.id}
-                                                            className={`flex cursor-pointer items-start gap-3 rounded-xl p-3 transition-all duration-200 ${
-                                                                checked
-                                                                    ? 'bg-gradient-to-r from-cyan-50 to-sky-50 ring-1 ring-cyan-300 dark:from-cyan-950/30 dark:to-sky-950/30 dark:ring-cyan-500/50'
-                                                                    : 'hover:bg-slate-100 dark:hover:bg-slate-800/50'
-                                                            }`}
-                                                        >
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={checked}
-                                                                onChange={() => toggleRecipient(recipient.id)}
-                                                                className="mt-0.5 h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-2 focus:ring-cyan-500/20 dark:border-slate-600"
-                                                            />
-                                                            <div className="min-w-0 flex-1">
-                                                                <p className="text-sm font-medium text-slate-800 dark:text-slate-100">
-                                                                    {recipient.name}
-                                                                </p>
-                                                                <p className="truncate text-xs text-slate-500 dark:text-slate-400">
-                                                                    {recipient.email}
-                                                                </p>
-                                                                <p className="mt-0.5 text-xs text-cyan-600 dark:text-cyan-400">
-                                                                    {recipient.role?.nom_role ?? __('Sans rôle')}
-                                                                </p>
-                                                                {recipient.is_out_of_office && (
-                                                                    <div className="mt-2 flex flex-wrap gap-2">
-                                                                        <StatusBadge type="warning">
-                                                                            <AlertCircle className="h-3 w-3" />
-                                                                            {__("Absent")}
-                                                                        </StatusBadge>
-                                                                        {recipient.has_auto_delegation && recipient.delegate_user ? (
-                                                                            <StatusBadge type="info">
-                                                                                <CornerDownRight className="h-3 w-3" />
-                                                                                {recipient.delegate_user.name}
-                                                                            </StatusBadge>
-                                                                        ) : (
-                                                                            <StatusBadge type="default">
-                                                                                {__("Sans delegation")}
-                                                                            </StatusBadge>
-                                                                        )}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        </label>
-                                                    );
-                                                })
-                                            ) : (
-                                                <div className="py-12 text-center text-sm text-slate-500 dark:text-slate-400">
-                                                    {__('Aucun destinataire trouvé')}
+                                {lockedRecipient ? (
+                                    <div className="rounded-2xl border border-cyan-200/80 bg-gradient-to-r from-cyan-50/90 to-sky-50/90 p-4 shadow-sm dark:border-cyan-500/20 dark:from-cyan-950/30 dark:to-sky-950/30">
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div className="min-w-0">
+                                                <div className="flex items-center gap-2">
+                                                    <p className="truncate text-base font-semibold text-slate-900 dark:text-white">
+                                                        {lockedRecipient.name}
+                                                    </p>
+                                                    {lockedRecipient.is_out_of_office && (
+                                                        <StatusBadge type="warning">
+                                                            <AlertCircle className="h-3 w-3" />
+                                                            {__('Absent')}
+                                                        </StatusBadge>
+                                                    )}
                                                 </div>
-                                            )}
+                                                <p className="mt-1 truncate text-sm text-slate-600 dark:text-slate-300">
+                                                    {lockedRecipient.email}
+                                                </p>
+                                                <p className="mt-1 text-xs font-medium text-cyan-700 dark:text-cyan-300">
+                                                    {lockedRecipient.role?.nom_role ?? __('Sans rôle')}
+                                                </p>
+                                                {lockedRecipient.is_out_of_office && (
+                                                    <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+                                                        {recipientAbsenceNote(lockedRecipient)}
+                                                    </p>
+                                                )}
+                                            </div>
+                                            <span className="rounded-full bg-white/80 px-3 py-1 text-xs font-semibold text-cyan-700 shadow-sm dark:bg-slate-900/70 dark:text-cyan-200">
+                                                {__('Préselectionné')}
+                                            </span>
                                         </div>
                                     </div>
-                                </div>
-                            )}
+                                ) : (
+                                    <div className="rounded-2xl border border-amber-200/80 bg-amber-50/80 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
+                                        {__('Aucun destinataire valide n’a été trouvé pour ce message.')}
+                                    </div>
+                                )}
 
-                            <InputError message={errors.receiver_ids || (errors as Record<string, string | undefined>)['receiver_ids.0']} className="mt-4" />
-                        </div>
+                                <InputError message={errors.receiver_ids || (errors as Record<string, string | undefined>)['receiver_ids.0']} className="mt-4" />
+                            </div>
+                        )}
 
                         {/* Message Content Section - Modern Editor */}
                         <div className="group rounded-3xl border border-slate-200/70 bg-white/80 p-5 shadow-lg backdrop-blur-sm transition-all duration-300 hover:shadow-xl dark:border-slate-800/50 dark:bg-slate-900/80 sm:p-6">
@@ -735,6 +916,19 @@ export default function Compose({
 
                     {/* Right Column - Settings (1/3) */}
                     <div className={`space-y-6 ${activeTab !== 'settings' ? 'hidden xl:block' : ''}`}>
+                        {/* Signature Section - Moved to Top */}
+                        {signature && (
+                            <div className="rounded-3xl border border-slate-200/70 bg-white/80 p-5 shadow-lg backdrop-blur-sm transition-all duration-300 hover:shadow-xl dark:border-slate-800/50 dark:bg-slate-900/80 sm:p-6">
+                                <SignaturePreview
+                                    signature={signature}
+                                    onEdit={() => {
+                                        // Navigate to profile settings or open modal
+                                        window.location.href = route('profile.edit');
+                                    }}
+                                />
+                            </div>
+                        )}
+
                         {/* Message Type Selection - Modern Cards */}
                         <div className="rounded-3xl border border-slate-200/70 bg-white/80 p-5 shadow-lg backdrop-blur-sm transition-all duration-300 hover:shadow-xl dark:border-slate-800/50 dark:bg-slate-900/80 sm:p-6">
                             <div className="mb-5 flex items-center gap-3">
@@ -783,16 +977,45 @@ export default function Compose({
                                 {/* Scheduled Date & Deadline - Modern Inputs */}
                                 <div className="space-y-4">
                                     <div>
-                                        <label className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
-                                            <Calendar className="h-4 w-4 text-cyan-500" />
-                                            {__('Envoi programmé')}
-                                        </label>
-                                        <input
-                                            type="datetime-local"
-                                            value={data.scheduled_at}
-                                            onChange={(event) => setData('scheduled_at', event.target.value)}
-                                            className="block w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm transition-all focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
-                                        />
+                                        <div className="mb-2 flex items-center justify-between gap-3">
+                                            <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+                                                <Calendar className="h-4 w-4 text-cyan-500" />
+                                                {__('Envoi programmé')}
+                                            </label>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    if (showScheduledAt && data.scheduled_at) {
+                                                        setData('scheduled_at', '');
+                                                    }
+
+                                                    setShowScheduledAt((value) => !value);
+                                                }}
+                                                className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition-all duration-200 ${
+                                                    showScheduledAt
+                                                        ? 'border-cyan-300 bg-cyan-50 text-cyan-700 shadow-sm dark:border-cyan-700/60 dark:bg-cyan-950/40 dark:text-cyan-200'
+                                                        : 'border-slate-200 bg-white text-slate-600 hover:border-cyan-300 hover:text-cyan-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300'
+                                                }`}
+                                            >
+                                                <Clock className="h-4 w-4" />
+                                                {showScheduledAt ? __('Retirer la planification') : __('Programmer')}
+                                            </button>
+                                        </div>
+
+                                        {showScheduledAt && (
+                                            <div className="rounded-2xl border border-cyan-100 bg-gradient-to-br from-cyan-50/80 to-sky-50/80 p-4 dark:border-cyan-900/40 dark:from-cyan-950/20 dark:to-sky-950/20">
+                                                <input
+                                                    type="datetime-local"
+                                                    value={data.scheduled_at}
+                                                    onChange={(event) => setData('scheduled_at', event.target.value)}
+                                                    className="block w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm transition-all focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                                                />
+                                                <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                                                    {__('Le message sera envoyé automatiquement à la date et l’heure choisies.')}
+                                                </p>
+                                            </div>
+                                        )}
+
                                         <InputError message={errors.scheduled_at} className="mt-1" />
                                     </div>
 
@@ -827,6 +1050,14 @@ export default function Compose({
                                         label={__('Demander un accusé de réception')}
                                         icon={Receipt}
                                         description={__("Recevez une notification quand le message est lu")}
+                                    />
+
+                                    <Checkbox
+                                        checked={data.is_tracked}
+                                        onChange={(val) => setData('is_tracked', val)}
+                                        label={__('Demander un suivi de lecture')}
+                                        icon={Eye}
+                                        description={__("Retrouvez le statut de lecture de ce message dans Suivi des messages")}
                                     />
 
                                     <Checkbox

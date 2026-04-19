@@ -1,7 +1,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { useTranslation } from '@/Hooks/useTranslation';
 import { Head, Link, router } from '@inertiajs/react';
-import { ArrowRight, Building2, Filter, Mail, RotateCcw, Search, ShieldCheck, UserRound } from 'lucide-react';
+import { ArrowRight, Building2, Filter, Mail, RotateCcw, Search, ShieldCheck, Star, UserRound } from 'lucide-react';
 import { FormEvent, useState } from 'react';
 
 type ContactUser = {
@@ -11,6 +11,7 @@ type ContactUser = {
     email: string;
     is_online: boolean;
     is_blocked: boolean;
+    is_favorite: boolean;
     department?: {
         id: number;
         name: string;
@@ -99,6 +100,15 @@ export default function ContactsIndex({
 
         setForm(emptyFilters);
         router.get(route('contacts.index'), {}, { preserveState: true, replace: true });
+    };
+
+    const toggleFavorite = (user: ContactUser) => {
+        if (user.is_favorite) {
+            router.delete(route('contacts.favorite.destroy', user.id), { preserveScroll: true });
+            return;
+        }
+
+        router.post(route('contacts.favorite.store', user.id), {}, { preserveScroll: true });
     };
 
     return (
@@ -282,24 +292,45 @@ export default function ContactsIndex({
                                             </div>
                                         </div>
 
-                                        <span
-                                            className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                                                user.is_blocked
-                                                    ? 'bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300'
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => toggleFavorite(user)}
+                                                className={`inline-flex h-10 w-10 items-center justify-center rounded-2xl border transition ${
+                                                    user.is_favorite
+                                                        ? 'border-amber-200 bg-amber-50 text-amber-600 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300'
+                                                        : 'border-slate-200 bg-white text-slate-400 hover:border-amber-200 hover:text-amber-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-500'
+                                                }`}
+                                                title={user.is_favorite ? __('Retirer des favoris') : __('Ajouter aux favoris')}
+                                            >
+                                                <Star className={`h-4 w-4 ${user.is_favorite ? 'fill-current' : ''}`} />
+                                            </button>
+
+                                            <span
+                                                className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                                                    user.is_blocked
+                                                        ? 'bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300'
+                                                        : user.is_online
+                                                          ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300'
+                                                          : 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                                                }`}
+                                            >
+                                                {user.is_blocked
+                                                    ? __('Bloque')
                                                     : user.is_online
-                                                      ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300'
-                                                      : 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
-                                            }`}
-                                        >
-                                            {user.is_blocked
-                                                ? __('Bloque')
-                                                : user.is_online
-                                                  ? __('En ligne')
-                                                  : __('Hors ligne')}
-                                        </span>
+                                                      ? __('En ligne')
+                                                      : __('Hors ligne')}
+                                            </span>
+                                        </div>
                                     </div>
 
                                     <div className="mt-5 space-y-3 text-sm text-slate-600 dark:text-slate-300">
+                                        {user.is_favorite && (
+                                            <div className="flex items-center gap-2 text-amber-600 dark:text-amber-300">
+                                                <Star className="h-4 w-4 fill-current" />
+                                                <span>{__('Contact favori')}</span>
+                                            </div>
+                                        )}
                                         <div className="flex items-center gap-2">
                                             <Mail className="h-4 w-4 text-cyan-600 dark:text-cyan-300" />
                                             <span>{user.email}</span>
@@ -390,6 +421,5 @@ export default function ContactsIndex({
         </AuthenticatedLayout>
     );
 }
-
 
 

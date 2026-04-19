@@ -1,5 +1,6 @@
 ﻿import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { useTranslation } from '@/Hooks/useTranslation';
+import ReportModal from '@/Components/ReportModal';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import {
@@ -9,6 +10,7 @@ import {
   Clock,
   Users,
   Mail,
+  Flag,
   MessageSquare,
   Reply,
   Send,
@@ -123,6 +125,7 @@ function StatusBadge({ type, children }: { type: 'info' | 'warning' | 'success' 
 export default function Show({ message }: { message: MessageDetail }) {
     const { __, locale, isRtl } = useTranslation();
     const [isReplying, setIsReplying] = useState(false);
+    const [isReportModalOpen, setIsReportModalOpen] = useState(false);
     const [fileInputKey, setFileInputKey] = useState(0);
     const [quickReplySendingKey, setQuickReplySendingKey] = useState<string | null>(null);
     const originalDate = formatDate(message.created_at, locale);
@@ -299,6 +302,14 @@ export default function Show({ message }: { message: MessageDetail }) {
                                     {__('Transferer')}
                                 </Link>
                             )}
+                            <button
+                                type="button"
+                                onClick={() => setIsReportModalOpen(true)}
+                                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 text-sm font-medium text-rose-700 transition-all hover:border-rose-300 hover:bg-rose-100 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300 dark:hover:bg-rose-500/20"
+                            >
+                                <Flag className="h-4 w-4" />
+                                {__('Signaler')}
+                            </button>
                             <Link
                                 href={route('messages.inbox')}
                                 className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white/80 px-4 text-sm font-medium text-slate-700 transition-all hover:border-cyan-300 hover:bg-white hover:text-cyan-700 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-cyan-500/40 dark:hover:text-cyan-300"
@@ -703,6 +714,12 @@ export default function Show({ message }: { message: MessageDetail }) {
                     </div>
                 </div>
             </div>
+            <ReportModal
+                show={isReportModalOpen}
+                messageId={message.id}
+                messageSubject={message.sujet}
+                onClose={() => setIsReportModalOpen(false)}
+            />
         </AuthenticatedLayout>
     );
 }

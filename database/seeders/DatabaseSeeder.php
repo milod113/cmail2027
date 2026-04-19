@@ -28,6 +28,7 @@ class DatabaseSeeder extends Seeder
             ['nom_role' => 'admin', 'is_protected' => false, 'is_unique' => false],
             ['nom_role' => 'Remplaçant', 'is_protected' => false, 'is_unique' => false],
             ['nom_role' => 'superadmin', 'is_protected' => true, 'is_unique' => false],
+            ['nom_role' => 'organizer', 'is_protected' => false, 'is_unique' => false],
         ];
 
         foreach ($roles as $role) {

@@ -34,6 +34,8 @@ class ProfileController extends Controller
                 'ooo_message' => null,
                 'redirect_messages' => false,
                 'delegate_user_id' => null,
+                'custom_signature' => null,
+                'use_auto_signature' => true,
             ]),
             'colleagues' => User::query()
                 ->whereKeyNot($user->id)
@@ -54,8 +56,29 @@ class ProfileController extends Controller
         ]);
 
         return Inertia::render('Contacts/Show', [
-            'contact' => $user,
+            'contact' => [
+                ...$user->toArray(),
+                'is_favorite' => $this->isFavoriteContact(request()->user(), $user),
+            ],
         ]);
+    }
+
+    public function favorite(Request $request, User $user): RedirectResponse
+    {
+        abort_if((int) $request->user()->id === (int) $user->id, 403);
+
+        $request->user()->favoriteContacts()->syncWithoutDetaching([$user->id]);
+
+        return back()->with('success', 'Contact ajoute aux favoris.');
+    }
+
+    public function unfavorite(Request $request, User $user): RedirectResponse
+    {
+        abort_if((int) $request->user()->id === (int) $user->id, 403);
+
+        $request->user()->favoriteContacts()->detach($user->id);
+
+        return back()->with('success', 'Contact retire des favoris.');
     }
 
     /**
@@ -64,7 +87,7 @@ class ProfileController extends Controller
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
         $user = $request->user();
-        
+
         // Update user basic info
         $user->fill($request->validated());
 
@@ -76,7 +99,7 @@ class ProfileController extends Controller
 
         // Update or create profile
         $profileData = $request->only(['matricule', 'grade', 'telephone', 'adresse']);
-        
+
         // Handle photo upload
         if ($request->hasFile('photo')) {
             $photo = $request->file('photo');
@@ -98,6 +121,26 @@ class ProfileController extends Controller
         }
 
         return Redirect::route('profile.edit')->with('success', 'Profile updated successfully.');
+    }
+
+    public function updateSignature(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'use_auto_signature' => ['required', 'boolean'],
+            'custom_signature' => ['nullable', 'string', 'max:5000'],
+        ]);
+
+        $user->settings()->updateOrCreate(
+            ['user_id' => $user->id],
+            [
+                'custom_signature' => $validated['custom_signature'] ?? null,
+                'use_auto_signature' => $validated['use_auto_signature'],
+            ],
+        );
+
+        return Redirect::route('profile.edit')->with('success', 'Signature automatique mise à jour avec succès.');
     }
 
     /**
@@ -124,5 +167,12 @@ class ProfileController extends Controller
         $request->session()->regenerateToken();
 
         return Redirect::to('/');
+    }
+
+    private function isFavoriteContact(User $owner, User $contact): bool
+    {
+        return $owner->favoriteContacts()
+            ->where('favorite_contact_id', $contact->id)
+            ->exists();
     }
 }

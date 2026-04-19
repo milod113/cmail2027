@@ -1,13 +1,19 @@
 <?php
 
 use App\Http\Controllers\DepartmentController;
+use App\Http\Controllers\AdminController;
 use App\Http\Controllers\CommentController;
+use App\Http\Controllers\EventInvitationController;
 use App\Http\Controllers\LikeController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\PublicationController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SupportTicketController;
 use App\Models\Department;
 use App\Models\Establishment;
+use App\Models\EventInvitation;
+use App\Models\Message;
+use App\Models\MessageDraft;
 use App\Models\Publication;
 use App\Models\Role;
 use App\Http\Controllers\ProfileController;
@@ -23,9 +29,26 @@ Route::get('/', function () {
     return Inertia::render('Welcome');
 });
 
-Route::get('/dashboard', function () {
+Route::get('/dashboard', function (Request $request) {
     return Inertia::render('Dashboard', [
         'publications' => Publication::query()->feed()->get(),
+        'stats' => [
+            'unread_messages' => Message::query()
+                ->where('receiver_id', $request->user()->id)
+                ->where('is_delivered', true)
+                ->where('lu', false)
+                ->where('archived', false)
+                ->count(),
+            'pending_invitations' => EventInvitation::query()
+                ->where('user_id', $request->user()->id)
+                ->where('status', 'pending')
+                ->count(),
+            'drafts' => MessageDraft::query()
+                ->where('sender_id', $request->user()->id)
+                ->count(),
+            'unread_notifications' => $request->user()->unreadNotifications()->count(),
+            'publications_count' => Publication::query()->count(),
+        ],
     ]);
 })->middleware(['auth'])->name('dashboard');
 
@@ -40,6 +63,14 @@ Route::post('/language', function (Request $request) {
 })->name('language.switch');
 
 Route::middleware(['auth'])->group(function () {
+    Route::get('/events/invitations', [EventInvitationController::class, 'index'])->name('events.invitations');
+    Route::get('/events/create', [EventInvitationController::class, 'create'])->name('events.create');
+    Route::get('/events/{event}', [EventInvitationController::class, 'show'])->name('events.show');
+    Route::get('/events/invitations/{invitation}/pdf', [EventInvitationController::class, 'downloadPdf'])->name('events.invitations.pdf');
+    Route::patch('/events/invitations/{invitation}/status', [EventInvitationController::class, 'rsvp'])->name('events.invitations.rsvp');
+    Route::patch('/events/{event}/cancel', [EventInvitationController::class, 'cancelEvent'])->name('events.cancel');
+    Route::patch('/events/{event}/postpone', [EventInvitationController::class, 'postponeEvent'])->name('events.postpone');
+    Route::post('/events', [EventInvitationController::class, 'store'])->name('events.store');
     Route::post('/publications', [PublicationController::class, 'store'])->name('publications.store');
     Route::post('/support/tickets', [SupportTicketController::class, 'store'])->name('support-tickets.store');
     Route::post('/publications/{publication}/like', [LikeController::class, 'toggle'])->name('publications.like.toggle');
@@ -47,8 +78,11 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/inbox', [MessageController::class, 'inbox'])->name('messages.inbox');
     Route::get('/messages/group', [MessageController::class, 'groupMessages'])->name('messages.group');
     Route::get('/messages/create', [MessageController::class, 'create'])->name('messages.create');
+    Route::get('/messages/composeparam', [MessageController::class, 'composeParam'])->name('messages.composeparam');
+    Route::get('/messages/tracked', [MessageController::class, 'trackedIndex'])->name('messages.tracked');
     Route::post('/messages', [MessageController::class, 'store'])->name('messages.store');
     Route::get('/messages/{message}', [MessageController::class, 'show'])->name('messages.show');
+    Route::post('/messages/{message}/report', [ReportController::class, 'store'])->name('messages.reports.store');
     Route::post('/messages/{message}/reply-all', [MessageController::class, 'replyAll'])->name('messages.reply_all');
     Route::post('/messages/{message}/reply-recipient/{recipient}', [MessageController::class, 'replyRecipient'])->name('messages.reply_recipient');
     Route::post('/messages/{message}/replies', [MessageController::class, 'storeReply'])->name('replies.store');
@@ -64,6 +98,7 @@ Route::middleware(['auth'])->group(function () {
         $departmentId = $request->integer('department');
         $roleId = $request->integer('role');
         $status = (string) $request->string('status');
+        $favoriteContactIds = $request->user()->favoriteContacts()->pluck('users.id')->map(fn ($id) => (int) $id)->all();
 
         $users = User::query()
             ->with([
@@ -107,6 +142,15 @@ Route::middleware(['auth'])->group(function () {
             ->paginate(12)
             ->withQueryString();
 
+        $users->setCollection(
+            $users->getCollection()->map(function (User $user) use ($favoriteContactIds) {
+                return [
+                    ...$user->toArray(),
+                    'is_favorite' => in_array((int) $user->id, $favoriteContactIds, true),
+                ];
+            })
+        );
+
         return Inertia::render('Contacts/Index', [
             'stats' => [
                 'users' => User::count(),
@@ -132,6 +176,8 @@ Route::middleware(['auth'])->group(function () {
             'users' => $users,
         ]);
     })->name('contacts.index');
+    Route::post('/contacts/{user}/favorite', [ProfileController::class, 'favorite'])->name('contacts.favorite.store');
+    Route::delete('/contacts/{user}/favorite', [ProfileController::class, 'unfavorite'])->name('contacts.favorite.destroy');
     Route::get('/contacts/{user}', [ProfileController::class, 'show'])->name('contacts.show');
     Route::get('/archive', [MessageController::class, 'archiveIndex'])->name('messages.archive');
     Route::post('/messages/archive/bulk', [MessageController::class, 'bulkArchive'])->name('messages.archive.bulk');
@@ -144,10 +190,29 @@ Route::middleware(['auth'])->group(function () {
     Route::resource('roles', RoleController::class)->except(['show']);
 });
 
+Route::middleware(['auth', 'admin'])
+    ->prefix('admin')
+    ->name('admin.')
+    ->group(function () {
+        Route::get('/', [AdminController::class, 'index'])->name('dashboard');
+        Route::get('/users', [AdminController::class, 'users'])->name('users.index');
+        Route::get('/users/{user}', [AdminController::class, 'showUser'])->name('users.show');
+        Route::patch('/users/{user}/profile', [AdminController::class, 'updateUserProfile'])->name('users.profile.update');
+        Route::patch('/users/{user}/status', [AdminController::class, 'blockUser'])->name('users.block');
+        Route::patch('/users/{user}/role', [AdminController::class, 'changeRole'])->name('users.change-role');
+        Route::get('/support', [AdminController::class, 'support'])->name('support.index');
+        Route::post('/support/{ticket}/respond', [AdminController::class, 'respondSupport'])->name('support.respond');
+        Route::get('/reports', [AdminController::class, 'reports'])->name('reports.index');
+        Route::patch('/reports/{reportedMessage}', [AdminController::class, 'updateReportStatus'])->name('reports.update');
+        Route::delete('/reports/{reportedMessage}/message', [AdminController::class, 'destroyReportedMessageSource'])->name('reports.message.destroy');
+        Route::get('/audit/messages', [AdminController::class, 'audit'])->name('audit.messages');
+    });
+
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::patch('/profile/settings', [UserSettingController::class, 'update'])->name('profile.settings.update');
+    Route::put('/profile/signature', [ProfileController::class, 'updateSignature'])->name('profile.signature.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 

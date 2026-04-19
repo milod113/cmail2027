@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Events\NotificationCreated;
 use App\Events\ReplyCreated;
+use App\Models\EventInvitation;
 use App\Models\Message;
 use App\Models\MessageDraft;
 use App\Models\Role;
@@ -42,6 +43,7 @@ class MessageController extends Controller
                 'originalReceiver:id,name,email',
             ])
             ->where('receiver_id', $user->id)
+            ->where('is_delivered', true)
             ->where('archived', false)
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($subQuery) use ($search) {
@@ -394,11 +396,22 @@ class MessageController extends Controller
 
         $this->authorizeMessageAccess($request->user()->id, $message);
 
+        if (
+            (int) $message->receiver_id === (int) $request->user()->id
+            && ! $message->is_delivered
+        ) {
+            abort(404);
+        }
+
         if ($message->receiver_id === $request->user()->id && ! $message->lu) {
             $message->update([
                 'lu' => true,
                 'lu_le' => now(),
             ]);
+        }
+
+        if ((int) $message->receiver_id === (int) $request->user()->id) {
+            $this->markAsRead($message);
         }
 
         $message->load([
@@ -463,6 +476,34 @@ class MessageController extends Controller
         ]);
     }
 
+    public function trackedIndex(Request $request): Response
+    {
+        $user = $request->user();
+
+        return Inertia::render('Messages/TrackedMessages', [
+            'messages' => Message::query()
+                ->with([
+                    'receiver:id,name,email',
+                ])
+                ->where('sender_id', $user->id)
+                ->where('is_tracked', true)
+                ->latest('sent_at')
+                ->latest()
+                ->get([
+                    'id',
+                    'sender_id',
+                    'receiver_id',
+                    'sujet',
+                    'contenu',
+                    'sent_at',
+                    'read_at',
+                    'is_tracked',
+                    'is_delivered',
+                    'created_at',
+                ]),
+        ]);
+    }
+
     public function replyAll(Request $request, Message $message): RedirectResponse
     {
         $rootMessage = $this->resolveThreadRootMessage($message);
@@ -490,7 +531,9 @@ class MessageController extends Controller
                 $receiverIds,
             );
 
-            broadcast(new NotificationCreated((int) $reply->receiver_id, 'message', (int) $reply->id))->toOthers();
+            $this->broadcastSafely(
+                new NotificationCreated((int) $reply->receiver_id, 'message', (int) $reply->id)
+            );
         }
 
         return back()->with('success', 'Réponse envoyée à tous les destinataires.');
@@ -519,7 +562,9 @@ class MessageController extends Controller
             [$recipient->id],
         );
 
-        broadcast(new NotificationCreated((int) $reply->receiver_id, 'message', (int) $reply->id))->toOthers();
+        $this->broadcastSafely(
+            new NotificationCreated((int) $reply->receiver_id, 'message', (int) $reply->id)
+        );
 
         return back()->with('success', 'Réponse envoyée au destinataire sélectionné.');
     }
@@ -551,8 +596,10 @@ class MessageController extends Controller
         ]);
 
         if ((int) $message->sender_id !== (int) $request->user()->id) {
-            broadcast(new ReplyCreated($message->id, (int) $message->sender_id))->toOthers();
-            broadcast(new NotificationCreated((int) $message->sender_id, 'reply', $message->id))->toOthers();
+            $this->broadcastSafely(new ReplyCreated($message->id, (int) $message->sender_id));
+            $this->broadcastSafely(
+                new NotificationCreated((int) $message->sender_id, 'reply', $message->id)
+            );
         }
 
         return back()->with('success', 'Reponse envoyee avec succes.');
@@ -633,7 +680,59 @@ class MessageController extends Controller
             ];
         }
 
+        if ($prefill === null) {
+            $recipientId = $request->integer('recipient_id');
+
+            if ($recipientId > 0) {
+                abort_if($recipientId === $request->user()->id, 403);
+                abort_unless(User::query()->where('id', $recipientId)->exists(), 404);
+
+                $prefill = [
+                    'receiver_ids' => [$recipientId],
+                    'sujet' => '',
+                    'contenu' => '',
+                    'important' => false,
+                    'requires_receipt' => false,
+                    'scheduled_at' => '',
+                    'type_message' => 'normal',
+                    'deadline_reponse' => '',
+                    'can_be_redirected' => false,
+                    'attachment_name' => null,
+                    'attachment_url' => null,
+                    'existing_attachment_path' => '',
+                    'forwarded_from_message_id' => null,
+                ];
+            }
+        }
+
         return Inertia::render('Messages/Compose', $this->composePayload($request->user()->id, $prefill));
+    }
+
+    public function composeParam(Request $request): Response
+    {
+        $recipientId = $request->integer('recipient_id');
+
+        abort_unless($recipientId > 0, 400);
+        abort_if($recipientId === $request->user()->id, 403);
+        abort_unless(User::query()->where('id', $recipientId)->exists(), 404);
+
+        $prefill = [
+            'receiver_ids' => [$recipientId],
+            'sujet' => '',
+            'contenu' => '',
+            'important' => false,
+            'requires_receipt' => false,
+            'scheduled_at' => '',
+            'type_message' => 'normal',
+            'deadline_reponse' => '',
+            'can_be_redirected' => false,
+            'attachment_name' => null,
+            'attachment_url' => null,
+            'existing_attachment_path' => '',
+            'forwarded_from_message_id' => null,
+        ];
+
+        return Inertia::render('Messages/ComposeParam', $this->composePayload($request->user()->id, $prefill));
     }
 
     public function editDraft(Request $request, MessageDraft $draft): Response
@@ -668,11 +767,26 @@ class MessageController extends Controller
         $storedFile = $this->resolveAttachmentPath($request, 'messages');
 
         $createdMessages = $this->createMessagesFromPayload($validated, $request->user()->id, $storedFile);
-        $followUpMessages = $this->handleOutOfOfficeActions($createdMessages);
+        $deliveredMessages = collect($createdMessages)
+            ->filter(fn (Message $message) => $message->is_delivered)
+            ->values();
+        $followUpMessages = $this->handleOutOfOfficeActions($deliveredMessages->all());
 
-        foreach (array_merge($createdMessages, $followUpMessages) as $message) {
-            broadcast(new NotificationCreated((int) $message->receiver_id, 'message', (int) $message->id))->toOthers();
+        foreach ($deliveredMessages->concat($followUpMessages) as $message) {
+            $this->broadcastSafely(
+                new NotificationCreated((int) $message->receiver_id, 'message', (int) $message->id)
+            );
         }
+
+        if ($deliveredMessages->isEmpty()) {
+            return redirect()
+                ->route('messages.sent')
+                ->with('success', 'Message programme avec succes.');
+        }
+
+        return redirect()
+            ->route('messages.sent')
+            ->with('success', 'Message envoye avec succes.');
 
         return redirect()
             ->route('messages.sent')
@@ -749,10 +863,15 @@ class MessageController extends Controller
         $storedFile = $this->storeOrReuseDraftFile($request, $draft);
 
         $createdMessages = $this->createMessagesFromPayload($validated, $request->user()->id, $storedFile);
-        $followUpMessages = $this->handleOutOfOfficeActions($createdMessages);
+        $deliveredMessages = collect($createdMessages)
+            ->filter(fn (Message $message) => $message->is_delivered)
+            ->values();
+        $followUpMessages = $this->handleOutOfOfficeActions($deliveredMessages->all());
 
-        foreach (array_merge($createdMessages, $followUpMessages) as $message) {
-            broadcast(new NotificationCreated((int) $message->receiver_id, 'message', (int) $message->id))->toOthers();
+        foreach ($deliveredMessages->concat($followUpMessages) as $message) {
+            $this->broadcastSafely(
+                new NotificationCreated((int) $message->receiver_id, 'message', (int) $message->id)
+            );
         }
 
         if ($draft->fichier && $draft->fichier !== $storedFile && $this->draftOwnsAttachment($draft, $draft->fichier)) {
@@ -760,6 +879,16 @@ class MessageController extends Controller
         }
 
         $draft->delete();
+
+        if ($deliveredMessages->isEmpty()) {
+            return redirect()
+                ->route('messages.sent')
+                ->with('success', 'Brouillon programme avec succes.');
+        }
+
+        return redirect()
+            ->route('messages.sent')
+            ->with('success', 'Brouillon envoye avec succes.');
 
         return redirect()
             ->route('messages.sent')
@@ -822,6 +951,7 @@ class MessageController extends Controller
         $messageNotifications = Message::query()
             ->with('sender:id,name,email')
             ->where('receiver_id', $user->id)
+            ->where('is_delivered', true)
             ->latest(DB::raw('COALESCE(sent_at, created_at)'))
             ->limit(10)
             ->get()
@@ -873,8 +1003,144 @@ class MessageController extends Controller
                 });
         }
 
+        $eventInviteNotifications = collect();
+        $eventRsvpNotifications = collect();
+        $databaseNotifications = Schema::hasTable('notifications')
+            ? $user->notifications()
+                ->latest()
+                ->limit(10)
+                ->get()
+                ->map(function ($notification) use ($readAt) {
+                    $data = is_array($notification->data) ? $notification->data : [];
+                    $createdAt = $notification->created_at;
+                    $eventId = (int) ($data['event_id'] ?? 0);
+                    $eventTitle = (string) ($data['event_title'] ?? 'Evenement');
+                    $messageSubject = (string) ($data['message_subject'] ?? 'Message sans sujet');
+                    $reporterName = (string) ($data['reporter_name'] ?? 'Utilisateur inconnu');
+                    $reasonCategory = (string) ($data['reason_category'] ?? '');
+                    $reason = trim((string) ($data['status_reason'] ?? ''));
+                    $subtype = (string) ($data['subtype'] ?? 'system');
+
+                    if ($subtype === 'event_canceled') {
+                        return [
+                            'id' => "db-{$notification->id}",
+                            'type' => 'event',
+                            'title' => 'Evenement annule',
+                            'body' => $eventTitle,
+                            'meta' => $reason !== '' ? $reason : 'Annulation communiquee par l organisateur',
+                            'href' => $eventId > 0 ? route('events.show', $eventId) : route('events.invitations'),
+                            'created_at' => optional($createdAt)?->toIso8601String(),
+                            'unread' => $notification->read_at === null || ($readAt !== null && optional($createdAt)?->gt($readAt)),
+                        ];
+                    }
+
+                    if ($subtype === 'event_postponed') {
+                        $startTime = filled($data['start_time'] ?? null)
+                            ? Carbon::parse((string) $data['start_time'])->format('d/m/Y H:i')
+                            : null;
+
+                        return [
+                            'id' => "db-{$notification->id}",
+                            'type' => 'event',
+                            'title' => 'Evenement reporte',
+                            'body' => $eventTitle,
+                            'meta' => $startTime
+                                ? "Nouvelle date: {$startTime}"
+                                : ($reason !== '' ? $reason : 'Report communique par l organisateur'),
+                            'href' => $eventId > 0 ? route('events.show', $eventId) : route('events.invitations'),
+                            'created_at' => optional($createdAt)?->toIso8601String(),
+                            'unread' => $notification->read_at === null || ($readAt !== null && optional($createdAt)?->gt($readAt)),
+                        ];
+                    }
+
+                    if ($subtype === 'reported_message_created') {
+                        $reportId = (int) ($data['report_id'] ?? 0);
+
+                        return [
+                            'id' => "db-{$notification->id}",
+                            'type' => 'system',
+                            'title' => 'Nouveau signalement message',
+                            'body' => $messageSubject !== '' ? $messageSubject : 'Message signale',
+                            'meta' => trim($reporterName.($reasonCategory !== '' ? ' - '.$reasonCategory : '')),
+                            'href' => $reportId > 0 ? route('admin.reports.index', ['report' => $reportId]) : route('admin.reports.index'),
+                            'created_at' => optional($createdAt)?->toIso8601String(),
+                            'unread' => $notification->read_at === null,
+                        ];
+                    }
+
+                    return [
+                        'id' => "db-{$notification->id}",
+                        'type' => 'system',
+                        'title' => 'Notification',
+                        'body' => $eventTitle,
+                        'meta' => $reason,
+                        'href' => $eventId > 0 ? route('events.show', $eventId) : route('notifications.index'),
+                        'created_at' => optional($createdAt)?->toIso8601String(),
+                        'unread' => $notification->read_at === null,
+                    ];
+                })
+            : collect();
+
+        if (Schema::hasTable('events') && Schema::hasTable('event_invitations')) {
+            $eventInviteNotifications = EventInvitation::query()
+                ->with([
+                    'event:id,title,organizer_id',
+                    'event.organizer:id,name',
+                ])
+                ->where('user_id', $user->id)
+                ->latest('created_at')
+                ->limit(10)
+                ->get()
+                ->map(function (EventInvitation $invitation) use ($readAt) {
+                    $createdAt = $invitation->created_at;
+                    $event = $invitation->event;
+
+                    return [
+                        'id' => "event-invite-{$invitation->id}",
+                        'type' => 'event',
+                        'title' => 'Invitation evenement',
+                        'body' => $event?->title ?? 'Evenement',
+                        'meta' => $event?->organizer?->name ?? 'Organisateur',
+                        'href' => $event ? route('events.show', $event->id) : route('events.invitations'),
+                        'created_at' => optional($createdAt)?->toIso8601String(),
+                        'unread' => $readAt === null || optional($createdAt)?->gt($readAt),
+                    ];
+                });
+
+            $eventRsvpNotifications = EventInvitation::query()
+                ->with([
+                    'event:id,title,organizer_id',
+                    'user:id,name',
+                ])
+                ->whereHas('event', fn ($query) => $query->where('organizer_id', $user->id))
+                ->where('user_id', '!=', $user->id)
+                ->whereIn('status', ['confirmed', 'rejected', 'present'])
+                ->latest('updated_at')
+                ->limit(10)
+                ->get()
+                ->map(function (EventInvitation $invitation) use ($readAt) {
+                    $updatedAt = $invitation->updated_at;
+                    $event = $invitation->event;
+                    $inviteeName = $invitation->user?->name ?? 'Utilisateur';
+
+                    return [
+                        'id' => "event-rsvp-{$invitation->id}-".optional($updatedAt)?->timestamp,
+                        'type' => 'event',
+                        'title' => 'Reponse invitation',
+                        'body' => $event?->title ?? 'Evenement',
+                        'meta' => "{$inviteeName}: {$invitation->status}",
+                        'href' => $event ? route('events.show', $event->id) : route('events.invitations'),
+                        'created_at' => optional($updatedAt)?->toIso8601String(),
+                        'unread' => $readAt === null || optional($updatedAt)?->gt($readAt),
+                    ];
+                });
+        }
+
         $notifications = $messageNotifications
             ->concat($replyNotifications)
+            ->concat($eventInviteNotifications)
+            ->concat($eventRsvpNotifications)
+            ->concat($databaseNotifications)
             ->sortByDesc('created_at')
             ->take(12)
             ->values();
@@ -884,6 +1150,7 @@ class MessageController extends Controller
             'unread_count' => $notifications->where('unread', true)->count(),
             'unread_messages_count' => Message::query()
                 ->where('receiver_id', $user->id)
+                ->where('is_delivered', true)
                 ->where('lu', false)
                 ->where('archived', false)
                 ->count(),
@@ -895,6 +1162,10 @@ class MessageController extends Controller
         $request->user()->forceFill([
             'notifications_read_at' => now(),
         ])->save();
+
+        if (Schema::hasTable('notifications')) {
+            $request->user()->unreadNotifications->markAsRead();
+        }
 
         return response()->noContent();
     }
@@ -910,7 +1181,8 @@ class MessageController extends Controller
             'existing_attachment_path' => ['nullable', 'string', 'max:255'],
             'important' => ['required', 'boolean'],
             'requires_receipt' => ['required', 'boolean'],
-            'scheduled_at' => ['nullable', 'date'],
+            'is_tracked' => ['required', 'boolean'],
+            'scheduled_at' => ['nullable', 'date', 'after:now'],
             'type_message' => ['nullable', 'string', 'max:100'],
             'deadline_reponse' => ['nullable', 'date'],
                 'can_be_redirected' => ['required', 'boolean'],
@@ -941,13 +1213,20 @@ class MessageController extends Controller
 
     private function createMessagesFromPayload(array $validated, int $senderId, ?string $storedFile): array
     {
+        $sender = User::query()
+            ->with(['settings', 'profile', 'department'])
+            ->findOrFail($senderId);
         $scheduledAt = filled($validated['scheduled_at'] ?? null)
             ? Carbon::parse($validated['scheduled_at'])
             : null;
         $isScheduled = $scheduledAt !== null && $scheduledAt->isFuture();
         $sentAt = $isScheduled ? null : now();
-        $receiptRequestedAt = $validated['requires_receipt'] ? now() : null;
+        $receiptRequestedAt = $validated['requires_receipt'] && ! $isScheduled ? now() : null;
         $messageGroupUuid = count($validated['receiver_ids']) > 1 ? (string) Str::uuid() : null;
+        $content = $this->appendSignatureToMessageContent(
+            (string) $validated['contenu'],
+            $sender->formatted_signature
+        );
         $messages = [];
 
         foreach ($validated['receiver_ids'] as $receiverId) {
@@ -956,7 +1235,7 @@ class MessageController extends Controller
                 'receiver_id' => $receiverId,
                 'original_receiver_id' => $validated['original_receiver_id'] ?? null,
                 'sujet' => $validated['sujet'],
-                'contenu' => $validated['contenu'],
+                'contenu' => $content,
                 'fichier' => $storedFile,
                 'lu_le' => null,
                 'lu' => false,
@@ -964,8 +1243,11 @@ class MessageController extends Controller
                 'important' => $validated['important'],
                 'sent_at' => $sentAt,
                 'requires_receipt' => $validated['requires_receipt'],
+                'is_tracked' => $validated['is_tracked'],
                 'receipt_requested_at' => $receiptRequestedAt,
                 'scheduled_at' => $scheduledAt,
+                'is_delivered' => ! $isScheduled,
+                'read_at' => null,
                 'archived' => false,
                 'type_message' => $validated['type_message'] ?? 'normal',
                 'envoye' => ! $isScheduled,
@@ -983,6 +1265,44 @@ class MessageController extends Controller
         }
 
         return $messages;
+    }
+
+    private function appendSignatureToMessageContent(string $content, string $signature): string
+    {
+        $signature = trim($this->normalizeMessageText($signature));
+
+        if ($signature === '') {
+            return $content;
+        }
+
+        $normalizedContent = $this->normalizeMessageText($content);
+        $trimmedContent = rtrim($normalizedContent);
+
+        if ($trimmedContent === '') {
+            return $signature;
+        }
+
+        if (str_ends_with($trimmedContent, $signature)) {
+            return $content;
+        }
+
+        return $trimmedContent."\n\n".$signature;
+    }
+
+    private function normalizeMessageText(string $value): string
+    {
+        return str_replace(["\r\n", "\r"], "\n", $value);
+    }
+
+    private function markAsRead(Message $message): void
+    {
+        if (! $message->is_tracked || $message->read_at !== null) {
+            return;
+        }
+
+        $message->forceFill([
+            'read_at' => now(),
+        ])->save();
     }
 
     private function handleOutOfOfficeActions(array $messages): array
@@ -1052,6 +1372,7 @@ class MessageController extends Controller
             'requires_receipt' => false,
             'receipt_requested_at' => null,
             'scheduled_at' => null,
+            'is_delivered' => true,
             'archived' => false,
             'type_message' => 'out_of_office',
             'envoye' => true,
@@ -1094,6 +1415,7 @@ class MessageController extends Controller
             'requires_receipt' => $message->requires_receipt,
             'receipt_requested_at' => $message->requires_receipt ? now() : null,
             'scheduled_at' => null,
+            'is_delivered' => true,
             'archived' => false,
             'type_message' => 'delegated',
             'envoye' => true,
@@ -1402,6 +1724,7 @@ class MessageController extends Controller
             'requires_receipt' => false,
             'receipt_requested_at' => null,
             'scheduled_at' => null,
+            'is_delivered' => true,
             'archived' => false,
             'type_message' => 'reply',
             'envoye' => true,
@@ -1436,6 +1759,13 @@ class MessageController extends Controller
 
     private function composePayload(int $userId, ?array $draft = null): array
     {
+        $favoriteContactIds = User::query()
+            ->findOrFail($userId)
+            ->favoriteContacts()
+            ->pluck('users.id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
         return [
             'recipients' => User::query()
                 ->with([
@@ -1447,7 +1777,7 @@ class MessageController extends Controller
                 ->whereKeyNot($userId)
                 ->orderBy('name')
                 ->get()
-                ->map(function (User $recipient): array {
+                ->map(function (User $recipient) use ($favoriteContactIds): array {
                     $settings = $recipient->userSetting;
                     $delegateUser = $settings?->delegateUser;
                     $hasAutoDelegation = (bool) (
@@ -1467,6 +1797,7 @@ class MessageController extends Controller
                                 'nom_role' => $recipient->role->nom_role,
                             ]
                             : null,
+                        'is_favorite' => in_array((int) $recipient->id, $favoriteContactIds, true),
                         'is_out_of_office' => (bool) ($settings?->is_out_of_office ?? false),
                         'redirect_messages' => (bool) ($settings?->redirect_messages ?? false),
                         'has_auto_delegation' => $hasAutoDelegation,

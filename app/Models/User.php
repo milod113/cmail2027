@@ -5,10 +5,12 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Str;
 
 class User extends Authenticatable
 {
@@ -41,6 +43,8 @@ class User extends Authenticatable
         'imap_password',
         'is_directeur_de_garde',
         'is_super_admin',
+        'can_publish_publication',
+        'can_organize_event',
         'remplacement_debut',
         'remplacement_fin',
         'password',
@@ -54,6 +58,15 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+    ];
+
+    /**
+     * The accessors to append to the model's array form.
+     *
+     * @var array<int, string>
+     */
+    protected $appends = [
+        'formatted_signature',
     ];
 
     /**
@@ -74,6 +87,8 @@ class User extends Authenticatable
             'can_transfer' => 'boolean',
             'is_directeur_de_garde' => 'boolean',
             'is_super_admin' => 'boolean',
+            'can_publish_publication' => 'boolean',
+            'can_organize_event' => 'boolean',
             'remplacement_debut' => 'date',
             'remplacement_fin' => 'date',
             'notifications_read_at' => 'datetime',
@@ -115,9 +130,43 @@ class User extends Authenticatable
         return $this->hasOne(Profile::class);
     }
 
+    public function settings(): HasOne
+    {
+        return $this->hasOne(UserSetting::class);
+    }
+
     public function userSetting(): HasOne
     {
         return $this->hasOne(UserSetting::class);
+    }
+
+    public function getFormattedSignatureAttribute(): string
+    {
+        $settings = $this->settings;
+
+        if (! $settings?->use_auto_signature) {
+            return '';
+        }
+
+        $lines = ["**{$this->name}**"];
+
+        if ($title = optional($this->profile)->grade) {
+            $lines[] = $title;
+        }
+
+        if ($department = optional($this->department)->name) {
+            $lines[] = $department;
+        }
+
+        if ($phone = optional($this->profile)->telephone) {
+            $lines[] = "📞 {$phone}";
+        }
+
+        if ($custom = trim((string) $settings->custom_signature)) {
+            $lines[] = $custom;
+        }
+
+        return trim(implode("\n\n", array_filter($lines)));
     }
 
     public function publications(): HasMany
@@ -138,5 +187,58 @@ class User extends Authenticatable
     public function supportTickets(): HasMany
     {
         return $this->hasMany(SupportTicket::class);
+    }
+
+    public function reportedMessages(): HasMany
+    {
+        return $this->hasMany(ReportedMessage::class, 'reporter_id');
+    }
+
+    public function organizedEvents(): HasMany
+    {
+        return $this->hasMany(Event::class, 'organizer_id');
+    }
+
+    public function eventInvitations(): HasMany
+    {
+        return $this->hasMany(EventInvitation::class);
+    }
+
+    public function invitedEvents(): BelongsToMany
+    {
+        return $this->belongsToMany(Event::class, 'event_invitations')
+            ->withPivot(['status', 'qr_code_uuid'])
+            ->withTimestamps();
+    }
+
+    public function favoriteContacts(): BelongsToMany
+    {
+        return $this->belongsToMany(self::class, 'favorite_contacts', 'user_id', 'favorite_contact_id')
+            ->withTimestamps();
+    }
+
+    public function favoritedByUsers(): BelongsToMany
+    {
+        return $this->belongsToMany(self::class, 'favorite_contacts', 'favorite_contact_id', 'user_id')
+            ->withTimestamps();
+    }
+
+    /**
+     * Spatie Permission support (if installed) + local fallback.
+     */
+    public function hasOrganizerRole(): bool
+    {
+        if (method_exists($this, 'hasRole')) {
+            return (bool) $this->hasRole('organizer');
+        }
+
+        $roleName = Str::lower((string) optional($this->role)->nom_role);
+
+        return $roleName === 'organizer';
+    }
+
+    public function canOrganizeEvents(): bool
+    {
+        return (bool) $this->can_organize_event || $this->hasOrganizerRole();
     }
 }

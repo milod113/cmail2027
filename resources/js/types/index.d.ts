@@ -11,6 +11,9 @@ export interface User {
     department_id?: number | null;
     role_id?: number | null;
     department_name?: string | null;
+    can_publish_publication?: boolean;
+    can_organize_event?: boolean;
+    is_blocked?: boolean;
     is_online?: boolean;
     is_super_admin?: boolean;
     email_verified_at?: string;

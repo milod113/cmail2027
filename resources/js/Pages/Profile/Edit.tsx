@@ -2,9 +2,10 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { useTranslation } from '@/Hooks/useTranslation';
 import { PageProps } from '@/types';
 import { Head, usePage } from '@inertiajs/react';
-import { User, Lock, Trash2, Mail, Shield, AlertTriangle, CheckCircle, Bell, Clock, Fingerprint, Award, Crown, Sparkles, Settings, Globe, Moon, Sun } from 'lucide-react';
+import { User, Lock, Trash2, Mail, Shield, AlertTriangle, CheckCircle, Bell, Clock, Fingerprint, Award, Crown, Sparkles, Settings, Globe, Moon, Sun, MessageSquare, CheckCircle2 } from 'lucide-react';
 import DeleteUserForm from './Partials/DeleteUserForm';
 import UpdatePasswordForm from './Partials/UpdatePasswordForm';
+import SignatureSettings from '@/Components/SignatureSettings';
 import UpdateOutOfOfficeSettingsForm from './Partials/UpdateOutOfOfficeSettingsForm';
 import UpdateProfileInformationForm from './Partials/UpdateProfileInformationForm';
 import { useState, useEffect } from 'react';
@@ -43,6 +44,7 @@ export default function Edit({
     const sections = [
         { id: 'profile', label: __('Profil'), icon: User, color: 'from-cyan-500 to-sky-600' },
         { id: 'absence', label: __('Absence'), icon: Clock, color: 'from-emerald-500 to-teal-600' },
+        { id: 'signature', label: __('Signature'), icon: MessageSquare, color: 'from-blue-500 to-indigo-600' },
         { id: 'security', label: __('Securite'), icon: Lock, color: 'from-violet-500 to-purple-600' },
         { id: 'danger', label: __('Danger'), icon: AlertTriangle, color: 'from-red-500 to-rose-600' },
     ];
@@ -87,7 +89,7 @@ export default function Edit({
                     <div className="absolute -right-1/2 -top-1/2 h-[500px] w-[500px] rounded-full bg-gradient-to-br from-cyan-500/20 to-sky-500/20 blur-3xl animate-[pulse_6s_ease-in-out_infinite]" />
                     <div className="absolute -bottom-1/2 -left-1/2 h-[500px] w-[500px] rounded-full bg-gradient-to-tr from-emerald-500/10 to-teal-500/10 blur-3xl animate-[pulse_6s_ease-in-out_infinite_1s]" />
                     <div className="absolute left-1/3 top-1/2 h-64 w-64 rounded-full bg-violet-500/10 blur-3xl animate-[pulse_8s_ease-in-out_infinite_2s]" />
-                    
+
                     {/* Floating Particles */}
                     {[...Array(12)].map((_, i) => (
                         <div
@@ -123,11 +125,11 @@ export default function Edit({
                                 </div>
                             )}
                         </div>
-                        
+
                         <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl md:text-5xl lg:text-6xl">
                             {__('Mon Profil')}
                         </h1>
-                        
+
                         <p className="max-w-2xl text-sm text-slate-300 sm:text-base">
                             {__('Gerez vos informations personnelles et les parametres de votre compte')}
                         </p>
@@ -209,7 +211,7 @@ export default function Edit({
                     <div className="group relative overflow-hidden rounded-3xl border border-slate-200/50 bg-white/90 shadow-xl shadow-slate-200/40 backdrop-blur-xl transition-all duration-500 hover:shadow-2xl hover:shadow-cyan-500/10 dark:border-slate-700/50 dark:bg-slate-900/90 dark:shadow-slate-950/50">
                         {/* Animated Border Gradient */}
                         <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-cyan-500/0 via-cyan-500/0 to-sky-500/0 opacity-0 transition-all duration-700 group-hover:opacity-100 group-hover:from-cyan-500/20 group-hover:via-sky-500/20 group-hover:to-cyan-500/20" />
-                        
+
                         <div className="relative p-5 sm:p-7 lg:p-8">
                             <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                                 <div className="flex items-center gap-4">
@@ -248,7 +250,7 @@ export default function Edit({
                 <section id="absence" data-section="absence" className="scroll-mt-20">
                     <div className="group relative overflow-hidden rounded-3xl border border-slate-200/50 bg-white/90 shadow-xl shadow-slate-200/40 backdrop-blur-xl transition-all duration-500 hover:shadow-2xl hover:shadow-emerald-500/10 dark:border-slate-700/50 dark:bg-slate-900/90 dark:shadow-slate-950/50">
                         <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-emerald-500/0 via-teal-500/0 to-emerald-500/0 opacity-0 transition-all duration-700 group-hover:opacity-100 group-hover:from-emerald-500/20 group-hover:via-teal-500/20 group-hover:to-emerald-500/20" />
-                        
+
                         <div className="relative p-5 sm:p-7 lg:p-8">
                             <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                                 <div className="flex items-center gap-4">
@@ -281,11 +283,43 @@ export default function Edit({
                     </div>
                 </section>
 
+                {/* Signature Section */}
+                <section id="signature" data-section="signature" className="scroll-mt-20">
+                    <div className="group relative overflow-hidden rounded-3xl border border-slate-200/50 bg-white/90 shadow-xl shadow-slate-200/40 backdrop-blur-xl transition-all duration-500 hover:shadow-2xl hover:shadow-blue-500/10 dark:border-slate-700/50 dark:bg-slate-900/90 dark:shadow-slate-950/50">
+                        <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-blue-500/0 via-indigo-500/0 to-blue-500/0 opacity-0 transition-all duration-700 group-hover:opacity-100 group-hover:from-blue-500/10 group-hover:via-indigo-500/10 group-hover:to-blue-500/10" />
+                        <div className="relative p-5 sm:p-7 lg:p-8">
+                            <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                                <div className="flex items-center gap-4">
+                                    <div className="relative">
+                                        <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 blur-lg opacity-50 transition-opacity group-hover:opacity-75" />
+                                        <div className="relative flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg sm:h-14 sm:w-14">
+                                            <MessageSquare className="h-6 w-6 sm:h-7 sm:w-7" />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 sm:text-2xl">
+                                            {__('Signature automatique')}
+                                        </h2>
+                                        <p className="text-sm text-slate-500 dark:text-slate-400">
+                                            {__('Ajoutez une signature qui sera automatiquement inseree au bas de vos messages.')}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-1.5 rounded-full bg-blue-100 px-2.5 py-1 text-xs font-medium text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
+                                    <CheckCircle2 className="h-3 w-3" />
+                                    {__('Efficace et professionnel')}
+                                </div>
+                            </div>
+                            <SignatureSettings settings={userSettings} profile={profile} />
+                        </div>
+                    </div>
+                </section>
+
                 {/* Security Section */}
                 <section id="security" data-section="security" className="scroll-mt-20">
                     <div className="group relative overflow-hidden rounded-3xl border border-slate-200/50 bg-white/90 shadow-xl shadow-slate-200/40 backdrop-blur-xl transition-all duration-500 hover:shadow-2xl hover:shadow-violet-500/10 dark:border-slate-700/50 dark:bg-slate-900/90 dark:shadow-slate-950/50">
                         <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-violet-500/0 via-purple-500/0 to-violet-500/0 opacity-0 transition-all duration-700 group-hover:opacity-100 group-hover:from-violet-500/20 group-hover:via-purple-500/20 group-hover:to-violet-500/20" />
-                        
+
                         <div className="relative p-5 sm:p-7 lg:p-8">
                             <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                                 <div className="flex items-center gap-4">
@@ -310,7 +344,7 @@ export default function Edit({
                                 </div>
                             </div>
                             <UpdatePasswordForm className="max-w-xl" />
-                            
+
                             {/* 2FA Coming Soon Badge */}
                             <div className="mt-6 flex items-center gap-3 rounded-xl bg-gradient-to-r from-violet-50 to-purple-50 p-3 dark:from-violet-950/30 dark:to-purple-950/30">
                                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/10">
@@ -336,7 +370,7 @@ export default function Edit({
                 <section id="danger" data-section="danger" className="scroll-mt-20">
                     <div className="group relative overflow-hidden rounded-3xl border border-red-200/50 bg-gradient-to-br from-red-50/90 to-rose-50/90 shadow-xl shadow-red-200/20 backdrop-blur-xl transition-all duration-500 hover:shadow-2xl hover:shadow-red-300/30 dark:border-red-900/30 dark:from-red-950/30 dark:to-rose-950/30">
                         <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-red-500/0 via-rose-500/0 to-red-500/0 opacity-0 transition-all duration-700 group-hover:opacity-100 group-hover:from-red-500/10 group-hover:via-rose-500/10 group-hover:to-red-500/10" />
-                        
+
                         <div className="relative p-5 sm:p-7 lg:p-8">
                             <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                                 <div className="flex items-center gap-4">
@@ -369,31 +403,31 @@ export default function Edit({
             {/* Custom Animations */}
             <style>{`
                 @keyframes float {
-                    0%, 100% { 
+                    0%, 100% {
                         transform: translateY(0px) translateX(0px) rotate(0deg);
                     }
                     25% {
                         transform: translateY(-15px) translateX(10px) rotate(5deg);
                     }
-                    50% { 
+                    50% {
                         transform: translateY(-30px) translateX(-5px) rotate(-3deg);
                     }
                     75% {
                         transform: translateY(-10px) translateX(15px) rotate(2deg);
                     }
                 }
-                
+
                 @keyframes pulse {
-                    0%, 100% { 
-                        opacity: 0.3; 
-                        transform: scale(1); 
+                    0%, 100% {
+                        opacity: 0.3;
+                        transform: scale(1);
                     }
-                    50% { 
-                        opacity: 0.7; 
-                        transform: scale(1.1); 
+                    50% {
+                        opacity: 0.7;
+                        transform: scale(1.1);
                     }
                 }
-                
+
                 @keyframes slideInFromTop {
                     from {
                         opacity: 0;
@@ -404,48 +438,48 @@ export default function Edit({
                         transform: translateY(0);
                     }
                 }
-                
+
                 .animate-in {
                     animation: slideInFromTop 0.3s ease-out;
                 }
-                
+
                 .animate-pulse {
                     animation: pulse 3s ease-in-out infinite;
                 }
-                
+
                 .scroll-mt-20 {
                     scroll-margin-top: 5rem;
                 }
-                
+
                 /* Smooth scrolling */
                 html {
                     scroll-behavior: smooth;
                 }
-                
+
                 /* Custom scrollbar */
                 ::-webkit-scrollbar {
                     width: 8px;
                     height: 8px;
                 }
-                
+
                 ::-webkit-scrollbar-track {
                     background: rgba(0, 0, 0, 0.05);
                     border-radius: 10px;
                 }
-                
+
                 ::-webkit-scrollbar-thumb {
                     background: linear-gradient(to bottom, #06b6d4, #0ea5e9);
                     border-radius: 10px;
                 }
-                
+
                 ::-webkit-scrollbar-thumb:hover {
                     background: linear-gradient(to bottom, #0891b2, #0284c7);
                 }
-                
+
                 .dark ::-webkit-scrollbar-track {
                     background: rgba(255, 255, 255, 0.05);
                 }
-                
+
                 /* Responsive adjustments */
                 @media (max-width: 640px) {
                     .sticky {

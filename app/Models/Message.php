@@ -20,13 +20,16 @@ class Message extends Model
         'contenu',
         'fichier',
         'lu_le',
+        'read_at',
         'lu',
         'spam',
         'important',
         'sent_at',
         'requires_receipt',
+        'is_tracked',
         'receipt_requested_at',
         'scheduled_at',
+        'is_delivered',
         'archived',
         'type_message',
         'envoye',
@@ -41,12 +44,15 @@ class Message extends Model
         'sent_at' => 'datetime',
         'scheduled_at' => 'datetime',
         'lu_le' => 'datetime',
+        'read_at' => 'datetime',
         'receipt_requested_at' => 'datetime',
         'deadline_reponse' => 'datetime',
         'receiver_ids' => 'array',
         'lu' => 'boolean',
         'spam' => 'boolean',
         'important' => 'boolean',
+        'is_tracked' => 'boolean',
+        'is_delivered' => 'boolean',
         'requires_receipt' => 'boolean',
         'archived' => 'boolean',
         'envoye' => 'boolean',
@@ -83,5 +89,10 @@ class Message extends Model
         return $this->hasMany(self::class, 'parent_id')
             ->with(['sender:id,name,email', 'receiver:id,name,email'])
             ->orderBy('created_at');
+    }
+
+    public function reports(): HasMany
+    {
+        return $this->hasMany(ReportedMessage::class);
     }
 }

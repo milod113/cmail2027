@@ -166,7 +166,8 @@ export default function PublicationsFeed({ publications }: PublicationsFeedProps
     const { auth } = usePage<PageProps>().props;
     const [photoPreview, setPhotoPreview] = useState<string | null>(null);
     const [expandedPost, setExpandedPost] = useState<number | null>(null);
-    const canCreatePublication = ['admin', 'superadmin', 'directeur'].includes((auth.user.role ?? '').toLowerCase());
+    const canCreatePublication = Boolean(auth.user.can_publish_publication)
+        || ['admin', 'superadmin', 'directeur'].includes((auth.user.role ?? '').toLowerCase());
 
     const publicationForm = useForm({
         title: '',

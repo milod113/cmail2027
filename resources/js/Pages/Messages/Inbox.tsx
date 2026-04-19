@@ -1,8 +1,9 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import ReportModal from '@/Components/ReportModal';
 import { useTranslation } from '@/Hooks/useTranslation';
 import { Head, Link, router } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
-import { Archive, CalendarDays, Filter, Search, Star, Zap } from 'lucide-react';
+import { Archive, CalendarDays, CheckCircle2, ChevronRight, Filter, Search, Shield, Star, X, Zap } from 'lucide-react';
 
 type RoleOption = {
     id: number;
@@ -34,6 +35,154 @@ type InboxMessage = {
     } | null;
 };
 
+function ReportBanner({
+    messageId,
+    messageSubject,
+    onDismiss,
+    onOpenFullReport,
+}: {
+    messageId: number;
+    messageSubject: string;
+    onDismiss: () => void;
+    onOpenFullReport: () => void;
+}) {
+    const { __ } = useTranslation();
+    const [isExpanded, setIsExpanded] = useState(false);
+    const [isSubmitted, setIsSubmitted] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const quickReasons = [
+        { value: 'spam', label: __('Spam'), icon: 'EMAIL', tone: 'orange' },
+        { value: 'harassment', label: __('Harcelement'), icon: 'ALERT', tone: 'red' },
+        { value: 'other', label: __('Inapproprie'), icon: 'FLAG', tone: 'purple' },
+    ];
+
+    const handleQuickReport = (reason: 'spam' | 'harassment' | 'other') => {
+        if (isSubmitting) {
+            return;
+        }
+
+        setIsSubmitting(true);
+
+        router.post(
+            route('messages.reports.store', messageId),
+            {
+                reason_category: reason,
+                comment: '',
+            },
+            {
+                preserveScroll: true,
+                preserveState: true,
+                onSuccess: () => {
+                    setIsSubmitted(true);
+                    window.setTimeout(() => {
+                        onDismiss();
+                    }, 3000);
+                },
+                onFinish: () => {
+                    setIsSubmitting(false);
+                },
+            },
+        );
+    };
+
+    if (isSubmitted) {
+        return (
+            <div className="mb-3 flex items-center gap-3 rounded-xl bg-emerald-50 p-3 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
+                <CheckCircle2 className="h-5 w-5" />
+                <span className="text-sm font-medium">{__('Signalement envoye. Merci !')}</span>
+            </div>
+        );
+    }
+
+    return (
+        <div
+            className={`mb-3 overflow-hidden rounded-xl border transition-all ${
+                isExpanded
+                    ? 'border-red-200 bg-red-50 dark:border-red-500/20 dark:bg-red-500/5'
+                    : 'border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800'
+            }`}
+        >
+            <div className="flex items-center justify-between p-3">
+                <button
+                    type="button"
+                    onClick={() => setIsExpanded((current) => !current)}
+                    className="flex flex-1 items-center gap-2 text-left"
+                >
+                    <Shield
+                        className={`h-4 w-4 transition-colors ${
+                            isExpanded ? 'text-red-500' : 'text-slate-400'
+                        }`}
+                    />
+                    <span
+                        className={`text-sm font-medium ${
+                            isExpanded ? 'text-red-700 dark:text-red-300' : 'text-slate-600 dark:text-slate-400'
+                        }`}
+                    >
+                        {__('Signaler un probleme avec ce message')}
+                    </span>
+                    <ChevronRight
+                        className={`ml-auto h-4 w-4 transition-transform ${
+                            isExpanded ? 'rotate-90' : ''
+                        }`}
+                    />
+                </button>
+
+                <button
+                    type="button"
+                    onClick={onDismiss}
+                    className="ml-2 rounded p-1 hover:bg-slate-100 dark:hover:bg-slate-700"
+                >
+                    <X className="h-3 w-3 text-slate-400" />
+                </button>
+            </div>
+
+            {isExpanded ? (
+                <div className="border-t border-red-100 p-3 dark:border-red-500/10">
+                    <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">
+                        {__('Pourquoi signalez-vous ce message ?')}
+                    </p>
+
+                    <div className="flex flex-wrap gap-2">
+                        {quickReasons.map((reason) => (
+                            <button
+                                key={reason.value}
+                                type="button"
+                                disabled={isSubmitting}
+                                onClick={() => handleQuickReport(reason.value as 'spam' | 'harassment' | 'other')}
+                                className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-60 ${
+                                    reason.tone === 'red'
+                                        ? 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-500/20 dark:text-red-300'
+                                        : reason.tone === 'orange'
+                                          ? 'bg-orange-100 text-orange-700 hover:bg-orange-200 dark:bg-orange-500/20 dark:text-orange-300'
+                                          : 'bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-500/20 dark:text-purple-300'
+                                }`}
+                            >
+                                <span className="text-[10px] font-bold tracking-[0.12em]">{reason.icon}</span>
+                                {reason.label}
+                            </button>
+                        ))}
+
+                        <button
+                            type="button"
+                            onClick={onOpenFullReport}
+                            className="rounded-full border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-red-300 hover:bg-red-50 hover:text-red-600 dark:border-slate-600 dark:text-slate-400"
+                        >
+                            {__('Autre raison...')}
+                        </button>
+                    </div>
+
+                    {messageSubject ? (
+                        <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
+                            {__('Objet')} : {messageSubject}
+                        </p>
+                    ) : null}
+                </div>
+            ) : null}
+        </div>
+    );
+}
+
 export default function Inbox({
     stats,
     messages,
@@ -55,6 +204,8 @@ export default function Inbox({
 }) {
     const { __, locale } = useTranslation();
     const [selectedMessageIds, setSelectedMessageIds] = useState<number[]>([]);
+    const [dismissedReportBannerIds, setDismissedReportBannerIds] = useState<number[]>([]);
+    const [reportModalMessage, setReportModalMessage] = useState<Pick<InboxMessage, 'id' | 'sujet'> | null>(null);
 
     const cards = [
         { label: __('Non lus'), value: String(stats.unread), tone: 'from-emerald-500 to-teal-600' },
@@ -97,6 +248,12 @@ export default function Inbox({
     const deselectAllVisible = () => {
         const visibleIds = new Set(visibleMessageIds);
         setSelectedMessageIds((current) => current.filter((id) => !visibleIds.has(id)));
+    };
+
+    const dismissReportBanner = (messageId: number) => {
+        setDismissedReportBannerIds((current) =>
+            current.includes(messageId) ? current : [...current, messageId],
+        );
     };
 
     const archiveSelected = () => {
@@ -243,6 +400,15 @@ export default function Inbox({
                         {messages.length > 0 ? (
                             messages.map((message) => (
                                 <div key={message.id} className="rounded-3xl border border-slate-200/70 bg-slate-50/80 px-5 py-4 dark:border-slate-800 dark:bg-slate-950/40">
+                                    {!dismissedReportBannerIds.includes(message.id) ? (
+                                        <ReportBanner
+                                            messageId={message.id}
+                                            messageSubject={message.sujet}
+                                            onDismiss={() => dismissReportBanner(message.id)}
+                                            onOpenFullReport={() => setReportModalMessage({ id: message.id, sujet: message.sujet })}
+                                        />
+                                    ) : null}
+
                                     <div className="flex items-start justify-between gap-4">
                                         <div className="min-w-0 flex-1">
                                             <div className="mb-3 flex items-center gap-3">
@@ -345,6 +511,18 @@ export default function Inbox({
                     </div>
                 </section>
             </div>
+
+            <ReportModal
+                show={reportModalMessage !== null}
+                messageId={reportModalMessage?.id ?? 0}
+                messageSubject={reportModalMessage?.sujet ?? ''}
+                onClose={() => setReportModalMessage(null)}
+                onSubmitted={() => {
+                    if (reportModalMessage) {
+                        dismissReportBanner(reportModalMessage.id);
+                    }
+                }}
+            />
         </AuthenticatedLayout>
     );
 }
