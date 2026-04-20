@@ -10,11 +10,13 @@ use App\Models\ReportedMessage;
 use App\Models\Role;
 use App\Models\SupportTicket;
 use App\Models\User;
+use App\Support\RichTextSanitizer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -525,14 +527,22 @@ class AdminController extends Controller
     {
         $validated = $request->validate([
             'title' => ['nullable', 'string', 'max:255'],
-            'content' => ['required', 'string', 'max:5000'],
+            'content' => ['required', 'string', 'max:20000'],
             'photo' => ['nullable', 'image', 'max:5120'],
             'remove_photo' => ['nullable', 'boolean'],
         ]);
 
+        $sanitizedContent = RichTextSanitizer::sanitize($validated['content']);
+
+        if (RichTextSanitizer::plainText($sanitizedContent) === '') {
+            throw ValidationException::withMessages([
+                'content' => 'Le contenu de la publication est obligatoire.',
+            ]);
+        }
+
         $payload = [
             'title' => filled($validated['title'] ?? null) ? trim((string) $validated['title']) : null,
-            'content' => trim((string) $validated['content']),
+            'content' => $sanitizedContent,
         ];
 
         if ((bool) ($validated['remove_photo'] ?? false) && $publication->photo_path) {
@@ -791,12 +801,14 @@ class AdminController extends Controller
 
     private function mapPublication(Publication $publication, bool $full = false): array
     {
+        $plainContent = RichTextSanitizer::plainText($publication->content);
+
         return [
             'id' => $publication->id,
             'title' => $publication->title,
             'content' => $full
                 ? $publication->content
-                : Str::limit(str($publication->content)->squish()->toString(), 180),
+                : Str::limit($plainContent, 180),
             'photo_url' => $publication->photo_url,
             'archived' => (bool) $publication->archived,
             'created_at' => optional($publication->created_at)?->toIso8601String(),

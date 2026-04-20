@@ -1,5 +1,7 @@
 import AdminLayout from '@/Layouts/AdminLayout';
 import InputError from '@/Components/InputError';
+import RichTextContent from '@/Components/RichTextContent';
+import RichTextEditor from '@/Components/RichTextEditor';
 import { Link, useForm, router } from '@inertiajs/react';
 import { Archive, ArrowLeft, Save, Trash2 } from 'lucide-react';
 import type { FormEvent } from 'react';
@@ -123,11 +125,11 @@ export default function PublicationShow({ publication }: PublicationShowProps) {
                                 <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
                                     Contenu
                                 </label>
-                                <textarea
-                                    rows={10}
+                                <RichTextEditor
                                     value={form.data.content}
-                                    onChange={(event) => form.setData('content', event.target.value)}
-                                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm leading-7 text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:ring-cyan-500/20"
+                                    onChange={(value) => form.setData('content', value)}
+                                    placeholder="Contenu de la publication"
+                                    minHeightClassName="min-h-[260px]"
                                 />
                                 <InputError message={form.errors.content} className="mt-2" />
                             </div>
@@ -203,11 +205,11 @@ export default function PublicationShow({ publication }: PublicationShowProps) {
                             ) : null}
                             <div>
                                 <p className="text-lg font-semibold text-slate-900 dark:text-white">
-                                    {publication.title?.trim() || 'Sans titre'}
+                                    {form.data.title.trim() || 'Sans titre'}
                                 </p>
-                                <p className="mt-3 whitespace-pre-line text-sm leading-7 text-slate-700 dark:text-slate-200">
-                                    {publication.content}
-                                </p>
+                                <div className="mt-3">
+                                    <RichTextContent html={form.data.content} compact />
+                                </div>
                             </div>
                         </div>
                     </div>

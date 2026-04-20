@@ -6,6 +6,7 @@ use App\Models\EventInvitation;
 use App\Models\Message;
 use App\Models\MessageDraft;
 use App\Models\Publication;
+use App\Support\RichTextSanitizer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -194,9 +195,10 @@ class DashboardController extends Controller
                         'created_at',
                     ])
                     ->map(function (Publication $publication) {
+                        $plainContent = RichTextSanitizer::plainText($publication->content);
                         $description = trim((string) $publication->title) !== ''
                             ? trim((string) $publication->title)
-                            : Str::limit(str($publication->content)->squish()->toString(), 80);
+                            : Str::limit($plainContent, 80);
 
                         return [
                             'id' => 'publication-'.$publication->id,

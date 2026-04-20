@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\RichTextSanitizer;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -91,5 +92,10 @@ class Publication extends Model
         $path = preg_replace('#^(public/|storage/)#', '', $path) ?? $path;
 
         return '/storage/'.$path;
+    }
+
+    public function getContentAttribute(?string $value): string
+    {
+        return RichTextSanitizer::sanitize($value);
     }
 }

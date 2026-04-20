@@ -1,4 +1,7 @@
 import InputError from '@/Components/InputError';
+import RichTextContent from '@/Components/RichTextContent';
+import RichTextEditor from '@/Components/RichTextEditor';
+import { richTextToPlainText } from '@/Utils/richText';
 import { PageProps } from '@/types';
 import { router, useForm, usePage } from '@inertiajs/react';
 import { ChangeEvent, FormEvent, useState } from 'react';
@@ -66,13 +69,6 @@ function initials(name: string): string {
         .slice(0, 2)
         .map((part) => part[0]?.toUpperCase() ?? '')
         .join('');
-}
-
-function splitIntoParagraphs(content: string): string[] {
-    return content
-        .split(/\n{2,}/)
-        .map((paragraph) => paragraph.trim())
-        .filter(Boolean);
 }
 
 function PublicationComments({ publication }: { publication: FeedPublication }) {
@@ -174,6 +170,7 @@ export default function PublicationsFeed({ publications }: PublicationsFeedProps
         content: '',
         photo: null as File | null,
     });
+    const publicationPlainText = richTextToPlainText(publicationForm.data.content);
 
     const handlePhotoChange = (event: ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0] ?? null;
@@ -199,7 +196,7 @@ export default function PublicationsFeed({ publications }: PublicationsFeedProps
 
     const submitPublication = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        if (!publicationForm.data.content.trim()) return;
+        if (!publicationPlainText) return;
 
         publicationForm.post(route('publications.store'), {
             preserveScroll: true,
@@ -248,13 +245,11 @@ export default function PublicationsFeed({ publications }: PublicationsFeedProps
                             </div>
 
                             <div>
-                                <textarea
-                                    id="publication-content"
+                                <RichTextEditor
                                     value={publicationForm.data.content}
-                                    onChange={(event) => publicationForm.setData('content', event.target.value)}
-                                    rows={4}
-                                    className="w-full rounded-xl border border-slate-200 bg-white/80 px-5 py-3.5 text-base text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-cyan-400 focus:bg-white focus:shadow-lg focus:ring-4 focus:ring-cyan-100 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-cyan-500 dark:focus:bg-slate-800 dark:focus:ring-cyan-500/10"
-                                    placeholder="Écrivez votre publication..."
+                                    onChange={(value) => publicationForm.setData('content', value)}
+                                    placeholder="Ecrivez votre publication..."
+                                    minHeightClassName="min-h-[180px]"
                                 />
                                 <InputError message={publicationForm.errors.content} className="mt-2" />
                             </div>
@@ -299,7 +294,7 @@ export default function PublicationsFeed({ publications }: PublicationsFeedProps
                             <div className="flex justify-end">
                                 <button
                                     type="submit"
-                                    disabled={publicationForm.processing || !publicationForm.data.content.trim()}
+                                    disabled={publicationForm.processing || !publicationPlainText}
                                     className="group relative inline-flex items-center gap-2 overflow-hidden rounded-xl bg-gradient-to-r from-slate-900 to-slate-800 px-8 py-3.5 text-sm font-semibold text-white transition-all hover:scale-105 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100 dark:from-cyan-500 dark:to-cyan-600"
                                 >
                                     <span className="relative z-10">Publier</span>
@@ -316,8 +311,8 @@ export default function PublicationsFeed({ publications }: PublicationsFeedProps
                 {publications.length > 0 ? (
                     publications.map((publication, index) => {
                         const isExpanded = expandedPost === publication.id;
-                        const paragraphs = splitIntoParagraphs(publication.content);
-                        const hasLongContent = publication.content.length > 200 || paragraphs.length > 2;
+                        const plainContent = richTextToPlainText(publication.content);
+                        const hasLongContent = plainContent.length > 220 || plainContent.split(/\n{2,}/).length > 2;
 
                         return (
                             <article
@@ -365,24 +360,12 @@ export default function PublicationsFeed({ publications }: PublicationsFeedProps
                                     )}
 
                                     <div className="mt-4">
-                                        {isExpanded ? (
-                                            <div className="max-w-3xl space-y-4 text-base leading-8 text-slate-700 dark:text-slate-300">
-                                                {(paragraphs.length > 0 ? paragraphs : [publication.content]).map((paragraph, paragraphIndex) => (
-                                                    <p key={`${publication.id}-paragraph-${paragraphIndex}`} className="whitespace-pre-line">
-                                                        {paragraph}
-                                                    </p>
-                                                ))}
-                                            </div>
-                                        ) : (
-                                            <div className="relative">
-                                                <p className="line-clamp-4 whitespace-pre-line text-base leading-7 text-slate-700 dark:text-slate-300">
-                                                    {publication.content}
-                                                </p>
-                                                {hasLongContent && (
-                                                    <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-white/95 to-transparent dark:from-slate-800/95"></div>
-                                                )}
-                                            </div>
-                                        )}
+                                        <div className="relative max-w-3xl">
+                                            <RichTextContent html={publication.content} collapsed={!isExpanded && hasLongContent} />
+                                            {!isExpanded && hasLongContent ? (
+                                                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-white/95 to-transparent dark:from-slate-800/95"></div>
+                                            ) : null}
+                                        </div>
                                     </div>
 
                                     {hasLongContent && (

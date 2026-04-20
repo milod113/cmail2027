@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Models\Message;
 use App\Models\Profile;
 use App\Models\User;
 use App\Models\UserSetting;
@@ -49,17 +50,90 @@ class ProfileController extends Controller
      */
     public function show(User $user): Response
     {
+        $authUser = request()->user();
+
         $user->load([
             'department:id,name',
             'role:id,nom_role',
             'profile:user_id,matricule,grade,telephone,adresse,photo',
         ]);
 
+        $communicationThread = Message::query()
+            ->with([
+                'sender:id,name,email',
+                'receiver:id,name,email',
+            ])
+            ->where(function ($query) use ($authUser, $user) {
+                $query
+                    ->where('sender_id', $authUser->id)
+                    ->where('receiver_id', $user->id);
+            })
+            ->orWhere(function ($query) use ($authUser, $user) {
+                $query
+                    ->where('sender_id', $user->id)
+                    ->where('receiver_id', $authUser->id);
+            })
+            ->orderByRaw('COALESCE(sent_at, created_at) desc')
+            ->limit(80)
+            ->get([
+                'id',
+                'sender_id',
+                'receiver_id',
+                'sujet',
+                'contenu',
+                'sent_at',
+                'created_at',
+                'lu',
+                'important',
+                'is_important',
+                'requires_receipt',
+                'acknowledged_at',
+                'deadline_reponse',
+                'status',
+            ])
+            ->map(function (Message $message) use ($authUser) {
+                $isOutgoing = (int) $message->sender_id === (int) $authUser->id;
+
+                return [
+                    'id' => $message->id,
+                    'subject' => $message->sujet,
+                    'excerpt' => str($message->contenu)->squish()->limit(160)->toString(),
+                    'sent_at' => optional($message->sent_at)?->toIso8601String(),
+                    'created_at' => optional($message->created_at)?->toIso8601String(),
+                    'read' => (bool) $message->lu,
+                    'important' => (bool) ($message->important || $message->is_important),
+                    'requires_receipt' => (bool) $message->requires_receipt,
+                    'acknowledged_at' => optional($message->acknowledged_at)?->toIso8601String(),
+                    'deadline_reponse' => optional($message->deadline_reponse)?->toIso8601String(),
+                    'status' => $message->status,
+                    'direction' => $isOutgoing ? 'outgoing' : 'incoming',
+                    'sender' => $message->sender
+                        ? [
+                            'id' => $message->sender->id,
+                            'name' => $message->sender->name,
+                            'email' => $message->sender->email,
+                        ]
+                        : null,
+                    'receiver' => $message->receiver
+                        ? [
+                            'id' => $message->receiver->id,
+                            'name' => $message->receiver->name,
+                            'email' => $message->receiver->email,
+                        ]
+                        : null,
+                    'href' => $isOutgoing
+                        ? route('messages.sent.show', $message)
+                        : route('messages.show', $message),
+                ];
+            })
+            ->values();
+
         return Inertia::render('Contacts/Show', [
             'contact' => [
                 ...$user->toArray(),
                 'is_favorite' => $this->isFavoriteContact(request()->user(), $user),
             ],
+            'communicationThread' => $communicationThread,
         ]);
     }
 

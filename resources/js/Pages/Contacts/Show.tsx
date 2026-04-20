@@ -1,6 +1,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { useTranslation } from '@/Hooks/useTranslation';
 import { Head, Link, router } from '@inertiajs/react';
+import { useMemo, useState } from 'react';
 import {
     ArrowLeft,
     BadgeCheck,
@@ -18,9 +19,9 @@ import {
     Clock,
     AlertCircle,
     CheckCircle2,
-    Globe,
     Lock,
     Eye,
+    Search,
     Star,
 } from 'lucide-react';
 
@@ -48,6 +49,32 @@ type Contact = {
         adresse?: string | null;
         photo?: string | null;
     } | null;
+};
+
+type ThreadMessage = {
+    id: number;
+    subject: string | null;
+    excerpt: string;
+    sent_at: string | null;
+    created_at: string | null;
+    read: boolean;
+    important: boolean;
+    requires_receipt: boolean;
+    acknowledged_at: string | null;
+    deadline_reponse: string | null;
+    status: string | null;
+    direction: 'incoming' | 'outgoing';
+    sender: {
+        id: number;
+        name: string;
+        email: string;
+    } | null;
+    receiver: {
+        id: number;
+        name: string;
+        email: string;
+    } | null;
+    href: string;
 };
 
 function getStatusBadge(contact: Contact, __: (key: string) => string) {
@@ -97,12 +124,39 @@ function StatusIndicator({ isActive, label }: { isActive: boolean; label: string
     );
 }
 
-export default function ContactsShow({ contact }: { contact: Contact }) {
-    const { __ } = useTranslation();
+function formatThreadDate(value: string | null, locale: string): string {
+    if (!value) {
+        return '-';
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return '-';
+    }
+
+    return date.toLocaleString(locale === 'ar' ? 'ar-DZ' : 'fr-FR', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+    });
+}
+
+export default function ContactsShow({
+    contact,
+    communicationThread,
+}: {
+    contact: Contact;
+    communicationThread: ThreadMessage[];
+}) {
+    const { __, locale } = useTranslation();
     const profile = contact.profile;
     const badge = getStatusBadge(contact, __);
     const photoUrl = profile?.photo ? `/storage/${profile.photo}` : null;
     const StatusIcon = badge.icon;
+    const [threadSearch, setThreadSearch] = useState('');
     const toggleFavorite = () => {
         if (contact.is_favorite) {
             router.delete(route('contacts.favorite.destroy', contact.id), { preserveScroll: true });
@@ -137,6 +191,30 @@ export default function ContactsShow({ contact }: { contact: Contact }) {
         },
         { label: __('Adresse'), value: profile?.adresse || __('Non renseignée'), icon: MapPin, color: 'rose' },
     ];
+
+    const filteredThread = useMemo(() => {
+        const term = threadSearch.trim().toLowerCase();
+
+        if (term === '') {
+            return communicationThread;
+        }
+
+        return communicationThread.filter((message) => {
+            const haystack = [
+                message.subject ?? '',
+                message.excerpt,
+                message.sender?.name ?? '',
+                message.receiver?.name ?? '',
+            ]
+                .join(' ')
+                .toLowerCase();
+
+            return haystack.includes(term);
+        });
+    }, [communicationThread, threadSearch]);
+
+    const outgoingCount = communicationThread.filter((message) => message.direction === 'outgoing').length;
+    const incomingCount = communicationThread.length - outgoingCount;
 
     return (
         <AuthenticatedLayout
@@ -235,8 +313,9 @@ export default function ContactsShow({ contact }: { contact: Contact }) {
                 </div>
 
                 <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
-                    {/* Main Content - General Information */}
-                    <section className="rounded-3xl border border-slate-200/70 bg-white/80 p-6 shadow-xl shadow-slate-200/40 backdrop-blur-xl transition-all duration-300 hover:shadow-2xl dark:border-slate-700/50 dark:bg-slate-900/80">
+                    <div className="space-y-6">
+                        {/* Main Content - General Information */}
+                        <section className="rounded-3xl border border-slate-200/70 bg-white/80 p-6 shadow-xl shadow-slate-200/40 backdrop-blur-xl transition-all duration-300 hover:shadow-2xl dark:border-slate-700/50 dark:bg-slate-900/80">
                         <div className="mb-6 flex items-center gap-3">
                             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-sky-600 shadow-md">
                                 <Sparkles className="h-5 w-5 text-white" />
@@ -285,7 +364,157 @@ export default function ContactsShow({ contact }: { contact: Contact }) {
                                 );
                             })}
                         </div>
-                    </section>
+                        </section>
+
+                        <section className="rounded-3xl border border-slate-200/70 bg-white/80 p-6 shadow-xl shadow-slate-200/40 backdrop-blur-xl transition-all duration-300 hover:shadow-2xl dark:border-slate-700/50 dark:bg-slate-900/80">
+                            <div className="flex flex-col gap-5 border-b border-slate-200/70 pb-5 dark:border-slate-800">
+                                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-cyan-600 shadow-md">
+                                            <MessageSquare className="h-5 w-5 text-white" />
+                                        </div>
+                                        <div>
+                                            <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
+                                                {__('Flux de communication')}
+                                            </h2>
+                                            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                                                {__('Retrouvez ici les messages recus et envoyes avec ce contact.')}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid gap-3 sm:grid-cols-3">
+                                        <div className="rounded-2xl bg-slate-50 px-4 py-3 dark:bg-slate-950/50">
+                                            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">{__('Total')}</p>
+                                            <p className="mt-1 text-xl font-bold text-slate-900 dark:text-white">{communicationThread.length}</p>
+                                        </div>
+                                        <div className="rounded-2xl bg-emerald-50 px-4 py-3 dark:bg-emerald-500/10">
+                                            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-600 dark:text-emerald-300">{__('Envoyes')}</p>
+                                            <p className="mt-1 text-xl font-bold text-emerald-700 dark:text-emerald-200">{outgoingCount}</p>
+                                        </div>
+                                        <div className="rounded-2xl bg-cyan-50 px-4 py-3 dark:bg-cyan-500/10">
+                                            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-600 dark:text-cyan-300">{__('Recus')}</p>
+                                            <p className="mt-1 text-xl font-bold text-cyan-700 dark:text-cyan-200">{incomingCount}</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="relative">
+                                    <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                                    <input
+                                        type="text"
+                                        value={threadSearch}
+                                        onChange={(event) => setThreadSearch(event.target.value)}
+                                        placeholder={__('Rechercher par sujet, contenu ou nom')}
+                                        className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-sm text-slate-900 outline-none transition focus:border-cyan-400 focus:bg-white focus:ring-4 focus:ring-cyan-100 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-cyan-500 dark:focus:ring-cyan-500/10"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="mt-6 space-y-4">
+                                {filteredThread.length > 0 ? (
+                                    filteredThread.map((message) => {
+                                        const isOutgoing = message.direction === 'outgoing';
+                                        const displayDate = formatThreadDate(message.sent_at ?? message.created_at, locale);
+
+                                        return (
+                                            <article
+                                                key={message.id}
+                                                className={`rounded-3xl border p-5 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg ${
+                                                    isOutgoing
+                                                        ? 'border-emerald-200 bg-gradient-to-br from-emerald-50/90 to-white dark:border-emerald-500/20 dark:from-emerald-500/10 dark:to-slate-900'
+                                                        : 'border-cyan-200 bg-gradient-to-br from-cyan-50/90 to-white dark:border-cyan-500/20 dark:from-cyan-500/10 dark:to-slate-900'
+                                                }`}
+                                            >
+                                                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                                                    <div className="space-y-3">
+                                                        <div className="flex flex-wrap items-center gap-2">
+                                                            <span className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                                                                isOutgoing
+                                                                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
+                                                                    : 'bg-cyan-100 text-cyan-700 dark:bg-cyan-500/15 dark:text-cyan-300'
+                                                            }`}>
+                                                                {isOutgoing ? __('Envoye') : __('Recu')}
+                                                            </span>
+                                                            <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm dark:bg-slate-950 dark:text-slate-300">
+                                                                {displayDate}
+                                                            </span>
+                                                            {message.important ? (
+                                                                <span className="rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">
+                                                                    {__('Important')}
+                                                                </span>
+                                                            ) : null}
+                                                            {message.requires_receipt ? (
+                                                                <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">
+                                                                    {__('Accuse demande')}
+                                                                </span>
+                                                            ) : null}
+                                                            {message.acknowledged_at ? (
+                                                                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
+                                                                    <CheckCircle2 className="h-3.5 w-3.5" />
+                                                                    {__('Accuse confirme')}
+                                                                </span>
+                                                            ) : null}
+                                                        </div>
+
+                                                        <div>
+                                                            <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                                                                {message.subject?.trim() || __('Sans sujet')}
+                                                            </h3>
+                                                            <p className="mt-2 max-w-3xl text-sm leading-7 text-slate-600 dark:text-slate-300">
+                                                                {message.excerpt}
+                                                            </p>
+                                                        </div>
+
+                                                        <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
+                                                            <span>
+                                                                {isOutgoing ? __('Vers') : __('Depuis')} <span className="font-semibold text-slate-700 dark:text-slate-200">{isOutgoing ? (message.receiver?.name ?? contact.name) : (message.sender?.name ?? contact.name)}</span>
+                                                            </span>
+                                                            {message.deadline_reponse ? (
+                                                                <span>
+                                                                    {__('Date limite')}: <span className="font-semibold text-slate-700 dark:text-slate-200">{formatThreadDate(message.deadline_reponse, locale)}</span>
+                                                                </span>
+                                                            ) : null}
+                                                            {!isOutgoing ? (
+                                                                <span className="inline-flex items-center gap-1">
+                                                                    <AlertCircle className="h-3.5 w-3.5" />
+                                                                    {message.read ? __('Lu') : __('Non lu')}
+                                                                </span>
+                                                            ) : null}
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex shrink-0 items-center gap-3">
+                                                        <Link
+                                                            href={message.href}
+                                                            className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-cyan-300 hover:bg-cyan-50 hover:text-cyan-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-cyan-500/30 dark:hover:bg-cyan-500/10"
+                                                        >
+                                                            <Eye className="h-4 w-4" />
+                                                            {__('Voir le message')}
+                                                        </Link>
+                                                    </div>
+                                                </div>
+                                            </article>
+                                        );
+                                    })
+                                ) : (
+                                    <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50/70 px-6 py-12 text-center dark:border-slate-800 dark:bg-slate-950/40">
+                                        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-white shadow-sm dark:bg-slate-900">
+                                            <MessageSquare className="h-6 w-6 text-slate-400 dark:text-slate-500" />
+                                        </div>
+                                        <h3 className="mt-4 text-lg font-semibold text-slate-900 dark:text-white">
+                                            {threadSearch.trim() !== '' ? __('Aucun resultat trouve') : __('Aucun echange pour le moment')}
+                                        </h3>
+                                        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                                            {threadSearch.trim() !== ''
+                                                ? __('Essayez un autre mot-cle pour retrouver un message dans ce flux.')
+                                                : __('Les prochains messages recus et envoyes avec ce contact apparaitront ici.')}
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        </section>
+                    </div>
 
                     {/* Sidebar - Status & Actions */}
                     <aside className="space-y-6">
