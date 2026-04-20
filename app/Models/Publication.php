@@ -18,11 +18,16 @@ class Publication extends Model
         'title',
         'content',
         'photo_path',
+        'archived',
     ];
 
     protected $appends = [
         'is_liked_by_current_user',
         'photo_url',
+    ];
+
+    protected $casts = [
+        'archived' => 'boolean',
     ];
 
     public function user(): BelongsTo
@@ -43,6 +48,7 @@ class Publication extends Model
     public function scopeFeed(Builder $query): Builder
     {
         return $query
+            ->where('archived', false)
             ->with([
                 'user:id,name,email',
                 'comments' => fn ($commentQuery) => $commentQuery

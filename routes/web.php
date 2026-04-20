@@ -198,6 +198,11 @@ Route::middleware(['auth', 'admin'])
         Route::patch('/reports/{reportedMessage}', [AdminController::class, 'updateReportStatus'])->name('reports.update');
         Route::delete('/reports/{reportedMessage}/message', [AdminController::class, 'destroyReportedMessageSource'])->name('reports.message.destroy');
         Route::get('/audit/messages', [AdminController::class, 'audit'])->name('audit.messages');
+        Route::get('/publications', [AdminController::class, 'publications'])->name('publications.index');
+        Route::get('/publications/{publication}', [AdminController::class, 'showPublication'])->name('publications.show');
+        Route::patch('/publications/{publication}', [AdminController::class, 'updatePublication'])->name('publications.update');
+        Route::patch('/publications/{publication}/archive', [AdminController::class, 'togglePublicationArchive'])->name('publications.archive');
+        Route::delete('/publications/{publication}', [AdminController::class, 'destroyPublication'])->name('publications.destroy');
     });
 
 Route::middleware('auth')->group(function () {

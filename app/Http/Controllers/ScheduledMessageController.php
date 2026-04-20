@@ -6,11 +6,13 @@ use App\Events\NotificationCreated;
 use App\Models\Message;
 use App\Models\PersonalReminder;
 use App\Models\RecurringMessage;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -97,13 +99,21 @@ class ScheduledMessageController extends Controller
             ->values();
 
         $recipients = User::query()
+            ->with('role:id,nom_role')
             ->whereKeyNot($userId)
             ->orderBy('name')
-            ->get(['id', 'name', 'email'])
+            ->get(['id', 'name', 'email', 'role_id'])
             ->map(fn (User $user) => [
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
+                'role_id' => $user->role_id,
+                'role' => $user->role
+                    ? [
+                        'id' => $user->role->id,
+                        'nom_role' => $user->role->nom_role,
+                    ]
+                    : null,
             ])
             ->values();
 
@@ -112,55 +122,71 @@ class ScheduledMessageController extends Controller
             'recurringMessages' => $recurringMessages,
             'personalReminders' => $personalReminders,
             'recipients' => $recipients,
+            'roles' => Role::query()
+                ->select('id', 'nom_role')
+                ->orderBy('nom_role')
+                ->get(),
         ]);
     }
 
     public function storeScheduledMessage(Request $request): RedirectResponse
     {
         $userId = (int) $request->user()->id;
-        $validated = $request->validate($this->scheduledMessageRules($userId));
+        $validated = $request->validate($this->scheduledMessageCreateRules($userId));
         $scheduledAt = Carbon::parse($validated['scheduled_at']);
+        $receiverIds = collect($validated['receiver_ids'] ?? [])
+            ->map(fn ($receiverId) => (int) $receiverId)
+            ->unique()
+            ->values()
+            ->all();
+        $messageGroupUuid = count($receiverIds) > 1 ? (string) Str::uuid() : null;
 
-        Message::query()->create([
-            'sender_id' => $userId,
-            'receiver_id' => (int) $validated['receiver_id'],
-            'receiver_ids' => [(int) $validated['receiver_id']],
-            'sujet' => trim((string) $validated['sujet']),
-            'contenu' => trim((string) $validated['contenu']),
-            'fichier' => null,
-            'lu_le' => null,
-            'read_at' => null,
-            'lu' => false,
-            'spam' => false,
-            'important' => false,
-            'sent_at' => null,
-            'requires_receipt' => false,
-            'is_tracked' => false,
-            'receipt_requested_at' => null,
-            'scheduled_at' => $scheduledAt,
-            'status' => 'scheduled',
-            'is_delivered' => false,
-            'archived' => false,
-            'type_message' => 'normal',
-            'envoye' => false,
-            'deadline_reponse' => null,
-            'can_be_redirected' => false,
-            'message_group_uuid' => null,
-            'parent_id' => null,
-            'forwarded_from_message_id' => null,
-            'original_receiver_id' => null,
-        ]);
+        DB::transaction(function () use ($messageGroupUuid, $receiverIds, $scheduledAt, $userId, $validated): void {
+            foreach ($receiverIds as $receiverId) {
+                Message::query()->create([
+                    'sender_id' => $userId,
+                    'receiver_id' => $receiverId,
+                    'receiver_ids' => $receiverIds,
+                    'sujet' => trim((string) $validated['sujet']),
+                    'contenu' => trim((string) $validated['contenu']),
+                    'fichier' => null,
+                    'lu_le' => null,
+                    'read_at' => null,
+                    'lu' => false,
+                    'spam' => false,
+                    'important' => false,
+                    'sent_at' => null,
+                    'requires_receipt' => false,
+                    'is_tracked' => false,
+                    'receipt_requested_at' => null,
+                    'scheduled_at' => $scheduledAt,
+                    'status' => 'scheduled',
+                    'is_delivered' => false,
+                    'archived' => false,
+                    'type_message' => 'normal',
+                    'envoye' => false,
+                    'deadline_reponse' => null,
+                    'can_be_redirected' => false,
+                    'message_group_uuid' => $messageGroupUuid,
+                    'parent_id' => null,
+                    'forwarded_from_message_id' => null,
+                    'original_receiver_id' => null,
+                ]);
+            }
+        });
 
         return redirect()
             ->route('planifications.index')
-            ->with('success', 'Message programme avec succes.');
+            ->with('success', count($receiverIds) > 1
+                ? 'Messages programmes avec succes.'
+                : 'Message programme avec succes.');
     }
 
     public function updateScheduledMessage(Request $request, Message $message): RedirectResponse
     {
         $this->authorizeScheduledMessage($request->user()->id, $message);
 
-        $validated = $request->validate($this->scheduledMessageRules((int) $request->user()->id));
+        $validated = $request->validate($this->scheduledMessageUpdateRules((int) $request->user()->id));
 
         $message->update([
             'receiver_id' => (int) $validated['receiver_id'],
@@ -218,26 +244,37 @@ class ScheduledMessageController extends Controller
 
     public function storeRecurringMessage(Request $request): RedirectResponse
     {
-        $validated = $request->validate($this->recurringMessageRules((int) $request->user()->id));
+        $validated = $request->validate($this->recurringMessageCreateRules((int) $request->user()->id));
+        $receiverIds = collect($validated['receiver_ids'] ?? [])
+            ->map(fn ($receiverId) => (int) $receiverId)
+            ->unique()
+            ->values()
+            ->all();
 
-        RecurringMessage::query()->create([
-            'user_id' => (int) $request->user()->id,
-            'receiver_id' => (int) $validated['receiver_id'],
-            'body' => trim((string) $validated['body']),
-            'frequency' => $validated['frequency'],
-            'time_of_day' => $validated['time_of_day'],
-            'is_active' => (bool) ($validated['is_active'] ?? true),
-        ]);
+        DB::transaction(function () use ($receiverIds, $request, $validated): void {
+            foreach ($receiverIds as $receiverId) {
+                RecurringMessage::query()->create([
+                    'user_id' => (int) $request->user()->id,
+                    'receiver_id' => $receiverId,
+                    'body' => trim((string) $validated['body']),
+                    'frequency' => $validated['frequency'],
+                    'time_of_day' => $validated['time_of_day'],
+                    'is_active' => (bool) ($validated['is_active'] ?? true),
+                ]);
+            }
+        });
 
         return redirect()
             ->route('planifications.index')
-            ->with('success', 'Message recurrent cree avec succes.');
+            ->with('success', count($receiverIds) > 1
+                ? 'Messages recurrents crees avec succes.'
+                : 'Message recurrent cree avec succes.');
     }
 
     public function updateRecurringMessage(Request $request, RecurringMessage $recurringMessage): RedirectResponse
     {
         $this->authorizeOwnedRecurringMessage($request->user()->id, $recurringMessage);
-        $validated = $request->validate($this->recurringMessageRules((int) $request->user()->id));
+        $validated = $request->validate($this->recurringMessageUpdateRules((int) $request->user()->id));
 
         $recurringMessage->update([
             'receiver_id' => (int) $validated['receiver_id'],
@@ -306,7 +343,18 @@ class ScheduledMessageController extends Controller
             ->with('success', 'Rappel personnel supprime avec succes.');
     }
 
-    private function scheduledMessageRules(int $userId): array
+    private function scheduledMessageCreateRules(int $userId): array
+    {
+        return [
+            'receiver_ids' => ['required', 'array', 'min:1'],
+            'receiver_ids.*' => ['required', 'integer', 'distinct', 'exists:users,id', Rule::notIn([$userId])],
+            'sujet' => ['required', 'string', 'max:255'],
+            'contenu' => ['required', 'string'],
+            'scheduled_at' => ['required', 'date', 'after:now'],
+        ];
+    }
+
+    private function scheduledMessageUpdateRules(int $userId): array
     {
         return [
             'receiver_id' => ['required', 'integer', 'exists:users,id', Rule::notIn([$userId])],
@@ -316,7 +364,19 @@ class ScheduledMessageController extends Controller
         ];
     }
 
-    private function recurringMessageRules(int $userId): array
+    private function recurringMessageCreateRules(int $userId): array
+    {
+        return [
+            'receiver_ids' => ['required', 'array', 'min:1'],
+            'receiver_ids.*' => ['required', 'integer', 'distinct', 'exists:users,id', Rule::notIn([$userId])],
+            'body' => ['required', 'string', 'max:5000'],
+            'frequency' => ['required', Rule::in(['daily', 'weekly', 'monthly'])],
+            'time_of_day' => ['required', 'date_format:H:i'],
+            'is_active' => ['nullable', 'boolean'],
+        ];
+    }
+
+    private function recurringMessageUpdateRules(int $userId): array
     {
         return [
             'receiver_id' => ['required', 'integer', 'exists:users,id', Rule::notIn([$userId])],

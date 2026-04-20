@@ -466,6 +466,123 @@ class AdminController extends Controller
         ]);
     }
 
+    public function publications(Request $request): Response
+    {
+        $search = trim((string) $request->string('search'));
+        $status = trim((string) $request->string('status'));
+
+        $publications = Publication::query()
+            ->with('user:id,name,email')
+            ->withCount(['likes', 'comments'])
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($subQuery) use ($search) {
+                    $subQuery
+                        ->where('title', 'like', "%{$search}%")
+                        ->orWhere('content', 'like', "%{$search}%")
+                        ->orWhereHas('user', function ($userQuery) use ($search) {
+                            $userQuery
+                                ->where('name', 'like', "%{$search}%")
+                                ->orWhere('email', 'like', "%{$search}%");
+                        });
+                });
+            })
+            ->when($status !== '', function ($query) use ($status) {
+                if ($status === 'active') {
+                    $query->where('archived', false);
+                }
+
+                if ($status === 'archived') {
+                    $query->where('archived', true);
+                }
+            })
+            ->latest()
+            ->paginate(12)
+            ->withQueryString()
+            ->through(fn (Publication $publication): array => $this->mapPublication($publication));
+
+        return Inertia::render('Admin/PublicationsIndex', [
+            'filters' => [
+                'search' => $search,
+                'status' => $status,
+            ],
+            'publications' => $publications,
+        ]);
+    }
+
+    public function showPublication(Publication $publication): Response
+    {
+        $publication->load([
+            'user:id,name,email',
+            'comments.user:id,name,email',
+        ])->loadCount(['likes', 'comments']);
+
+        return Inertia::render('Admin/PublicationShow', [
+            'publication' => $this->mapPublication($publication, true),
+        ]);
+    }
+
+    public function updatePublication(Request $request, Publication $publication): RedirectResponse
+    {
+        $validated = $request->validate([
+            'title' => ['nullable', 'string', 'max:255'],
+            'content' => ['required', 'string', 'max:5000'],
+            'photo' => ['nullable', 'image', 'max:5120'],
+            'remove_photo' => ['nullable', 'boolean'],
+        ]);
+
+        $payload = [
+            'title' => filled($validated['title'] ?? null) ? trim((string) $validated['title']) : null,
+            'content' => trim((string) $validated['content']),
+        ];
+
+        if ((bool) ($validated['remove_photo'] ?? false) && $publication->photo_path) {
+            Storage::disk('public')->delete($publication->photo_path);
+            $payload['photo_path'] = null;
+        }
+
+        if ($request->hasFile('photo')) {
+            $newPhotoPath = $request->file('photo')->store('publications', 'public');
+
+            if ($publication->photo_path) {
+                Storage::disk('public')->delete($publication->photo_path);
+            }
+
+            $payload['photo_path'] = $newPhotoPath;
+        }
+
+        $publication->update($payload);
+
+        return back()->with('success', 'Publication mise a jour avec succes.');
+    }
+
+    public function togglePublicationArchive(Request $request, Publication $publication): RedirectResponse
+    {
+        $validated = $request->validate([
+            'archived' => ['required', 'boolean'],
+        ]);
+
+        $publication->update([
+            'archived' => (bool) $validated['archived'],
+        ]);
+
+        return back()->with('success', (bool) $validated['archived']
+            ? 'Publication archivee avec succes.'
+            : 'Publication restauree avec succes.');
+    }
+
+    public function destroyPublication(Publication $publication): RedirectResponse
+    {
+        if ($publication->photo_path) {
+            Storage::disk('public')->delete($publication->photo_path);
+        }
+
+        $publication->delete();
+
+        return redirect()
+            ->route('admin.publications.index')
+            ->with('success', 'Publication supprimee avec succes.');
+    }
+
     public function updateReportStatus(Request $request, ReportedMessage $reportedMessage): RedirectResponse
     {
         $validated = $request->validate([
@@ -669,6 +786,46 @@ class AdminController extends Controller
                         : null,
                 ]
                 : null,
+        ];
+    }
+
+    private function mapPublication(Publication $publication, bool $full = false): array
+    {
+        return [
+            'id' => $publication->id,
+            'title' => $publication->title,
+            'content' => $full
+                ? $publication->content
+                : Str::limit(str($publication->content)->squish()->toString(), 180),
+            'photo_url' => $publication->photo_url,
+            'archived' => (bool) $publication->archived,
+            'created_at' => optional($publication->created_at)?->toIso8601String(),
+            'updated_at' => optional($publication->updated_at)?->toIso8601String(),
+            'likes_count' => (int) ($publication->likes_count ?? 0),
+            'comments_count' => (int) ($publication->comments_count ?? 0),
+            'user' => $publication->user
+                ? [
+                    'id' => $publication->user->id,
+                    'name' => $publication->user->name,
+                    'email' => $publication->user->email,
+                ]
+                : null,
+            'comments' => $full
+                ? $publication->comments->map(function ($comment) {
+                    return [
+                        'id' => $comment->id,
+                        'content' => $comment->content,
+                        'created_at' => optional($comment->created_at)?->toIso8601String(),
+                        'user' => $comment->user
+                            ? [
+                                'id' => $comment->user->id,
+                                'name' => $comment->user->name,
+                                'email' => $comment->user->email,
+                            ]
+                            : null,
+                    ];
+                })->values()->all()
+                : [],
         ];
     }
 

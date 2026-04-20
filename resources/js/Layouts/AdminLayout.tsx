@@ -9,6 +9,7 @@ import {
     ShieldCheck,
     Flag,
     ArrowLeft,
+    FileText,
 } from 'lucide-react';
 
 type AdminLayoutProps = PropsWithChildren<{
@@ -93,6 +94,12 @@ export default function AdminLayout({ title, description, actions, children }: A
             routeName: 'admin.audit.messages',
             href: route('admin.audit.messages'),
             icon: <ShieldCheck className="h-4.5 w-4.5" />,
+        },
+        {
+            label: 'Publications',
+            routeName: 'admin.publications.index',
+            href: route('admin.publications.index'),
+            icon: <FileText className="h-4.5 w-4.5" />,
         },
     ];
 

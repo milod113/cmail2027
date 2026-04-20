@@ -23,6 +23,16 @@ type Recipient = {
     id: number;
     name: string;
     email: string;
+    role_id?: number | null;
+    role?: {
+        id: number;
+        nom_role: string;
+    } | null;
+};
+
+type RoleOption = {
+    id: number;
+    nom_role: string;
 };
 
 type ScheduledMessageItem = {
@@ -62,11 +72,13 @@ export default function PlanificationsIndex({
     recurringMessages,
     personalReminders,
     recipients,
+    roles,
 }: {
     scheduledMessages: ScheduledMessageItem[];
     recurringMessages: RecurringMessageItem[];
     personalReminders: PersonalReminderItem[];
     recipients: Recipient[];
+    roles: RoleOption[];
 }) {
     const { __, locale } = useTranslation();
     const [activeTab, setActiveTab] = useState<TabKey>('scheduled');
@@ -764,6 +776,7 @@ export default function PlanificationsIndex({
                 mode={planningModalState?.mode ?? 'create'}
                 type={planningModalState?.type ?? 'scheduled'}
                 recipients={recipients}
+                roles={roles}
                 scheduledItem={planningModalState?.type === 'scheduled' ? planningModalState.scheduledItem ?? null : null}
                 recurringItem={planningModalState?.type === 'recurring' ? planningModalState.recurringItem ?? null : null}
                 onClose={() => setPlanningModalState(null)}
