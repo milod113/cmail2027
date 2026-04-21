@@ -11,6 +11,13 @@ Broadcast::channel('user.{id}', function ($user, $id) {
     return (int) $user->id === (int) $id;
 });
 
+Broadcast::channel('contacts.presence', function ($user) {
+    return [
+        'id' => (int) $user->id,
+        'name' => $user->name,
+    ];
+});
+
 Broadcast::channel('message.{messageId}', function ($user, $messageId) {
     return Message::query()
         ->whereKey($messageId)

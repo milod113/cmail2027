@@ -1,6 +1,7 @@
 import Dropdown from '@/Components/Dropdown';
 import LanguageSwitcher from '@/Components/LanguageSwitcher';
 import SupportDrawer from '@/Components/SupportDrawer';
+import { useRealtimePresence } from '@/Hooks/useRealtimePresence';
 import { useTranslation } from '@/Hooks/useTranslation';
 import { Link, usePage } from '@inertiajs/react';
 import {
@@ -206,6 +207,7 @@ function NotificationBell({
                 if (incoming.length > 0) {
                     playNotificationSound();
                     setToasts((current) => [...incoming.slice(-3), ...current].slice(0, 4));
+                    showBrowserNotifications(incoming);
                 }
             } else {
                 initializedRef.current = true;
@@ -237,6 +239,31 @@ function NotificationBell({
         window.setTimeout(() => void audioContext.close(), 300);
     };
 
+    const showBrowserNotifications = (items: NotificationItem[]) => {
+        if (typeof window === 'undefined' || !('Notification' in window)) {
+            return;
+        }
+
+        if (document.visibilityState === 'visible' || Notification.permission !== 'granted') {
+            return;
+        }
+
+        items
+            .filter((item) => item.type === 'message')
+            .slice(0, 2)
+            .forEach((item) => {
+                const notification = new Notification(item.title, {
+                    body: item.body,
+                    tag: item.id,
+                });
+
+                notification.onclick = () => {
+                    window.focus();
+                    window.location.href = item.href;
+                };
+            });
+    };
+
     useEffect(() => {
         void fetchNotifications();
         const intervalId = window.setInterval(() => void fetchNotifications(), 10000);
@@ -252,6 +279,24 @@ function NotificationBell({
             window.Echo?.leaveChannel?.(`private-user.${userId}`);
         };
     }, [userId]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined' || !('Notification' in window)) {
+            return;
+        }
+
+        if (Notification.permission === 'default') {
+            const requestPermission = async () => {
+                try {
+                    await Notification.requestPermission();
+                } catch {
+                    // Ignore browser permission issues and keep in-app toasts active.
+                }
+            };
+
+            void requestPermission();
+        }
+    }, []);
 
     useEffect(() => {
         if (!isOpen || unreadCount === 0) return;
@@ -444,6 +489,8 @@ export default function AuthenticatedLayout({
     actions,
     children,
 }: LayoutProps) {
+    useRealtimePresence();
+
     const { auth, current_locale } = usePage().props as {
         auth: {
             user: {

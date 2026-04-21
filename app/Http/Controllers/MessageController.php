@@ -1084,6 +1084,23 @@ class MessageController extends Controller
                         ];
                     }
 
+                    if ($subtype === 'chat_message') {
+                        $senderId = (int) ($data['sender_id'] ?? 0);
+                        $senderName = (string) ($data['sender_name'] ?? 'Utilisateur inconnu');
+                        $preview = (string) ($data['preview'] ?? 'Nouveau message instantane');
+
+                        return [
+                            'id' => "db-{$notification->id}",
+                            'type' => 'message',
+                            'title' => 'Nouveau message instantane',
+                            'body' => $preview,
+                            'meta' => $senderName,
+                            'href' => $senderId > 0 ? route('contacts.show', $senderId) : route('notifications.index'),
+                            'created_at' => optional($createdAt)?->toIso8601String(),
+                            'unread' => $notification->read_at === null,
+                        ];
+                    }
+
                     return [
                         'id' => "db-{$notification->id}",
                         'type' => 'system',

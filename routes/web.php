@@ -3,11 +3,14 @@
 use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\CommentController;
+use App\Http\Controllers\ChatController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EventInvitationController;
+use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\LikeController;
 use App\Http\Controllers\MessageActionController;
 use App\Http\Controllers\MessageController;
+use App\Http\Controllers\PresenceController;
 use App\Http\Controllers\PublicationController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ScheduledMessageController;
@@ -52,6 +55,8 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/events', [EventInvitationController::class, 'store'])->name('events.store');
     Route::post('/publications', [PublicationController::class, 'store'])->name('publications.store');
     Route::post('/support/tickets', [SupportTicketController::class, 'store'])->name('support-tickets.store');
+    Route::post('/feedbacks', [FeedbackController::class, 'store'])->name('feedbacks.store');
+    Route::post('/presence/ping', [PresenceController::class, 'ping'])->name('presence.ping');
     Route::post('/publications/{publication}/like', [LikeController::class, 'toggle'])->name('publications.like.toggle');
     Route::post('/publications/{publication}/comments', [CommentController::class, 'store'])->name('publications.comments.store');
     Route::get('/inbox', [MessageController::class, 'inbox'])->name('messages.inbox');
@@ -105,6 +110,7 @@ Route::middleware(['auth'])->group(function () {
                 'department_id',
                 'role_id',
                 'is_online',
+                'last_seen_at',
                 'is_blocked',
             ])
             ->when($search !== '', function ($query) use ($search) {
@@ -119,11 +125,22 @@ Route::middleware(['auth'])->group(function () {
             ->when($roleId > 0, fn ($query) => $query->where('role_id', $roleId))
             ->when($status !== '', function ($query) use ($status) {
                 if ($status === 'online') {
-                    $query->where('is_online', true)->where('is_blocked', false);
+                    $query
+                        ->where('is_online', true)
+                        ->where('is_blocked', false)
+                        ->whereNotNull('last_seen_at')
+                        ->where('last_seen_at', '>=', now()->subMinutes(2));
                 }
 
                 if ($status === 'offline') {
-                    $query->where('is_online', false)->where('is_blocked', false);
+                    $query
+                        ->where('is_blocked', false)
+                        ->where(function ($offlineQuery) {
+                            $offlineQuery
+                                ->where('is_online', false)
+                                ->orWhereNull('last_seen_at')
+                                ->orWhere('last_seen_at', '<', now()->subMinutes(2));
+                        });
                 }
 
                 if ($status === 'blocked') {
@@ -136,8 +153,14 @@ Route::middleware(['auth'])->group(function () {
 
         $users->setCollection(
             $users->getCollection()->map(function (User $user) use ($favoriteContactIds) {
+                $isOnline = (bool) $user->is_online
+                    && $user->last_seen_at !== null
+                    && $user->last_seen_at->gte(now()->subMinutes(2));
+
                 return [
                     ...$user->toArray(),
+                    'is_online' => $isOnline,
+                    'last_seen_at' => optional($user->last_seen_at)?->toIso8601String(),
                     'is_favorite' => in_array((int) $user->id, $favoriteContactIds, true),
                 ];
             })
@@ -170,6 +193,8 @@ Route::middleware(['auth'])->group(function () {
     })->name('contacts.index');
     Route::post('/contacts/{user}/favorite', [ProfileController::class, 'favorite'])->name('contacts.favorite.store');
     Route::delete('/contacts/{user}/favorite', [ProfileController::class, 'unfavorite'])->name('contacts.favorite.destroy');
+    Route::post('/contacts/{user}/chat', [ChatController::class, 'store'])->name('contacts.chat.store');
+    Route::post('/contacts/{user}/chat/read', [ChatController::class, 'markRead'])->name('contacts.chat.read');
     Route::get('/contacts/{user}', [ProfileController::class, 'show'])->name('contacts.show');
     Route::get('/archive', [MessageController::class, 'archiveIndex'])->name('messages.archive');
     Route::post('/messages/archive/bulk', [MessageController::class, 'bulkArchive'])->name('messages.archive.bulk');
@@ -188,12 +213,16 @@ Route::middleware(['auth', 'admin'])
     ->group(function () {
         Route::get('/', [AdminController::class, 'index'])->name('dashboard');
         Route::get('/users', [AdminController::class, 'users'])->name('users.index');
+        Route::get('/users/create', [AdminController::class, 'createUser'])->name('users.create');
+        Route::post('/users', [AdminController::class, 'storeUser'])->name('users.store');
         Route::get('/users/{user}', [AdminController::class, 'showUser'])->name('users.show');
         Route::patch('/users/{user}/profile', [AdminController::class, 'updateUserProfile'])->name('users.profile.update');
         Route::patch('/users/{user}/status', [AdminController::class, 'blockUser'])->name('users.block');
         Route::patch('/users/{user}/role', [AdminController::class, 'changeRole'])->name('users.change-role');
         Route::get('/support', [AdminController::class, 'support'])->name('support.index');
         Route::post('/support/{ticket}/respond', [AdminController::class, 'respondSupport'])->name('support.respond');
+        Route::get('/feedbacks', [AdminController::class, 'feedbackAnalytics'])->name('feedback.index');
+        Route::post('/feedbacks/request', [AdminController::class, 'requestFeedbackCampaign'])->name('feedback.request');
         Route::get('/reports', [AdminController::class, 'reports'])->name('reports.index');
         Route::patch('/reports/{reportedMessage}', [AdminController::class, 'updateReportStatus'])->name('reports.update');
         Route::delete('/reports/{reportedMessage}/message', [AdminController::class, 'destroyReportedMessageSource'])->name('reports.message.destroy');

@@ -2,6 +2,7 @@ import ActionRequiredWidget from '@/Components/ActionRequiredWidget';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import PendingRequestsWidget from '@/Components/PendingRequestsWidget';
 import PublicationsFeed from '@/Components/PublicationsFeed';
+import SystemFeedbackCard from '@/Components/SystemFeedbackCard';
 import { Head, Link } from '@inertiajs/react';
 import {
     Archive,
@@ -86,6 +87,12 @@ type DashboardProps = {
         description: string;
         occurred_at: string;
     }>;
+    feedbackRequest: {
+        id: string;
+        title: string;
+        message: string;
+        type: string;
+    } | null;
 };
 
 function statCards(stats: DashboardProps['stats']) {
@@ -212,7 +219,7 @@ function recentActivityMeta(type: DashboardProps['recentActivity'][number]['type
     }
 }
 
-export default function Dashboard({ publications, stats, pendingSentRequests, actionRequiredMessages, recentActivity }: DashboardProps) {
+export default function Dashboard({ publications, stats, pendingSentRequests, actionRequiredMessages, recentActivity, feedbackRequest }: DashboardProps) {
     const quickActions = [
         { label: 'Nouveau message', href: route('messages.create'), icon: Send, color: 'from-indigo-500 to-indigo-600' },
         { label: 'Boîte de réception', href: route('messages.inbox'), icon: Inbox, color: 'from-emerald-500 to-emerald-600' },
@@ -313,6 +320,13 @@ export default function Dashboard({ publications, stats, pendingSentRequests, ac
                         </div>
                     ))}
                 </section>
+
+                {feedbackRequest?.type === 'feedback_request' ? (
+                    <SystemFeedbackCard
+                        title={feedbackRequest.title}
+                        message={feedbackRequest.message}
+                    />
+                ) : null}
 
                 {/* Main Content Grid */}
                 <div className="grid gap-8 lg:grid-cols-2">

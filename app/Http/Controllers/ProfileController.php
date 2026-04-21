@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ChatMessage;
 use App\Http\Requests\ProfileUpdateRequest;
 use App\Models\Message;
 use App\Models\Profile;
@@ -12,6 +13,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -51,6 +53,7 @@ class ProfileController extends Controller
     public function show(User $user): Response
     {
         $authUser = request()->user();
+        $isOnline = $this->isUserOnline($user);
 
         $user->load([
             'department:id,name',
@@ -58,82 +61,26 @@ class ProfileController extends Controller
             'profile:user_id,matricule,grade,telephone,adresse,photo',
         ]);
 
-        $communicationThread = Message::query()
-            ->with([
-                'sender:id,name,email',
-                'receiver:id,name,email',
-            ])
-            ->where(function ($query) use ($authUser, $user) {
-                $query
-                    ->where('sender_id', $authUser->id)
-                    ->where('receiver_id', $user->id);
-            })
-            ->orWhere(function ($query) use ($authUser, $user) {
-                $query
-                    ->where('sender_id', $user->id)
-                    ->where('receiver_id', $authUser->id);
-            })
-            ->orderByRaw('COALESCE(sent_at, created_at) desc')
-            ->limit(80)
-            ->get([
-                'id',
-                'sender_id',
-                'receiver_id',
-                'sujet',
-                'contenu',
-                'sent_at',
-                'created_at',
-                'lu',
-                'important',
-                'is_important',
-                'requires_receipt',
-                'acknowledged_at',
-                'deadline_reponse',
-                'status',
-            ])
-            ->map(function (Message $message) use ($authUser) {
-                $isOutgoing = (int) $message->sender_id === (int) $authUser->id;
-
-                return [
-                    'id' => $message->id,
-                    'subject' => $message->sujet,
-                    'excerpt' => str($message->contenu)->squish()->limit(160)->toString(),
-                    'sent_at' => optional($message->sent_at)?->toIso8601String(),
-                    'created_at' => optional($message->created_at)?->toIso8601String(),
-                    'read' => (bool) $message->lu,
-                    'important' => (bool) ($message->important || $message->is_important),
-                    'requires_receipt' => (bool) $message->requires_receipt,
-                    'acknowledged_at' => optional($message->acknowledged_at)?->toIso8601String(),
-                    'deadline_reponse' => optional($message->deadline_reponse)?->toIso8601String(),
-                    'status' => $message->status,
-                    'direction' => $isOutgoing ? 'outgoing' : 'incoming',
-                    'sender' => $message->sender
-                        ? [
-                            'id' => $message->sender->id,
-                            'name' => $message->sender->name,
-                            'email' => $message->sender->email,
-                        ]
-                        : null,
-                    'receiver' => $message->receiver
-                        ? [
-                            'id' => $message->receiver->id,
-                            'name' => $message->receiver->name,
-                            'email' => $message->receiver->email,
-                        ]
-                        : null,
-                    'href' => $isOutgoing
-                        ? route('messages.sent.show', $message)
-                        : route('messages.show', $message),
-                ];
-            })
-            ->values();
+        $communicationThread = $this->buildCommunicationThread($authUser, $user);
 
         return Inertia::render('Contacts/Show', [
             'contact' => [
                 ...$user->toArray(),
+                'is_online' => $isOnline,
+                'last_seen_at' => optional($user->last_seen_at)?->toIso8601String(),
                 'is_favorite' => $this->isFavoriteContact(request()->user(), $user),
             ],
             'communicationThread' => $communicationThread,
+            'chatConversation' => Schema::hasTable('chat_messages')
+                ? $this->buildChatConversation($authUser, $user)
+                : [],
+            'chatUnreadCount' => Schema::hasTable('chat_messages')
+                ? ChatMessage::query()
+                    ->where('sender_id', $user->id)
+                    ->where('receiver_id', $authUser->id)
+                    ->whereNull('read_at')
+                    ->count()
+                : 0,
         ]);
     }
 
@@ -248,5 +195,144 @@ class ProfileController extends Controller
         return $owner->favoriteContacts()
             ->where('favorite_contact_id', $contact->id)
             ->exists();
+    }
+
+    private function buildCommunicationThread(User $authUser, User $contact)
+    {
+        return Message::query()
+            ->with([
+                'sender:id,name,email',
+                'receiver:id,name,email',
+            ])
+            ->where(function ($query) use ($authUser, $contact) {
+                $query
+                    ->where('sender_id', $authUser->id)
+                    ->where('receiver_id', $contact->id);
+            })
+            ->orWhere(function ($query) use ($authUser, $contact) {
+                $query
+                    ->where('sender_id', $contact->id)
+                    ->where('receiver_id', $authUser->id);
+            })
+            ->orderByRaw('COALESCE(sent_at, created_at) desc')
+            ->limit(80)
+            ->get([
+                'id',
+                'sender_id',
+                'receiver_id',
+                'sujet',
+                'contenu',
+                'sent_at',
+                'created_at',
+                'lu',
+                'important',
+                'is_important',
+                'requires_receipt',
+                'acknowledged_at',
+                'deadline_reponse',
+                'status',
+                'type_message',
+            ])
+            ->map(fn (Message $message) => $this->mapThreadMessage($message, $authUser))
+            ->values();
+    }
+
+    private function buildChatConversation(User $authUser, User $contact)
+    {
+        return ChatMessage::query()
+            ->with([
+                'sender:id,name,email',
+                'receiver:id,name,email',
+            ])
+            ->where(function ($query) use ($authUser, $contact) {
+                $query
+                    ->where('sender_id', $authUser->id)
+                    ->where('receiver_id', $contact->id);
+            })
+            ->orWhere(function ($query) use ($authUser, $contact) {
+                $query
+                    ->where('sender_id', $contact->id)
+                    ->where('receiver_id', $authUser->id);
+            })
+            ->orderBy('created_at')
+            ->limit(60)
+            ->get()
+            ->map(fn (ChatMessage $message) => $this->mapChatMessage($message, $authUser))
+            ->values();
+    }
+
+    private function mapThreadMessage(Message $message, User $viewer): array
+    {
+        $isOutgoing = (int) $message->sender_id === (int) $viewer->id;
+
+        return [
+            'id' => $message->id,
+            'subject' => $message->sujet,
+            'content' => $message->contenu,
+            'excerpt' => str($message->contenu)->squish()->limit(160)->toString(),
+            'sent_at' => optional($message->sent_at)?->toIso8601String(),
+            'created_at' => optional($message->created_at)?->toIso8601String(),
+            'read' => (bool) $message->lu,
+            'important' => (bool) ($message->important || $message->is_important),
+            'requires_receipt' => (bool) $message->requires_receipt,
+            'acknowledged_at' => optional($message->acknowledged_at)?->toIso8601String(),
+            'deadline_reponse' => optional($message->deadline_reponse)?->toIso8601String(),
+            'status' => $message->status,
+            'type_message' => $message->type_message,
+            'direction' => $isOutgoing ? 'outgoing' : 'incoming',
+            'sender' => $message->sender
+                ? [
+                    'id' => $message->sender->id,
+                    'name' => $message->sender->name,
+                    'email' => $message->sender->email,
+                ]
+                : null,
+            'receiver' => $message->receiver
+                ? [
+                    'id' => $message->receiver->id,
+                    'name' => $message->receiver->name,
+                    'email' => $message->receiver->email,
+                ]
+                : null,
+            'href' => $isOutgoing
+                ? route('messages.sent.show', $message)
+                : route('messages.show', $message),
+        ];
+    }
+
+    private function mapChatMessage(ChatMessage $message, User $viewer): array
+    {
+        $isOutgoing = (int) $message->sender_id === (int) $viewer->id;
+
+        return [
+            'id' => $message->id,
+            'body' => $message->body,
+            'created_at' => optional($message->created_at)?->toIso8601String(),
+            'read_at' => optional($message->read_at)?->toIso8601String(),
+            'direction' => $isOutgoing ? 'outgoing' : 'incoming',
+            'sender' => $message->sender
+                ? [
+                    'id' => $message->sender->id,
+                    'name' => $message->sender->name,
+                    'email' => $message->sender->email,
+                ]
+                : null,
+            'receiver' => $message->receiver
+                ? [
+                    'id' => $message->receiver->id,
+                    'name' => $message->receiver->name,
+                    'email' => $message->receiver->email,
+                ]
+                : null,
+        ];
+    }
+
+    private function isUserOnline(User $user): bool
+    {
+        if (! $user->is_online) {
+            return false;
+        }
+
+        return $user->last_seen_at !== null && $user->last_seen_at->gte(now()->subMinutes(2));
     }
 }

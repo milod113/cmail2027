@@ -45,6 +45,7 @@ class User extends Authenticatable
         'is_super_admin',
         'can_publish_publication',
         'can_organize_event',
+        'last_seen_at',
         'remplacement_debut',
         'remplacement_fin',
         'password',
@@ -89,6 +90,7 @@ class User extends Authenticatable
             'is_super_admin' => 'boolean',
             'can_publish_publication' => 'boolean',
             'can_organize_event' => 'boolean',
+            'last_seen_at' => 'datetime',
             'remplacement_debut' => 'date',
             'remplacement_fin' => 'date',
             'notifications_read_at' => 'datetime',
@@ -123,6 +125,16 @@ class User extends Authenticatable
     public function receivedMessages(): HasMany
     {
         return $this->hasMany(Message::class, 'receiver_id');
+    }
+
+    public function sentChatMessages(): HasMany
+    {
+        return $this->hasMany(ChatMessage::class, 'sender_id');
+    }
+
+    public function receivedChatMessages(): HasMany
+    {
+        return $this->hasMany(ChatMessage::class, 'receiver_id');
     }
 
     public function recurringMessages(): HasMany
@@ -202,6 +214,11 @@ class User extends Authenticatable
     public function supportTickets(): HasMany
     {
         return $this->hasMany(SupportTicket::class);
+    }
+
+    public function appFeedbacks(): HasMany
+    {
+        return $this->hasMany(AppFeedback::class);
     }
 
     public function reportedMessages(): HasMany

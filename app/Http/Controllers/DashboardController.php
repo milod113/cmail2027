@@ -214,6 +214,11 @@ class DashboardController extends Controller
             ->take(6)
             ->values();
 
+        $feedbackRequestNotification = $user->unreadNotifications()
+            ->where('data->type', 'feedback_request')
+            ->latest()
+            ->first();
+
         return Inertia::render('Dashboard', [
             'publications' => Publication::query()->feed()->get(),
             'stats' => [
@@ -236,6 +241,14 @@ class DashboardController extends Controller
             'pendingSentRequests' => $pendingSentRequests,
             'actionRequiredMessages' => $actionRequiredMessages,
             'recentActivity' => $recentActivity,
+            'feedbackRequest' => $feedbackRequestNotification
+                ? [
+                    'id' => $feedbackRequestNotification->id,
+                    'title' => (string) ($feedbackRequestNotification->data['title'] ?? 'Votre avis sur Cmail'),
+                    'message' => (string) ($feedbackRequestNotification->data['message'] ?? ''),
+                    'type' => (string) ($feedbackRequestNotification->data['type'] ?? ''),
+                ]
+                : null,
         ]);
     }
 }

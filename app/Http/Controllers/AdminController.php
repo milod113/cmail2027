@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Events\NotificationCreated;
+use App\Models\AppFeedback;
 use App\Models\Department;
 use App\Models\Message;
 use App\Models\Publication;
@@ -10,14 +11,17 @@ use App\Models\ReportedMessage;
 use App\Models\Role;
 use App\Models\SupportTicket;
 use App\Models\User;
+use App\Support\FeedbackCampaignDispatcher;
 use App\Support\RichTextSanitizer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -114,6 +118,89 @@ class AdminController extends Controller
                 ->orderBy('nom_role')
                 ->get(),
         ]);
+    }
+
+    public function createUser(): Response
+    {
+        return Inertia::render('Admin/UserCreate', [
+            'roles' => Role::query()
+                ->select('id', 'nom_role')
+                ->orderBy('nom_role')
+                ->get(),
+            'departments' => Department::query()
+                ->select('id', 'name')
+                ->orderBy('name')
+                ->get(),
+        ]);
+    }
+
+    public function storeUser(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'username' => ['nullable', 'string', 'max:255', Rule::unique('users', 'username')],
+            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', Rule::unique('users', 'email')],
+            'department_id' => ['nullable', 'exists:departments,id'],
+            'role_id' => ['nullable', 'exists:roles,id'],
+            'matricule' => ['nullable', 'string', 'max:255', Rule::unique('profiles', 'matricule')],
+            'grade' => ['nullable', 'string', 'max:255'],
+            'telephone' => ['nullable', 'string', 'max:20'],
+            'adresse' => ['nullable', 'string', 'max:1000'],
+            'photo' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif,webp', 'max:2048'],
+            'access_level' => ['required', 'string', 'in:user,publisher,admin'],
+            'can_organize_event' => ['required', 'boolean'],
+            'is_active' => ['required', 'boolean'],
+            'password' => ['required', 'confirmed', Password::defaults()],
+        ]);
+
+        $photoPath = null;
+
+        try {
+            DB::beginTransaction();
+
+            if ($request->hasFile('photo')) {
+                $photoPath = $request->file('photo')->store('profiles/photos', 'public');
+            }
+
+            $isAdminAccess = $validated['access_level'] === 'admin';
+            $canPublish = in_array($validated['access_level'], ['publisher', 'admin'], true);
+
+            $user = User::query()->create([
+                'name' => trim((string) $validated['name']),
+                'username' => filled($validated['username'] ?? null) ? trim((string) $validated['username']) : null,
+                'email' => trim((string) $validated['email']),
+                'department_id' => $validated['department_id'] ?? null,
+                'role_id' => $validated['role_id'] ?? null,
+                'is_blocked' => ! (bool) $validated['is_active'],
+                'is_online' => false,
+                'is_super_admin' => $isAdminAccess,
+                'can_publish_publication' => $canPublish,
+                'can_organize_event' => (bool) $validated['can_organize_event'],
+                'password' => $validated['password'],
+            ]);
+
+            $user->profile()->create([
+                'matricule' => filled($validated['matricule'] ?? null) ? trim((string) $validated['matricule']) : null,
+                'grade' => filled($validated['grade'] ?? null) ? trim((string) $validated['grade']) : null,
+                'telephone' => filled($validated['telephone'] ?? null) ? trim((string) $validated['telephone']) : null,
+                'adresse' => filled($validated['adresse'] ?? null) ? trim((string) $validated['adresse']) : null,
+                'photo' => $photoPath,
+            ]);
+
+            DB::commit();
+        } catch (\Throwable $exception) {
+            DB::rollBack();
+
+            if ($photoPath) {
+                Storage::disk('public')->delete($photoPath);
+            }
+
+            throw $exception;
+        }
+
+        return redirect()
+            ->route('admin.users.show', $user)
+            ->with('success', 'Nouvel utilisateur cree avec succes.');
     }
 
     public function showUser(User $user): Response
@@ -404,6 +491,73 @@ class AdminController extends Controller
             'reports' => $reports,
             'selectedReport' => $selectedReport,
         ]);
+    }
+
+    public function feedbackAnalytics(): Response
+    {
+        $totalFeedbacks = AppFeedback::query()->count();
+        $averageRating = round((float) (AppFeedback::query()->avg('rating') ?? 0), 1);
+        $distributionCounts = AppFeedback::query()
+            ->selectRaw('rating, COUNT(*) as total')
+            ->groupBy('rating')
+            ->pluck('total', 'rating');
+
+        $distribution = collect(range(5, 1))
+            ->map(function (int $rating) use ($distributionCounts, $totalFeedbacks): array {
+                $count = (int) ($distributionCounts[$rating] ?? 0);
+
+                return [
+                    'rating' => $rating,
+                    'count' => $count,
+                    'percentage' => $totalFeedbacks > 0
+                        ? round(($count / $totalFeedbacks) * 100, 1)
+                        : 0,
+                ];
+            })
+            ->values();
+
+        $recentComments = AppFeedback::query()
+            ->with('user:id,name,email')
+            ->whereNotNull('comment')
+            ->where('comment', '!=', '')
+            ->latest()
+            ->take(10)
+            ->get()
+            ->map(function (AppFeedback $feedback): array {
+                return [
+                    'id' => $feedback->id,
+                    'rating' => $feedback->rating,
+                    'comment' => $feedback->comment,
+                    'created_at' => optional($feedback->created_at)?->toIso8601String(),
+                    'user' => $feedback->user
+                        ? [
+                            'id' => $feedback->user->id,
+                            'name' => $feedback->user->name,
+                            'email' => $feedback->user->email,
+                        ]
+                        : null,
+                ];
+            })
+            ->values();
+
+        return Inertia::render('Admin/FeedbackAnalytics', [
+            'analytics' => [
+                'average_rating' => $averageRating,
+                'total_feedbacks' => $totalFeedbacks,
+                'recent_comments' => $recentComments,
+                'distribution' => $distribution,
+            ],
+        ]);
+    }
+
+    public function requestFeedbackCampaign(FeedbackCampaignDispatcher $dispatcher): RedirectResponse
+    {
+        $count = $dispatcher->dispatch();
+
+        return back()->with('success', sprintf(
+            'Campagne feedback lancee. %d utilisateur(s) ont recu la demande.',
+            $count
+        ));
     }
 
     public function audit(Request $request): Response

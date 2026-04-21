@@ -1,7 +1,7 @@
 import AdminLayout from '@/Layouts/AdminLayout';
 import { FormEvent, useState } from 'react';
 import { Link, router } from '@inertiajs/react';
-import { Eye, Search, UserRoundCheck, UserX } from 'lucide-react';
+import { Eye, Plus, Search, UserRoundCheck, UserX } from 'lucide-react';
 
 type RoleOption = {
     id: number;
@@ -111,6 +111,15 @@ export default function UsersIndex({ filters, roles, users }: UsersIndexProps) {
         <AdminLayout
             title="Gestion des utilisateurs"
             description="Recherchez, bloquez/debloquez les comptes et ajustez les privileges."
+            actions={
+                <Link
+                    href={route('admin.users.create')}
+                    className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 dark:bg-cyan-600 dark:hover:bg-cyan-500"
+                >
+                    <Plus className="h-4 w-4" />
+                    Nouvel utilisateur
+                </Link>
+            }
         >
             <div className="space-y-5">
                 <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
