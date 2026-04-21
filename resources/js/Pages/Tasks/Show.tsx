@@ -315,12 +315,12 @@ export default function TaskShow({ task }: { task: TaskDetail }) {
                                 <div className="space-y-3 sm:space-y-4">
                                     <div className="inline-flex items-center gap-2 rounded-full bg-white/20 px-3 py-1.5 backdrop-blur-sm">
                                         <Sparkles className="h-3.5 w-3.5 text-amber-300" />
-                                        <span className="text-xs font-semibold uppercase tracking-wider text-white">
+                                        <span className="text-xs font-semibold uppercase tracking-wider text-slate-900 dark:text-white">
                                             {__('Tâche professionnelle')}
                                         </span>
                                     </div>
 
-                                    <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl md:text-4xl lg:text-5xl">
+                                    <h1 className="text-2xl font-bold tracking-tight text-slate-950 dark:text-white sm:text-3xl md:text-4xl lg:text-5xl">
                                         {task.title}
                                     </h1>
 
@@ -330,14 +330,14 @@ export default function TaskShow({ task }: { task: TaskDetail }) {
                                             {priority.label}
                                         </div>
                                         {relativeTime && (
-                                            <div className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-sm">
+                                            <div className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1.5 text-xs font-semibold text-slate-900 dark:text-white backdrop-blur-sm">
                                                 <Clock className="h-3.5 w-3.5" />
                                                 Créée {relativeTime}
                                             </div>
                                         )}
                                     </div>
 
-                                    <p className="text-sm leading-relaxed text-white/90 sm:text-base lg:text-lg">
+                                    <p className="text-sm leading-relaxed text-slate-900 dark:text-slate-100 sm:text-base lg:text-lg">
                                         {task.description || __('Aucune description renseignée pour cette tâche.')}
                                     </p>
                                 </div>
