@@ -2,6 +2,7 @@ import ActionRequiredWidget from '@/Components/ActionRequiredWidget';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import PendingRequestsWidget from '@/Components/PendingRequestsWidget';
 import PublicationsFeed from '@/Components/PublicationsFeed';
+import ShiftDashboard from '@/Components/ShiftDashboard';
 import SystemFeedbackCard from '@/Components/SystemFeedbackCard';
 import { Head, Link } from '@inertiajs/react';
 import {
@@ -86,6 +87,18 @@ type DashboardProps = {
         title: string;
         description: string;
         occurred_at: string;
+    }>;
+    tasks: Array<{
+        id: number;
+        message_id: number | null;
+        title: string;
+        description: string | null;
+        status: 'pending' | 'completed';
+        created_at: string | null;
+        message: {
+            id: number;
+            sujet: string | null;
+        } | null;
     }>;
     feedbackRequest: {
         id: string;
@@ -219,7 +232,7 @@ function recentActivityMeta(type: DashboardProps['recentActivity'][number]['type
     }
 }
 
-export default function Dashboard({ publications, stats, pendingSentRequests, actionRequiredMessages, recentActivity, feedbackRequest }: DashboardProps) {
+export default function Dashboard({ publications, stats, pendingSentRequests, actionRequiredMessages, recentActivity, tasks, feedbackRequest }: DashboardProps) {
     const quickActions = [
         { label: 'Nouveau message', href: route('messages.create'), icon: Send, color: 'from-indigo-500 to-indigo-600' },
         { label: 'Boîte de réception', href: route('messages.inbox'), icon: Inbox, color: 'from-emerald-500 to-emerald-600' },
@@ -373,6 +386,7 @@ export default function Dashboard({ publications, stats, pendingSentRequests, ac
                     {/* Right Column */}
                     <div className="space-y-8">
                         <PendingRequestsWidget pendingSentRequests={pendingSentRequests} />
+                        <ShiftDashboard tasks={tasks} />
                     </div>
                 </div>
 

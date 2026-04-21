@@ -6,6 +6,7 @@ use App\Models\EventInvitation;
 use App\Models\Message;
 use App\Models\MessageDraft;
 use App\Models\Publication;
+use App\Models\Task;
 use App\Support\RichTextSanitizer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -219,6 +220,43 @@ class DashboardController extends Controller
             ->latest()
             ->first();
 
+        $tasks = Task::query()
+            ->with([
+                'message:id,sujet',
+            ])
+            ->where('user_id', $user->id)
+            ->whereNull('archived_at')
+            ->latest()
+            ->limit(8)
+            ->get([
+                'id',
+                'user_id',
+                'message_id',
+                'title',
+                'description',
+                'status',
+                'archived_at',
+                'created_at',
+            ])
+            ->map(function (Task $task) {
+                return [
+                    'id' => $task->id,
+                    'message_id' => $task->message_id,
+                    'title' => $task->title,
+                    'description' => $task->description,
+                    'status' => $task->status,
+                    'archived_at' => optional($task->archived_at)?->toIso8601String(),
+                    'created_at' => optional($task->created_at)?->toIso8601String(),
+                    'message' => $task->message
+                        ? [
+                            'id' => $task->message->id,
+                            'sujet' => $task->message->sujet,
+                        ]
+                        : null,
+                ];
+            })
+            ->values();
+
         return Inertia::render('Dashboard', [
             'publications' => Publication::query()->feed()->get(),
             'stats' => [
@@ -241,6 +279,7 @@ class DashboardController extends Controller
             'pendingSentRequests' => $pendingSentRequests,
             'actionRequiredMessages' => $actionRequiredMessages,
             'recentActivity' => $recentActivity,
+            'tasks' => $tasks,
             'feedbackRequest' => $feedbackRequestNotification
                 ? [
                     'id' => $feedbackRequestNotification->id,

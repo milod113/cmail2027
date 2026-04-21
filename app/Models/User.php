@@ -127,6 +127,11 @@ class User extends Authenticatable
         return $this->hasMany(Message::class, 'receiver_id');
     }
 
+    public function tasks(): HasMany
+    {
+        return $this->hasMany(Task::class);
+    }
+
     public function sentChatMessages(): HasMany
     {
         return $this->hasMany(ChatMessage::class, 'sender_id');

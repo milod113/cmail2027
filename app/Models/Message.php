@@ -125,4 +125,9 @@ class Message extends Model
     {
         return $this->hasMany(ReportedMessage::class);
     }
+
+    public function tasks(): HasMany
+    {
+        return $this->hasMany(Task::class);
+    }
 }

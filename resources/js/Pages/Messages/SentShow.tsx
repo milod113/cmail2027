@@ -24,6 +24,7 @@ import {
     Send,
     X,
     CornerDownLeft,
+    ClipboardList,
 } from 'lucide-react';
 
 type ReplyItem = {
@@ -148,6 +149,7 @@ export default function SentShow({ message }: { message: MessageDetail }) {
     const { __, locale } = useTranslation();
     const [isReplying, setIsReplying] = useState(false);
     const [fileInputKey, setFileInputKey] = useState(0);
+    const [isCreatingTask, setIsCreatingTask] = useState(false);
 
     const { data, setData, post, processing, reset, errors, clearErrors } = useForm<{
         contenu: string;
@@ -200,6 +202,23 @@ export default function SentShow({ message }: { message: MessageDetail }) {
                 });
             },
         });
+    };
+
+    const createTaskFromMessage = () => {
+        if (isCreatingTask) {
+            return;
+        }
+
+        setIsCreatingTask(true);
+
+        router.post(
+            route('tasks.store-from-message', message.id),
+            {},
+            {
+                preserveScroll: true,
+                onFinish: () => setIsCreatingTask(false),
+            },
+        );
     };
 
     return (
@@ -275,6 +294,19 @@ export default function SentShow({ message }: { message: MessageDetail }) {
                                     {__('Transferer')}
                                 </Link>
                             )}
+                            <button
+                                type="button"
+                                onClick={createTaskFromMessage}
+                                disabled={isCreatingTask}
+                                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 text-sm font-medium text-emerald-700 transition-all hover:border-emerald-300 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300 dark:hover:bg-emerald-500/20"
+                            >
+                                {isCreatingTask ? (
+                                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-emerald-600 border-t-transparent dark:border-emerald-300 dark:border-t-transparent" />
+                                ) : (
+                                    <ClipboardList className="h-4 w-4" />
+                                )}
+                                {isCreatingTask ? __('Creation...') : __('Créer une tâche')}
+                            </button>
                             <Link
                                 href={route('messages.sent')}
                                 className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white/80 px-4 text-sm font-medium text-slate-700 transition-all hover:border-cyan-300 hover:bg-white hover:text-cyan-700 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-cyan-500/40 dark:hover:text-cyan-300"

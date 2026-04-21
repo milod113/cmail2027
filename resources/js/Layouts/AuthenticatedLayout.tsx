@@ -593,6 +593,14 @@ export default function AuthenticatedLayout({
                 href: route('drafts.index'),
                 icon: <FileText className="h-5 w-5" />,
             },
+            ...(route().has('tasks.index')
+                ? [{
+                    label: __('Mes tâches'),
+                    routeName: 'tasks.index',
+                    href: route('tasks.index'),
+                    icon: <CheckCircle2 className="h-5 w-5" />,
+                }]
+                : []),
             ...(route().has('planifications.index')
                 ? [{
                     label: __('Planifications'),
