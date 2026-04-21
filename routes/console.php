@@ -19,3 +19,8 @@ Schedule::job(new ProcessRecurringMessages())
     ->name('process-recurring-messages')
     ->everyMinute()
     ->withoutOverlapping();
+
+Schedule::command('tasks:dispatch-reminders')
+    ->name('dispatch-task-reminders')
+    ->everyMinute()
+    ->withoutOverlapping();

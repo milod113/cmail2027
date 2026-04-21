@@ -1101,6 +1101,24 @@ class MessageController extends Controller
                         ];
                     }
 
+                    if ($subtype === 'message_task_reminder') {
+                        $taskId = (int) ($data['task_id'] ?? 0);
+                        $taskTitle = (string) ($data['task_title'] ?? 'Tache professionnelle');
+                        $messageSubject = (string) ($data['message_subject'] ?? '');
+                        $priority = (string) ($data['priority'] ?? 'normal');
+
+                        return [
+                            'id' => "db-{$notification->id}",
+                            'type' => 'system',
+                            'title' => 'Rappel de tâche',
+                            'body' => $taskTitle,
+                            'meta' => trim(($messageSubject !== '' ? $messageSubject.' - ' : '').$priority),
+                            'href' => $taskId > 0 ? route('tasks.show', $taskId) : route('tasks.index'),
+                            'created_at' => optional($createdAt)?->toIso8601String(),
+                            'unread' => $notification->read_at === null,
+                        ];
+                    }
+
                     return [
                         'id' => "db-{$notification->id}",
                         'type' => 'system',

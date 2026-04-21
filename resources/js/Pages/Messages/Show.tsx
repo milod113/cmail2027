@@ -1,6 +1,7 @@
 ﻿import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { useTranslation } from '@/Hooks/useTranslation';
 import ReportModal from '@/Components/ReportModal';
+import TaskFormModal from '@/Components/TaskFormModal';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import {
@@ -166,7 +167,7 @@ export default function Show({ message }: { message: MessageDetail }) {
     const [isReportModalOpen, setIsReportModalOpen] = useState(false);
     const [fileInputKey, setFileInputKey] = useState(0);
     const [quickReplySendingKey, setQuickReplySendingKey] = useState<string | null>(null);
-    const [isCreatingTask, setIsCreatingTask] = useState(false);
+    const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
     const originalDate = formatDate(message.created_at, locale);
     const originalRelative = formatRelativeDate(message.created_at, locale);
     const receiptRequestedAt = formatDate(message.receipt_requested_at, locale);
@@ -279,23 +280,6 @@ export default function Show({ message }: { message: MessageDetail }) {
         );
     };
 
-    const createTaskFromMessage = () => {
-        if (isCreatingTask) {
-            return;
-        }
-
-        setIsCreatingTask(true);
-
-        router.post(
-            route('tasks.store-from-message', message.id),
-            {},
-            {
-                preserveScroll: true,
-                onFinish: () => setIsCreatingTask(false),
-            },
-        );
-    };
-
     return (
         <AuthenticatedLayout
             title={message.sujet}
@@ -378,16 +362,11 @@ export default function Show({ message }: { message: MessageDetail }) {
                             )}
                             <button
                                 type="button"
-                                onClick={createTaskFromMessage}
-                                disabled={isCreatingTask}
+                                onClick={() => setIsTaskModalOpen(true)}
                                 className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 text-sm font-medium text-emerald-700 transition-all hover:border-emerald-300 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300 dark:hover:bg-emerald-500/20"
                             >
-                                {isCreatingTask ? (
-                                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-emerald-600 border-t-transparent dark:border-emerald-300 dark:border-t-transparent" />
-                                ) : (
-                                    <ClipboardList className="h-4 w-4" />
-                                )}
-                                {isCreatingTask ? __('Creation...') : __('Créer une tâche')}
+                                <ClipboardList className="h-4 w-4" />
+                                {__('Créer une tâche')}
                             </button>
                             <button
                                 type="button"
@@ -906,6 +885,12 @@ export default function Show({ message }: { message: MessageDetail }) {
                 messageId={message.id}
                 messageSubject={message.sujet}
                 onClose={() => setIsReportModalOpen(false)}
+            />
+            <TaskFormModal
+                show={isTaskModalOpen}
+                messageId={message.id}
+                onClose={() => setIsTaskModalOpen(false)}
+                onSubmitted={() => {}}
             />
         </AuthenticatedLayout>
     );
