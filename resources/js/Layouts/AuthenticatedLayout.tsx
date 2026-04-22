@@ -601,6 +601,14 @@ export default function AuthenticatedLayout({
                     icon: <CheckCircle2 className="h-5 w-5" />,
                 }]
                 : []),
+            ...(route().has('tasks.calendar')
+                ? [{
+                    label: __('Calendrier'),
+                    routeName: 'tasks.calendar',
+                    href: route('tasks.calendar'),
+                    icon: <CalendarDays className="h-5 w-5" />,
+                }]
+                : []),
             ...(route().has('planifications.index')
                 ? [{
                     label: __('Planifications'),

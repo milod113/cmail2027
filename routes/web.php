@@ -77,6 +77,7 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/planifications/rappels/{personalReminder}', [ScheduledMessageController::class, 'updatePersonalReminder'])->name('planifications.reminders.update');
     Route::delete('/planifications/rappels/{personalReminder}', [ScheduledMessageController::class, 'destroyPersonalReminder'])->name('planifications.reminders.destroy');
     Route::get('/tasks', [TaskController::class, 'index'])->name('tasks.index');
+    Route::get('/tasks/calendar', [TaskController::class, 'calendar'])->name('tasks.calendar');
     Route::get('/tasks/archives', [TaskController::class, 'archives'])->name('tasks.archives');
     Route::get('/tasks/{task}', [TaskController::class, 'show'])->name('tasks.show');
     Route::post('/messages', [MessageController::class, 'store'])->name('messages.store');

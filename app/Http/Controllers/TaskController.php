@@ -28,6 +28,13 @@ class TaskController extends Controller
         ]);
     }
 
+    public function calendar(Request $request): Response
+    {
+        return Inertia::render('Tasks/Calendar', [
+            'tasks' => $this->buildMessageTasksCollection((int) $request->user()->id),
+        ]);
+    }
+
     public function show(Request $request, MessageTask $task): Response
     {
         $task->loadMissing([
