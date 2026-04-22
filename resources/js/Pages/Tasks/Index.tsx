@@ -1,3 +1,4 @@
+import TasksCalendar from '@/Components/TasksCalendar';
 import ShiftDashboard from '@/Components/ShiftDashboard';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link } from '@inertiajs/react';
@@ -8,9 +9,13 @@ type TaskItem = {
     message_id: number | null;
     title: string;
     description: string | null;
+    priority?: 'low' | 'normal' | 'high' | 'urgent';
     status: 'pending' | 'completed';
+    due_date?: string | null;
+    reminder_at?: string | null;
     archived_at: string | null;
     created_at: string | null;
+    show_url?: string;
     message: {
         id: number;
         sujet: string | null;
@@ -69,6 +74,7 @@ export default function TasksIndex({ tasks }: { tasks: TaskItem[] }) {
                     </div>
                 </section>
 
+                <TasksCalendar tasks={tasks} />
                 <ShiftDashboard tasks={tasks} mode="active" />
             </div>
         </AuthenticatedLayout>

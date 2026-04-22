@@ -1029,6 +1029,7 @@ class MessageController extends Controller
                 ->map(function ($notification) use ($readAt) {
                     $data = is_array($notification->data) ? $notification->data : [];
                     $createdAt = $notification->created_at;
+                    $type = (string) ($data['type'] ?? '');
                     $eventId = (int) ($data['event_id'] ?? 0);
                     $eventTitle = (string) ($data['event_title'] ?? 'Evenement');
                     $messageSubject = (string) ($data['message_subject'] ?? 'Message sans sujet');
@@ -1036,6 +1037,19 @@ class MessageController extends Controller
                     $reasonCategory = (string) ($data['reason_category'] ?? '');
                     $reason = trim((string) ($data['status_reason'] ?? ''));
                     $subtype = (string) ($data['subtype'] ?? 'system');
+
+                    if ($type === 'feedback_request') {
+                        return [
+                            'id' => "db-{$notification->id}",
+                            'type' => 'system',
+                            'title' => (string) ($data['title'] ?? 'Votre avis sur Cmail'),
+                            'body' => (string) ($data['message'] ?? 'Aidez-nous a ameliorer Cmail en partageant votre experience.'),
+                            'meta' => 'Campagne feedback',
+                            'href' => route('dashboard'),
+                            'created_at' => optional($createdAt)?->toIso8601String(),
+                            'unread' => $notification->read_at === null,
+                        ];
+                    }
 
                     if ($subtype === 'event_canceled') {
                         return [
@@ -1196,7 +1210,7 @@ class MessageController extends Controller
             ->take(12)
             ->values();
 
-        return response()->json([
+        $payload = [
             'notifications' => $notifications,
             'unread_count' => $notifications->where('unread', true)->count(),
             'unread_messages_count' => Message::query()
@@ -1205,7 +1219,13 @@ class MessageController extends Controller
                 ->where('lu', false)
                 ->where('archived', false)
                 ->count(),
-        ]);
+        ];
+
+        if ($request->expectsJson() && ! $request->header('X-Inertia')) {
+            return response()->json($payload);
+        }
+
+        return Inertia::render('Notifications/Index', $payload);
     }
 
     public function markNotificationsRead(Request $request)

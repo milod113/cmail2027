@@ -98,6 +98,7 @@ type DashboardProps = {
         excerpt: string;
         sent_at: string | null;
         created_at: string | null;
+        view_url?: string;
         sender: {
             id: number;
             name: string;
@@ -116,11 +117,16 @@ type DashboardProps = {
         message_id: number | null;
         title: string;
         description: string | null;
+        priority?: 'low' | 'normal' | 'high' | 'urgent';
         status: 'pending' | 'completed';
+        due_date?: string | null;
+        reminder_at?: string | null;
         created_at: string | null;
+        show_url?: string;
         message: {
             id: number;
             sujet: string | null;
+            view_url?: string;
         } | null;
     }>;
     feedbackRequest: {
@@ -251,6 +257,222 @@ function recentActivityMeta(type: DashboardProps['recentActivity'][number]['type
     }
 }
 
+type DailyPriority = {
+    id: string;
+    kind: 'overdue' | 'due_today' | 'reminder_today' | 'action_required' | 'upcoming';
+    title: string;
+    description: string;
+    meta: string;
+    href: string;
+    hrefLabel: string;
+};
+
+function parseDate(value: string | null | undefined) {
+    if (!value) return null;
+
+    const date = new Date(value);
+
+    return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function startOfDay(value: Date) {
+    const date = new Date(value);
+    date.setHours(0, 0, 0, 0);
+    return date;
+}
+
+function isSameDay(left: Date, right: Date) {
+    return left.getFullYear() === right.getFullYear()
+        && left.getMonth() === right.getMonth()
+        && left.getDate() === right.getDate();
+}
+
+function formatDayMoment(value: string | null | undefined, today: Date) {
+    const date = parseDate(value);
+
+    if (!date) {
+        return 'Heure non precisee';
+    }
+
+    const timeLabel = date.toLocaleTimeString('fr-FR', {
+        hour: '2-digit',
+        minute: '2-digit',
+    });
+
+    if (isSameDay(date, today)) {
+        return `Aujourd'hui a ${timeLabel}`;
+    }
+
+    return date.toLocaleString('fr-FR', {
+        day: 'numeric',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+    });
+}
+
+function describeTaskWindow(task: DashboardProps['tasks'][number], today: Date) {
+    const parts: string[] = [];
+
+    if (task.reminder_at) {
+        parts.push(`Rappel ${formatDayMoment(task.reminder_at, today)}`);
+    }
+
+    if (task.due_date) {
+        parts.push(`Echeance ${formatDayMoment(task.due_date, today)}`);
+    }
+
+    return parts.join(' · ');
+}
+
+function priorityCardMeta(kind: DailyPriority['kind']) {
+    switch (kind) {
+        case 'overdue':
+            return {
+                icon: Zap,
+                badge: 'En retard',
+                badgeClass: 'bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300',
+                panelClass: 'border-rose-200/80 bg-rose-50/70 dark:border-rose-500/20 dark:bg-rose-500/10',
+            };
+        case 'due_today':
+            return {
+                icon: CalendarDays,
+                badge: 'Aujourd hui',
+                badgeClass: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-500/15 dark:text-cyan-300',
+                panelClass: 'border-cyan-200/80 bg-cyan-50/70 dark:border-cyan-500/20 dark:bg-cyan-500/10',
+            };
+        case 'reminder_today':
+            return {
+                icon: Bell,
+                badge: 'Rappel',
+                badgeClass: 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300',
+                panelClass: 'border-amber-200/80 bg-amber-50/70 dark:border-amber-500/20 dark:bg-amber-500/10',
+            };
+        case 'upcoming':
+            return {
+                icon: Compass,
+                badge: 'A venir',
+                badgeClass: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300',
+                panelClass: 'border-indigo-200/80 bg-indigo-50/70 dark:border-indigo-500/20 dark:bg-indigo-500/10',
+            };
+        default:
+            return {
+                icon: MessageSquare,
+                badge: 'Action requise',
+                badgeClass: 'bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300',
+                panelClass: 'border-violet-200/80 bg-violet-50/70 dark:border-violet-500/20 dark:bg-violet-500/10',
+            };
+    }
+}
+
+function buildDailyPriorities(
+    tasks: DashboardProps['tasks'],
+    actionRequiredMessages: DashboardProps['actionRequiredMessages'],
+) {
+    const today = startOfDay(new Date());
+    const pendingTasks = tasks.filter((task) => task.status !== 'completed');
+    const selectedTaskIds = new Set<number>();
+
+    const overdue = pendingTasks
+        .filter((task) => {
+            const dueDate = parseDate(task.due_date);
+            return dueDate !== null && startOfDay(dueDate).getTime() < today.getTime();
+        })
+        .sort((left, right) => (left.due_date ?? '').localeCompare(right.due_date ?? ''))
+        .map<DailyPriority>((task) => {
+            selectedTaskIds.add(task.id);
+
+            return {
+                id: `overdue-${task.id}`,
+                kind: 'overdue',
+                title: task.title,
+                description: task.description || task.message?.sujet || 'Tache issue d un message important.',
+                meta: task.due_date ? `Date limite ${formatDayMoment(task.due_date, today)}` : 'Echeance non precisee',
+                href: task.show_url || route('tasks.index'),
+                hrefLabel: 'Ouvrir la tache',
+            };
+        });
+
+    const todayTasks = pendingTasks
+        .filter((task) => {
+            if (selectedTaskIds.has(task.id)) {
+                return false;
+            }
+
+            const dueDate = parseDate(task.due_date);
+            const reminderDate = parseDate(task.reminder_at);
+
+            return (dueDate && isSameDay(dueDate, today)) || (reminderDate && isSameDay(reminderDate, today));
+        })
+        .sort((left, right) => {
+            const leftDate = left.due_date ?? left.reminder_at ?? '';
+            const rightDate = right.due_date ?? right.reminder_at ?? '';
+            return leftDate.localeCompare(rightDate);
+        })
+        .map<DailyPriority>((task) => {
+            const dueDate = parseDate(task.due_date);
+            const dueToday = dueDate ? isSameDay(dueDate, today) : false;
+            selectedTaskIds.add(task.id);
+
+            return {
+                id: `today-${task.id}`,
+                kind: dueToday ? 'due_today' : 'reminder_today',
+                title: task.title,
+                description: task.description || task.message?.sujet || 'Tache planifiee pour aujourd hui.',
+                meta: describeTaskWindow(task, today),
+                href: task.show_url || route('tasks.index'),
+                hrefLabel: 'Voir la tache',
+            };
+        });
+
+    const actionItems = actionRequiredMessages.slice(0, 2).map<DailyPriority>((message) => ({
+        id: `message-${message.id}`,
+        kind: 'action_required',
+        title: message.subject || 'Message necessitant une action',
+        description: message.excerpt || message.body || 'Ouvrez ce message pour traiter la demande.',
+        meta: message.sender?.name ? `Expediteur : ${message.sender.name}` : 'Verification recommandee aujourd hui',
+        href: message.view_url || route('messages.inbox'),
+        hrefLabel: 'Ouvrir le message',
+    }));
+
+    const upcoming = pendingTasks
+        .filter((task) => {
+            if (selectedTaskIds.has(task.id)) {
+                return false;
+            }
+
+            const dueDate = parseDate(task.due_date);
+            const reminderDate = parseDate(task.reminder_at);
+            const nextDate = dueDate ?? reminderDate;
+
+            return nextDate !== null && startOfDay(nextDate).getTime() > today.getTime();
+        })
+        .sort((left, right) => {
+            const leftDate = left.due_date ?? left.reminder_at ?? '';
+            const rightDate = right.due_date ?? right.reminder_at ?? '';
+            return leftDate.localeCompare(rightDate);
+        })
+        .slice(0, 2)
+        .map<DailyPriority>((task) => ({
+            id: `upcoming-${task.id}`,
+            kind: 'upcoming',
+            title: task.title,
+            description: task.description || task.message?.sujet || 'Prochaine etape planifiee.',
+            meta: describeTaskWindow(task, today) || 'A programmer',
+            href: task.show_url || route('tasks.index'),
+            hrefLabel: 'Anticiper la tache',
+        }));
+
+    const items = [...overdue, ...todayTasks, ...actionItems];
+
+    return {
+        items: (items.length > 0 ? items : upcoming).slice(0, 5),
+        overdueCount: overdue.length,
+        todayCount: todayTasks.length,
+        actionCount: actionItems.length,
+    };
+}
+
 // Animated Counter Component
 function AnimatedCounter({ value }: { value: number }) {
     const [count, setCount] = useState(0);
@@ -301,6 +523,7 @@ function FloatingParticles() {
 export default function Dashboard({ publications, stats, pendingSentRequests, actionRequiredMessages, recentActivity, tasks, feedbackRequest }: DashboardProps) {
     const [greeting, setGreeting] = useState('');
     const [currentTime, setCurrentTime] = useState('');
+    const dailyPriorities = buildDailyPriorities(tasks, actionRequiredMessages);
 
     useEffect(() => {
         const hour = new Date().getHours();
@@ -499,8 +722,116 @@ export default function Dashboard({ publications, stats, pendingSentRequests, ac
                                 <ActionRequiredWidget actionRequiredMessages={actionRequiredMessages} />
                             </div>
 
-                            {/* Recent Activity - Enhanced */}
                             <div className="rounded-xl bg-white p-4 shadow-lg dark:bg-slate-900 sm:rounded-2xl sm:p-6">
+                                <div className="mb-4 flex items-center justify-between sm:mb-6">
+                                    <div>
+                                        <h3 className="text-base font-semibold text-slate-900 dark:text-white sm:text-lg">
+                                            Priorites du jour
+                                        </h3>
+                                        <p className="text-xs text-slate-500 dark:text-slate-400 sm:text-sm">
+                                            Ce qui merite votre attention maintenant
+                                        </p>
+                                    </div>
+                                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-100 to-sky-100 dark:from-cyan-500/20 dark:to-sky-500/20">
+                                        <Target className="h-4 w-4 text-cyan-600 dark:text-cyan-300" />
+                                    </div>
+                                </div>
+
+                                <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                                    <div className="rounded-2xl bg-rose-50 px-4 py-3 dark:bg-rose-500/10">
+                                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-rose-600 dark:text-rose-300">
+                                            En retard
+                                        </p>
+                                        <p className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">
+                                            {dailyPriorities.overdueCount}
+                                        </p>
+                                    </div>
+                                    <div className="rounded-2xl bg-cyan-50 px-4 py-3 dark:bg-cyan-500/10">
+                                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-600 dark:text-cyan-300">
+                                            Aujourd hui
+                                        </p>
+                                        <p className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">
+                                            {dailyPriorities.todayCount}
+                                        </p>
+                                    </div>
+                                    <div className="rounded-2xl bg-violet-50 px-4 py-3 dark:bg-violet-500/10">
+                                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-600 dark:text-violet-300">
+                                            Messages
+                                        </p>
+                                        <p className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">
+                                            {dailyPriorities.actionCount}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                    {dailyPriorities.items.length > 0 ? (
+                                        dailyPriorities.items.map((item) => {
+                                            const meta = priorityCardMeta(item.kind);
+                                            const Icon = meta.icon;
+
+                                            return (
+                                                <Link
+                                                    key={item.id}
+                                                    href={item.href}
+                                                    className={`group flex items-start gap-3 rounded-2xl border p-3 transition-all hover:-translate-y-0.5 hover:shadow-md dark:hover:bg-slate-800/80 sm:gap-4 sm:p-4 ${meta.panelClass}`}
+                                                >
+                                                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white shadow-sm dark:bg-slate-900">
+                                                        <Icon className="h-5 w-5 text-slate-700 dark:text-slate-200" />
+                                                    </div>
+                                                    <div className="min-w-0 flex-1">
+                                                        <div className="flex flex-wrap items-center gap-2">
+                                                            <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${meta.badgeClass}`}>
+                                                                {meta.badge}
+                                                            </span>
+                                                            <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                                                                {item.meta}
+                                                            </span>
+                                                        </div>
+                                                        <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-white">
+                                                            {item.title}
+                                                        </p>
+                                                        <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
+                                                            {item.description}
+                                                        </p>
+                                                        <div className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-cyan-700 transition group-hover:gap-2 dark:text-cyan-300">
+                                                            {item.hrefLabel}
+                                                            <ChevronRight className="h-3.5 w-3.5" />
+                                                        </div>
+                                                    </div>
+                                                </Link>
+                                            );
+                                        })
+                                    ) : (
+                                        <div className="rounded-lg bg-slate-50 p-6 text-center dark:bg-slate-800/50">
+                                            <Coffee className="mx-auto h-8 w-8 text-slate-400" />
+                                            <p className="mt-2 text-sm text-slate-500">
+                                                Aucune urgence aujourd hui
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="mt-4 flex flex-wrap items-center gap-2">
+                                    <Link
+                                        href={route('tasks.index')}
+                                        className="inline-flex items-center gap-2 rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs font-semibold text-cyan-700 transition hover:border-cyan-300 hover:bg-cyan-100 dark:border-cyan-500/20 dark:bg-cyan-500/10 dark:text-cyan-300 dark:hover:bg-cyan-500/20"
+                                    >
+                                        <CalendarDays className="h-3.5 w-3.5" />
+                                        Voir toutes les taches
+                                    </Link>
+                                    <Link
+                                        href={route('messages.inbox')}
+                                        className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:hover:bg-slate-800"
+                                    >
+                                        <Inbox className="h-3.5 w-3.5" />
+                                        Ouvrir la boite de reception
+                                    </Link>
+                                </div>
+                            </div>
+
+                            {/* Daily Priorities */}
+                            <div className="hidden rounded-xl bg-white p-4 shadow-lg dark:bg-slate-900 sm:rounded-2xl sm:p-6">
                                 <div className="mb-4 flex items-center justify-between sm:mb-6">
                                     <div>
                                         <h3 className="text-base font-semibold text-slate-900 dark:text-white sm:text-lg">
