@@ -17,9 +17,15 @@ type SentMessage = {
     sent_at: string | null;
     scheduled_at: string | null;
     type_message: string | null;
+    is_escalated?: boolean;
     requires_receipt: boolean;
     original_receiver_id?: number | null;
     original_receiver?: {
+        id: number;
+        name: string;
+        email: string;
+    } | null;
+    escalated_to?: {
         id: number;
         name: string;
         email: string;
@@ -327,6 +333,12 @@ export default function Sent({
                                                                 {__('Accusé')}
                                                             </StatusBadge>
                                                         )}
+                                                        {message.is_escalated && (
+                                                            <StatusBadge type="warning">
+                                                                <AlertCircle className="h-3 w-3" />
+                                                                {__('Escalade')}
+                                                            </StatusBadge>
+                                                        )}
                                                         {message.receiver?.role?.nom_role && (
                                                             <StatusBadge type="default">
                                                                 <Users className="h-3 w-3" />
@@ -365,6 +377,12 @@ export default function Sent({
                                                         )}
                                                     </div>
                                                     
+                                                    {message.is_escalated && message.escalated_to && (
+                                                        <p className="mt-2 text-xs font-medium text-rose-600 dark:text-rose-300">
+                                                            {__('Escalade automatique vers')} {message.escalated_to.name}
+                                                        </p>
+                                                    )}
+
                                                     {/* Message preview */}
                                                     <p className="mt-3 line-clamp-2 text-sm text-slate-600 dark:text-slate-400">
                                                         {message.contenu}

@@ -7,6 +7,7 @@ import DeleteUserForm from './Partials/DeleteUserForm';
 import UpdatePasswordForm from './Partials/UpdatePasswordForm';
 import SignatureSettings from '@/Components/SignatureSettings';
 import UpdateOutOfOfficeSettingsForm from './Partials/UpdateOutOfOfficeSettingsForm';
+import UpdateEscalationSettingsForm from './Partials/UpdateEscalationSettingsForm';
 import UpdateProfileInformationForm from './Partials/UpdateProfileInformationForm';
 import { useState, useEffect } from 'react';
 
@@ -44,6 +45,7 @@ export default function Edit({
     const sections = [
         { id: 'profile', label: __('Profil'), icon: User, color: 'from-cyan-500 to-sky-600' },
         { id: 'absence', label: __('Absence'), icon: Clock, color: 'from-emerald-500 to-teal-600' },
+        { id: 'escalation', label: __('Escalade'), icon: Bell, color: 'from-rose-500 to-orange-600' },
         { id: 'signature', label: __('Signature'), icon: MessageSquare, color: 'from-blue-500 to-indigo-600' },
         { id: 'security', label: __('Securite'), icon: Lock, color: 'from-violet-500 to-purple-600' },
         { id: 'danger', label: __('Danger'), icon: AlertTriangle, color: 'from-red-500 to-rose-600' },
@@ -275,6 +277,42 @@ export default function Edit({
                                 </div>
                             </div>
                             <UpdateOutOfOfficeSettingsForm
+                                settings={userSettings}
+                                colleagues={colleagues}
+                                className="max-w-xl"
+                            />
+                        </div>
+                    </div>
+                </section>
+
+                <section id="escalation" data-section="escalation" className="scroll-mt-20">
+                    <div className="group relative overflow-hidden rounded-3xl border border-slate-200/50 bg-white/90 shadow-xl shadow-slate-200/40 backdrop-blur-xl transition-all duration-500 hover:shadow-2xl hover:shadow-rose-500/10 dark:border-slate-700/50 dark:bg-slate-900/90 dark:shadow-slate-950/50">
+                        <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-rose-500/0 via-orange-500/0 to-rose-500/0 opacity-0 transition-all duration-700 group-hover:opacity-100 group-hover:from-rose-500/20 group-hover:via-orange-500/20 group-hover:to-rose-500/20" />
+
+                        <div className="relative p-5 sm:p-7 lg:p-8">
+                            <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                                <div className="flex items-center gap-4">
+                                    <div className="relative">
+                                        <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-rose-500 to-orange-600 blur-lg opacity-50 transition-opacity group-hover:opacity-75" />
+                                        <div className="relative flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-rose-500 to-orange-600 text-white shadow-lg sm:h-14 sm:w-14">
+                                            <Bell className="h-6 w-6 sm:h-7 sm:w-7" />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 sm:text-2xl">
+                                            {__('Escalade automatique')}
+                                        </h2>
+                                        <p className="text-sm text-slate-500 dark:text-slate-400">
+                                            {__('Choisissez un collegue de secours et le delai avant transfert automatique.')}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-1.5 rounded-full bg-rose-500/10 px-2.5 py-1 text-xs font-medium text-rose-600 dark:text-rose-400">
+                                    <Bell className="h-3 w-3" />
+                                    {__('Suivi automatique')}
+                                </div>
+                            </div>
+                            <UpdateEscalationSettingsForm
                                 settings={userSettings}
                                 colleagues={colleagues}
                                 className="max-w-xl"

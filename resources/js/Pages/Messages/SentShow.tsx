@@ -51,6 +51,12 @@ type MessageDetail = {
     receipt_requested_at: string | null;
     deadline_reponse: string | null;
     type_message: string | null;
+    is_escalated?: boolean;
+    escalated_to?: {
+        id: number;
+        name: string;
+        email: string;
+    } | null;
     can_be_redirected: boolean;
     can_forward: boolean;
     fichier: string | null;
@@ -237,6 +243,12 @@ export default function SentShow({ message }: { message: MessageDetail }) {
                                         {__('Accuse de reception')}
                                     </StatusBadge>
                                 )}
+                                {message.is_escalated && (
+                                    <StatusBadge type="warning">
+                                        <AlertCircle className="h-3 w-3" />
+                                        {__('Escalade automatique')}
+                                    </StatusBadge>
+                                )}
                                 <StatusBadge type="default">
                                     {message.type_message ?? __('Normal')}
                                 </StatusBadge>
@@ -310,6 +322,26 @@ export default function SentShow({ message }: { message: MessageDetail }) {
                             <div className="mt-6 rounded-2xl bg-gradient-to-br from-slate-50 to-white p-6 text-sm leading-7 text-slate-700 shadow-inner dark:from-slate-950/50 dark:to-slate-900/30 dark:text-slate-200 lg:text-base">
                                 <MessageContentWithSignature content={message.contenu} />
                             </div>
+
+                            {message.is_escalated && (
+                                <div className="mt-6 rounded-2xl border border-rose-200 bg-rose-50/80 p-4 dark:border-rose-500/30 dark:bg-rose-500/10">
+                                    <div className="flex items-start gap-3">
+                                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-100 text-rose-600 dark:bg-rose-500/20 dark:text-rose-300">
+                                            <AlertCircle className="h-5 w-5" />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-semibold text-rose-700 dark:text-rose-300">
+                                                {__('Ce message a ete escalade automatiquement.')}
+                                            </p>
+                                            <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                                                {message.escalated_to
+                                                    ? __('Il a ete transfere automatiquement a :') + ` ${message.escalated_to.name}${message.escalated_to.email ? ` (${message.escalated_to.email})` : ''}`
+                                                    : __('Le transfert automatique vers le collegue de secours a ete declenche.')}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
 
                             {hasAttachment && (
                                 <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50/50 p-4 dark:border-slate-800 dark:bg-slate-950/30">

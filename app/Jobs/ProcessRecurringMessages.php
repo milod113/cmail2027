@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Events\NotificationCreated;
 use App\Models\Message;
 use App\Models\RecurringMessage;
+use App\Support\MessageEscalationService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -74,6 +75,7 @@ class ProcessRecurringMessages implements ShouldQueue
                     $this->broadcastSafely(
                         new NotificationCreated((int) $message->receiver_id, 'message', (int) $message->id)
                     );
+                    app(MessageEscalationService::class)->scheduleIfEligible($message);
                 }
             });
 

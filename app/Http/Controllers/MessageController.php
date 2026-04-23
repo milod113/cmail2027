@@ -11,6 +11,7 @@ use App\Models\Role;
 use App\Models\User;
 use App\Models\UserSetting;
 use App\Support\MessageCategorizer;
+use App\Support\MessageEscalationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -24,6 +25,10 @@ use Inertia\Response;
 
 class MessageController extends Controller
 {
+    public function __construct(private readonly MessageEscalationService $messageEscalationService)
+    {
+    }
+
     public function inbox(Request $request): Response
     {
         $user = $request->user();
@@ -146,6 +151,7 @@ class MessageController extends Controller
                         ->with('role:id,nom_role')
                         ->select('id', 'name', 'email', 'role_id'),
                     'originalReceiver:id,name,email',
+                    'escalatedTo:id,name,email',
                 ])
                 ->where('sender_id', $user->id)
                 ->where('archived', false)
@@ -178,6 +184,8 @@ class MessageController extends Controller
                     'scheduled_at',
                     'type_message',
                     'requires_receipt',
+                    'is_escalated',
+                    'escalated_to_id',
                 ]),
             'filters' => [
                 'search' => $search,
@@ -335,6 +343,7 @@ class MessageController extends Controller
         $message->load([
             'receiver:id,name,email',
             'sender:id,name,email',
+            'escalatedTo:id,name,email',
         ]);
 
         $replies = collect();
@@ -379,6 +388,14 @@ class MessageController extends Controller
                 'receipt_requested_at' => optional($message->receipt_requested_at)?->toIso8601String(),
                 'deadline_reponse' => optional($message->deadline_reponse)?->toIso8601String(),
                 'type_message' => $message->type_message,
+                'is_escalated' => (bool) ($message->is_escalated ?? false),
+                'escalated_to' => $message->escalatedTo
+                    ? [
+                        'id' => $message->escalatedTo->id,
+                        'name' => $message->escalatedTo->name,
+                        'email' => $message->escalatedTo->email,
+                    ]
+                    : null,
                 'can_be_redirected' => $message->can_be_redirected,
                 'can_forward' => true,
                 'fichier' => $message->fichier,
@@ -799,6 +816,7 @@ class MessageController extends Controller
         $deliveredMessages = collect($createdMessages)
             ->filter(fn (Message $message) => $message->is_delivered)
             ->values();
+        $deliveredMessages->each(fn (Message $message) => $this->messageEscalationService->scheduleIfEligible($message));
         $followUpMessages = $this->handleOutOfOfficeActions($deliveredMessages->all());
 
         foreach ($deliveredMessages->concat($followUpMessages) as $message) {

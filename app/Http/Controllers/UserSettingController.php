@@ -38,12 +38,12 @@ class UserSettingController extends Controller
             $delegateSettings = $delegate->userSetting;
 
             if (
-                $delegateSettings?->is_out_of_office
-                && $delegateSettings?->redirect_messages
-                && $delegateSettings?->delegate_user_id
+                $delegateSettings?->is_out_of_office &&
+                $delegateSettings?->redirect_messages &&
+                $delegateSettings?->delegate_user_id
             ) {
                 throw ValidationException::withMessages([
-                    'delegate_user_id' => 'Ce collègue est déjà absent avec une redirection active. Choisissez un autre remplaçant.',
+                    'delegate_user_id' => 'Ce collegue est deja absent avec une redirection active. Choisissez un autre remplacant.',
                 ]);
             }
         }
@@ -58,6 +58,32 @@ class UserSettingController extends Controller
             ],
         );
 
-        return back()->with('success', 'Paramètres d’absence enregistrés avec succès.');
+        return back()->with('success', 'Parametres d absence enregistres avec succes.');
+    }
+
+    public function updateEscalation(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'escalation_enabled' => ['required', 'boolean'],
+            'backup_user_id' => ['nullable', 'integer', 'exists:users,id', 'not_in:'.$user->id],
+            'escalation_timeout' => ['required', 'integer', 'min:1', 'max:1440'],
+        ]);
+
+        if (! $validated['escalation_enabled']) {
+            $validated['backup_user_id'] = null;
+        }
+
+        UserSetting::query()->updateOrCreate(
+            ['user_id' => $user->id],
+            [
+                'escalation_enabled' => $validated['escalation_enabled'],
+                'backup_user_id' => $validated['backup_user_id'] ?? null,
+                'escalation_timeout' => $validated['escalation_timeout'],
+            ],
+        );
+
+        return back()->with('success', 'Parametres d escalation enregistres avec succes.');
     }
 }

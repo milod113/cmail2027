@@ -23,6 +23,8 @@ class Message extends Model
         'fichier',
         'lu_le',
         'read_at',
+        'is_escalated',
+        'escalated_to_id',
         'lu',
         'spam',
         'important',
@@ -57,6 +59,7 @@ class Message extends Model
         'receipt_requested_at' => 'datetime',
         'deadline_reponse' => 'datetime',
         'receiver_ids' => 'array',
+        'is_escalated' => 'boolean',
         'lu' => 'boolean',
         'spam' => 'boolean',
         'important' => 'boolean',
@@ -131,6 +134,11 @@ class Message extends Model
     public function forwardedFrom(): BelongsTo
     {
         return $this->belongsTo(self::class, 'forwarded_from_message_id');
+    }
+
+    public function escalatedTo(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'escalated_to_id');
     }
 
     public function parent(): BelongsTo

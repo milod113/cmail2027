@@ -248,6 +248,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::patch('/profile/settings', [UserSettingController::class, 'update'])->name('profile.settings.update');
+    Route::patch('/profile/escalation-settings', [UserSettingController::class, 'updateEscalation'])->name('profile.escalation.update');
     Route::put('/profile/signature', [ProfileController::class, 'updateSignature'])->name('profile.signature.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });

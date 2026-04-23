@@ -540,7 +540,12 @@ export default function Inbox({
                                                 ) : null}
                                                 {message.original_receiver ? (
                                                     <span className="rounded-full bg-violet-100 px-2.5 py-1 text-xs font-semibold text-violet-800 dark:bg-violet-500/15 dark:text-violet-300">
-                                                        {__('Delegue pour')} {message.original_receiver.name}
+                                                        {message.type_message === 'escalated' ? __('Escalade pour') : __('Delegue pour')} {message.original_receiver.name}
+                                                    </span>
+                                                ) : null}
+                                                {message.type_message === 'escalated' ? (
+                                                    <span className="rounded-full bg-rose-100 px-2.5 py-1 text-xs font-semibold text-rose-800 dark:bg-rose-500/15 dark:text-rose-300">
+                                                        {__('Escalade auto')}
                                                     </span>
                                                 ) : null}
                                             </div>
