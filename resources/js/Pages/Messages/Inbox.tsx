@@ -18,6 +18,7 @@ type InboxMessage = {
     lu: boolean;
     sent_at: string | null;
     type_message: string | null;
+    category: string | null;
     original_receiver_id?: number | null;
     original_receiver?: {
         id: number;
@@ -187,6 +188,7 @@ export default function Inbox({
     stats,
     messages,
     filters,
+    categories,
     roles,
 }: {
     stats: {
@@ -199,7 +201,9 @@ export default function Inbox({
         search: string;
         role: string;
         quick: string;
+        category: string;
     };
+    categories: string[];
     roles: RoleOption[];
 }) {
     const { __, locale } = useTranslation();
@@ -213,13 +217,14 @@ export default function Inbox({
         { label: __('Total'), value: String(stats.total), tone: 'from-sky-500 to-cyan-600' },
     ];
 
-    const applyFilters = (nextFilters: { search?: string; role?: string; quick?: string }) => {
+    const applyFilters = (nextFilters: { search?: string; role?: string; quick?: string; category?: string }) => {
         router.get(
             route('messages.inbox'),
             {
                 search: nextFilters.search ?? filters.search,
                 role: nextFilters.role ?? filters.role,
                 quick: nextFilters.quick ?? filters.quick,
+                category: nextFilters.category ?? filters.category,
             },
             {
                 preserveState: true,
@@ -283,6 +288,52 @@ export default function Inbox({
         { value: 'urgent', label: __('Urgent'), icon: Zap },
     ];
 
+    const categoryMeta: Record<string, { label: string; className: string }> = {
+        urgent: {
+            label: __('Urgent'),
+            className: 'bg-rose-100 text-rose-800 dark:bg-rose-500/15 dark:text-rose-300',
+        },
+        validation: {
+            label: __('Validation'),
+            className: 'bg-violet-100 text-violet-800 dark:bg-violet-500/15 dark:text-violet-300',
+        },
+        finance: {
+            label: __('Finance'),
+            className: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300',
+        },
+        rh: {
+            label: __('RH'),
+            className: 'bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-500/15 dark:text-fuchsia-300',
+        },
+        reunion: {
+            label: __('Reunion'),
+            className: 'bg-sky-100 text-sky-800 dark:bg-sky-500/15 dark:text-sky-300',
+        },
+        support: {
+            label: __('Support'),
+            className: 'bg-orange-100 text-orange-800 dark:bg-orange-500/15 dark:text-orange-300',
+        },
+        delegation: {
+            label: __('Delegation'),
+            className: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-500/15 dark:text-indigo-300',
+        },
+        reponse: {
+            label: __('Reponse'),
+            className: 'bg-teal-100 text-teal-800 dark:bg-teal-500/15 dark:text-teal-300',
+        },
+        absence: {
+            label: __('Absence'),
+            className: 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200',
+        },
+        information: {
+            label: __('Information'),
+            className: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-500/15 dark:text-cyan-300',
+        },
+    };
+
+    const getCategoryMeta = (category: string | null) =>
+        categoryMeta[category ?? 'information'] ?? categoryMeta.information;
+
     return (
         <AuthenticatedLayout
             title={__('Boîte de réception')}
@@ -311,7 +362,7 @@ export default function Inbox({
                             </p>
                         </div>
 
-                        <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="grid gap-3 sm:grid-cols-3">
                             <label className="block">
                                 <span className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
                                     <Search className="h-4 w-4 text-cyan-500" />
@@ -324,6 +375,25 @@ export default function Inbox({
                                     placeholder={__('Tapez un nom ou un email')}
                                     className="block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                                 />
+                            </label>
+
+                            <label className="block">
+                                <span className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
+                                    <Filter className="h-4 w-4 text-cyan-500" />
+                                    {__('Categorie')}
+                                </span>
+                                <select
+                                    value={filters.category}
+                                    onChange={(event) => applyFilters({ category: event.target.value })}
+                                    className="block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                                >
+                                    <option value="">{__('Toutes les categories')}</option>
+                                    {categories.map((category) => (
+                                        <option key={category} value={category}>
+                                            {getCategoryMeta(category).label}
+                                        </option>
+                                    ))}
+                                </select>
                             </label>
 
                             <label className="block">
@@ -398,7 +468,10 @@ export default function Inbox({
 
                     <div className="mt-6 grid gap-4">
                         {messages.length > 0 ? (
-                            messages.map((message) => (
+                            messages.map((message) => {
+                                const category = getCategoryMeta(message.category);
+
+                                return (
                                 <div key={message.id} className="rounded-3xl border border-slate-200/70 bg-slate-50/80 px-5 py-4 dark:border-slate-800 dark:bg-slate-950/40">
                                     {!dismissedReportBannerIds.includes(message.id) ? (
                                         <ReportBanner
@@ -448,11 +521,9 @@ export default function Inbox({
                                                         {__('Important')}
                                                     </span>
                                                 ) : null}
-                                                {message.type_message === 'urgent' ? (
-                                                    <span className="rounded-full bg-rose-100 px-2.5 py-1 text-xs font-semibold text-rose-800 dark:bg-rose-500/15 dark:text-rose-300">
-                                                        {__('Urgent')}
-                                                    </span>
-                                                ) : null}
+                                                <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${category.className}`}>
+                                                    {category.label}
+                                                </span>
                                                 <span
                                                     className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
                                                         message.lu
@@ -502,7 +573,8 @@ export default function Inbox({
                                         </div>
                                     </div>
                                 </div>
-                            ))
+                                );
+                            })
                         ) : (
                             <div className="rounded-3xl border border-dashed border-slate-300 bg-white/60 px-6 py-12 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-400">
                                 {__('Aucun message trouvé avec ce filtre.')}

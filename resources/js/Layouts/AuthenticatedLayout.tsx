@@ -522,6 +522,7 @@ export default function AuthenticatedLayout({
     const [unreadInboxCount, setUnreadInboxCount] = useState(0);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [supportDrawerOpen, setSupportDrawerOpen] = useState(false);
+    const chuLogoSrc = '/images/Logo%20CHU.jpg';
 
     useEffect(() => {
         const storedTheme = window.localStorage.getItem('theme');
@@ -696,21 +697,29 @@ export default function AuthenticatedLayout({
                         >
                             {!isSidebarCollapsed ? (
                                 <>
-                                    <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                                        {__('Centre hospitalier')}
+                                    <div className="flex items-center gap-3 rounded-2xl border border-white/70 bg-white/80 px-3 py-2 shadow-lg shadow-slate-200/40 backdrop-blur-xl dark:border-slate-700/70 dark:bg-slate-900/80">
+                                        <img
+                                            src={chuLogoSrc}
+                                            alt="CHU de Tlemcen"
+                                            className="h-11 w-11 rounded-xl object-cover ring-1 ring-slate-200 dark:ring-slate-700"
+                                        />
+                                        <div className="leading-tight">
+                                            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400 dark:text-slate-500">
+                                                Institution
+                                            </p>
+                                            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                                                CHU Tlemcen
+                                            </p>
+                                        </div>
                                     </div>
-                                    <div className="mt-1 bg-gradient-to-r from-cyan-600 to-sky-600 bg-clip-text text-xl font-bold text-transparent dark:from-cyan-400 dark:to-sky-400">
-                                        cmail2027
-                                    </div>
-                                    <p className="mt-2 text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-                                        {__('Plateforme de messagerie interne, delegation intelligente et suivi des notifications.')}
-                                    </p>
                                 </>
                             ) : (
                                 <div className="flex flex-col items-center">
-                                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500 to-sky-600 text-xs font-bold text-white shadow">
-                                        CM
-                                    </span>
+                                    <img
+                                        src={chuLogoSrc}
+                                        alt="CHU de Tlemcen"
+                                        className="h-9 w-9 rounded-xl object-cover ring-1 ring-slate-200 dark:ring-slate-700"
+                                    />
                                 </div>
                             )}
                         </motion.div>

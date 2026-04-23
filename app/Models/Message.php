@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\MessageCategorizer;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -36,6 +37,9 @@ class Message extends Model
         'is_delivered',
         'archived',
         'type_message',
+        'category',
+        'category_source',
+        'category_confidence',
         'envoye',
         'deadline_reponse',
         'can_be_redirected',
@@ -63,7 +67,27 @@ class Message extends Model
         'archived' => 'boolean',
         'envoye' => 'boolean',
         'can_be_redirected' => 'boolean',
+        'category_confidence' => 'float',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (self $message): void {
+            if (filled($message->category)) {
+                return;
+            }
+
+            $classification = app(MessageCategorizer::class)->categorize(
+                (string) $message->sujet,
+                (string) $message->contenu,
+                $message->type_message
+            );
+
+            $message->category = $classification['category'];
+            $message->category_source = $classification['source'];
+            $message->category_confidence = $classification['confidence'];
+        });
+    }
 
     public function scopePendingAcknowledge(Builder $query): Builder
     {

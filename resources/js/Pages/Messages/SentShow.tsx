@@ -1,4 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import MessageContentWithSignature from '@/Components/MessageContentWithSignature';
 import TaskFormModal from '@/Components/TaskFormModal';
 import { useTranslation } from '@/Hooks/useTranslation';
 import { Head, Link, router, useForm } from '@inertiajs/react';
@@ -307,7 +308,7 @@ export default function SentShow({ message }: { message: MessageDetail }) {
                             </div>
 
                             <div className="mt-6 rounded-2xl bg-gradient-to-br from-slate-50 to-white p-6 text-sm leading-7 text-slate-700 shadow-inner dark:from-slate-950/50 dark:to-slate-900/30 dark:text-slate-200 lg:text-base">
-                                <p className="whitespace-pre-wrap text-start">{message.contenu}</p>
+                                <MessageContentWithSignature content={message.contenu} />
                             </div>
 
                             {hasAttachment && (

@@ -180,7 +180,13 @@ class User extends Authenticatable
             return '';
         }
 
-        $lines = ["**{$this->name}**"];
+        $lines = [];
+
+        if ($roleName = trim((string) optional($this->role)->nom_role)) {
+            $lines[] = $roleName;
+        }
+
+        $lines[] = "**{$this->name}**";
 
         if ($title = optional($this->profile)->grade) {
             $lines[] = $title;

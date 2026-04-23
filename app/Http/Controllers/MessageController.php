@@ -10,6 +10,7 @@ use App\Models\MessageDraft;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\UserSetting;
+use App\Support\MessageCategorizer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -29,10 +30,16 @@ class MessageController extends Controller
         $search = trim((string) $request->string('search'));
         $roleId = $request->integer('role');
         $quickFilter = (string) $request->string('quick');
+        $categoryFilter = trim((string) $request->string('category'));
         $allowedQuickFilters = ['', 'yesterday', 'important', 'urgent'];
+        $availableCategories = MessageCategorizer::categories();
 
         if (! in_array($quickFilter, $allowedQuickFilters, true)) {
             $quickFilter = '';
+        }
+
+        if ($categoryFilter !== '' && ! in_array($categoryFilter, $availableCategories, true)) {
+            $categoryFilter = '';
         }
 
         $messages = Message::query()
@@ -69,6 +76,9 @@ class MessageController extends Controller
             ->when($quickFilter === 'urgent', function ($query) {
                 $query->where('type_message', 'urgent');
             })
+            ->when($categoryFilter !== '', function ($query) use ($categoryFilter) {
+                $query->where('category', $categoryFilter);
+            })
             ->latest('sent_at')
             ->latest()
             ->get([
@@ -83,6 +93,7 @@ class MessageController extends Controller
                 'sent_at',
                 'scheduled_at',
                 'type_message',
+                'category',
             ]);
 
         return Inertia::render('Messages/Inbox', [
@@ -95,7 +106,9 @@ class MessageController extends Controller
                 'search' => $search,
                 'role' => $roleId > 0 ? (string) $roleId : '',
                 'quick' => $quickFilter,
+                'category' => $categoryFilter,
             ],
+            'categories' => $availableCategories,
             'roles' => Role::query()
                 ->select('id', 'nom_role')
                 ->orderBy('nom_role')
