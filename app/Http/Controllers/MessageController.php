@@ -742,7 +742,7 @@ class MessageController extends Controller
                     'scheduled_at' => '',
                     'type_message' => 'normal',
                     'deadline_reponse' => '',
-                    'can_be_redirected' => false,
+                    'can_be_redirected' => true,
                     'attachment_name' => null,
                     'attachment_url' => null,
                     'existing_attachment_path' => '',
@@ -771,7 +771,7 @@ class MessageController extends Controller
             'scheduled_at' => '',
             'type_message' => 'normal',
             'deadline_reponse' => '',
-            'can_be_redirected' => false,
+            'can_be_redirected' => true,
             'attachment_name' => null,
             'attachment_url' => null,
             'existing_attachment_path' => '',
@@ -1496,6 +1496,10 @@ class MessageController extends Controller
     private function createDelegatedCopy(Message $message, UserSetting $settings): ?Message
     {
         if (! $settings->redirect_messages || ! $settings->delegate_user_id) {
+            return null;
+        }
+
+        if (! $message->can_be_redirected) {
             return null;
         }
 

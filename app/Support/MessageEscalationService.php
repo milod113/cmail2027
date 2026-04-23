@@ -42,6 +42,10 @@ class MessageEscalationService
             return false;
         }
 
+        if (! (bool) $message->can_be_redirected) {
+            return false;
+        }
+
         if ($message->forwarded_from_message_id) {
             return false;
         }

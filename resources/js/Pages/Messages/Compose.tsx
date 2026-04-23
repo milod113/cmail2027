@@ -246,7 +246,7 @@ export default function Compose({
         scheduled_at: draft?.scheduled_at ?? '',
         type_message: draft?.type_message ?? 'normal',
         deadline_reponse: draft?.deadline_reponse ?? '',
-        can_be_redirected: draft?.can_be_redirected ?? false,
+        can_be_redirected: draft?.can_be_redirected ?? true,
         forwarded_from_message_id: draft?.forwarded_from_message_id ?? null,
     });
 
@@ -1063,10 +1063,28 @@ export default function Compose({
                                     <Checkbox
                                         checked={data.can_be_redirected}
                                         onChange={(val) => setData('can_be_redirected', val)}
-                                        label={__('Autoriser la redirection')}
+                                        label={__('Autoriser le transfert et l\'escalade automatique')}
                                         icon={Share2}
                                         description={__("Permet aux destinataires de rediriger ce message")}
                                     />
+
+                                    {!data.can_be_redirected && (
+                                        <div className="rounded-2xl border border-amber-200 bg-amber-50/80 p-4 shadow-sm dark:border-amber-500/30 dark:bg-amber-500/10">
+                                            <div className="flex items-start gap-3">
+                                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300">
+                                                    <Lock className="h-5 w-5" />
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">
+                                                        {__('Redirection interdite pour ce message')}
+                                                    </p>
+                                                    <p className="mt-1 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+                                                        {__('Ce message restera confidentiel : il ne pourra pas etre transfere, delegue automatiquement ni escalade vers un collegue de secours.')}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
