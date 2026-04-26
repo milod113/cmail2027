@@ -45,6 +45,7 @@ class User extends Authenticatable
         'is_super_admin',
         'can_publish_publication',
         'can_organize_event',
+        'can_organize_meetings',
         'last_seen_at',
         'remplacement_debut',
         'remplacement_fin',
@@ -90,6 +91,7 @@ class User extends Authenticatable
             'is_super_admin' => 'boolean',
             'can_publish_publication' => 'boolean',
             'can_organize_event' => 'boolean',
+            'can_organize_meetings' => 'boolean',
             'last_seen_at' => 'datetime',
             'remplacement_debut' => 'date',
             'remplacement_fin' => 'date',
@@ -254,6 +256,24 @@ class User extends Authenticatable
             ->withTimestamps();
     }
 
+    public function organizedMeetings(): HasMany
+    {
+        return $this->hasMany(Meeting::class, 'organizer_id');
+    }
+
+    public function participatingMeetings(): BelongsToMany
+    {
+        return $this->belongsToMany(Meeting::class, 'meeting_participants')
+            ->using(MeetingParticipant::class)
+            ->withPivot(['is_present'])
+            ->withTimestamps();
+    }
+
+    public function meetingNotes(): HasMany
+    {
+        return $this->hasMany(MeetingNote::class);
+    }
+
     public function favoriteContacts(): BelongsToMany
     {
         return $this->belongsToMany(self::class, 'favorite_contacts', 'user_id', 'favorite_contact_id')
@@ -283,5 +303,10 @@ class User extends Authenticatable
     public function canOrganizeEvents(): bool
     {
         return (bool) $this->can_organize_event || $this->hasOrganizerRole();
+    }
+
+    public function canOrganizeMeetings(): bool
+    {
+        return (bool) $this->can_organize_meetings;
     }
 }

@@ -63,6 +63,7 @@ type ManagedUser = {
     is_super_admin: boolean;
     can_publish_publication: boolean;
     can_organize_event: boolean;
+    can_organize_meetings: boolean;
     access_level: 'user' | 'publisher' | 'admin';
     profile: {
         matricule: string | null;
@@ -328,6 +329,7 @@ export default function UserShow({ managedUser, roles, departments }: UserShowPr
                 role_id: roleId === '' ? null : Number(roleId),
                 access_level: managedUser.access_level,
                 can_organize_event: managedUser.can_organize_event,
+                can_organize_meetings: managedUser.can_organize_meetings,
             },
             { preserveScroll: true },
         );
@@ -342,6 +344,7 @@ export default function UserShow({ managedUser, roles, departments }: UserShowPr
                 role_id: managedUser.role_id,
                 access_level: accessLevel,
                 can_organize_event: managedUser.can_organize_event,
+                can_organize_meetings: managedUser.can_organize_meetings,
             },
             { preserveScroll: true },
         );
@@ -356,6 +359,22 @@ export default function UserShow({ managedUser, roles, departments }: UserShowPr
                 role_id: managedUser.role_id,
                 access_level: managedUser.access_level,
                 can_organize_event: allowed,
+                can_organize_meetings: managedUser.can_organize_meetings,
+            },
+            { preserveScroll: true },
+        );
+    };
+
+    const handleMeetingsPermissionChange = (allowed: boolean) => {
+        selectTab('permissions');
+
+        router.patch(
+            route('admin.users.change-role', managedUser.id),
+            {
+                role_id: managedUser.role_id,
+                access_level: managedUser.access_level,
+                can_organize_event: managedUser.can_organize_event,
+                can_organize_meetings: allowed,
             },
             { preserveScroll: true },
         );
@@ -735,6 +754,19 @@ export default function UserShow({ managedUser, roles, departments }: UserShowPr
                                         </select>
                                     </div>
 
+                                    <div>
+                                        <InputLabel htmlFor="meetings-organizer" value="Organisation staff" />
+                                        <select
+                                            id="meetings-organizer"
+                                            value={managedUser.can_organize_meetings ? '1' : '0'}
+                                            onChange={(event) => handleMeetingsPermissionChange(event.target.value === '1')}
+                                            className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm transition-all focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                                        >
+                                            <option value="0">Non</option>
+                                            <option value="1">Oui</option>
+                                        </select>
+                                    </div>
+
                                     <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-950">
                                         <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Publication</p>
                                         <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-white">
@@ -794,6 +826,12 @@ export default function UserShow({ managedUser, roles, departments }: UserShowPr
                                         <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Organisation</p>
                                         <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-white">
                                             {managedUser.can_organize_event ? 'Autorisee' : 'Desactivee'}
+                                        </p>
+                                    </div>
+                                    <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-950">
+                                        <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Staffs</p>
+                                        <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-white">
+                                            {managedUser.can_organize_meetings ? 'Autorisee' : 'Desactivee'}
                                         </p>
                                     </div>
                                 </div>

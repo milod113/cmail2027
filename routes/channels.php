@@ -1,6 +1,8 @@
 <?php
 
+use App\Models\Meeting;
 use App\Models\Message;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Broadcast;
 
 Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
@@ -27,4 +29,12 @@ Broadcast::channel('message.{messageId}', function ($user, $messageId) {
                 ->orWhere('receiver_id', $user->id);
         })
         ->exists();
+});
+
+Broadcast::channel('meeting.{meetingId}', function ($user, $meetingId) {
+    $meeting = Meeting::query()->find($meetingId);
+
+    return $meeting
+        ? Gate::forUser($user)->allows('view', $meeting)
+        : false;
 });

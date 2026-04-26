@@ -10,6 +10,8 @@ use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\LikeController;
 use App\Http\Controllers\MessageActionController;
 use App\Http\Controllers\MessageController;
+use App\Http\Controllers\MeetingController;
+use App\Http\Controllers\MeetingNoteController;
 use App\Http\Controllers\PresenceController;
 use App\Http\Controllers\PublicationController;
 use App\Http\Controllers\ReportController;
@@ -60,6 +62,16 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/presence/ping', [PresenceController::class, 'ping'])->name('presence.ping');
     Route::post('/publications/{publication}/like', [LikeController::class, 'toggle'])->name('publications.like.toggle');
     Route::post('/publications/{publication}/comments', [CommentController::class, 'store'])->name('publications.comments.store');
+    Route::get('/meetings', [MeetingController::class, 'index'])->name('meetings.index');
+    Route::get('/meetings/create', [MeetingController::class, 'create'])
+        ->middleware('can:organize-meetings')
+        ->name('meetings.create');
+    Route::post('/meetings', [MeetingController::class, 'store'])
+        ->middleware('can:organize-meetings')
+        ->name('meetings.store');
+    Route::get('/meetings/{meeting}', [MeetingController::class, 'show'])->name('meetings.show');
+    Route::post('/meetings/{meeting}/topics/{topic}/notes', [MeetingNoteController::class, 'store'])
+        ->name('meetings.notes.store');
     Route::get('/inbox', [MessageController::class, 'inbox'])->name('messages.inbox');
     Route::get('/messages/group', [MessageController::class, 'groupMessages'])->name('messages.group');
     Route::get('/messages/create', [MessageController::class, 'create'])->name('messages.create');

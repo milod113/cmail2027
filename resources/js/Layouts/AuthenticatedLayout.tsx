@@ -501,6 +501,7 @@ export default function AuthenticatedLayout({
                 role?: string;
                 is_super_admin?: boolean;
                 can_organize_event?: boolean;
+                can_organize_meetings?: boolean;
                 department_name?: string | null;
                 delegation_reminder?: {
                     is_active: boolean;
@@ -624,6 +625,15 @@ export default function AuthenticatedLayout({
                     routeName: 'events.*',
                     href: route('events.invitations'),
                     icon: <CalendarDays className="h-5 w-5" />,
+                }]
+                : []),
+            ...(route().has('meetings.index')
+                ? [{
+                    label: __('Staffs medicaux'),
+                    routeName: 'meetings.*',
+                    href: route('meetings.index'),
+                    icon: <CalendarDays className="h-5 w-5" />,
+                    isNew: true,
                 }]
                 : []),
             ...(route().has('messages.starred')

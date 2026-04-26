@@ -13,6 +13,7 @@ export interface User {
     department_name?: string | null;
     can_publish_publication?: boolean;
     can_organize_event?: boolean;
+    can_organize_meetings?: boolean;
     is_blocked?: boolean;
     is_online?: boolean;
     is_super_admin?: boolean;

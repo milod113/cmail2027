@@ -90,6 +90,7 @@ export default function UserCreate({ roles, departments }: UserCreateProps) {
         photo: null as File | null,
         access_level: 'user' as 'user' | 'publisher' | 'admin',
         can_organize_event: '0',
+        can_organize_meetings: '0',
         is_active: '1',
         password: '',
         password_confirmation: '',
@@ -125,7 +126,7 @@ export default function UserCreate({ roles, departments }: UserCreateProps) {
             forceFormData: true,
             preserveScroll: true,
             onError: (formErrors) => {
-                if (formErrors.role_id || formErrors.access_level || formErrors.can_organize_event || formErrors.is_active) {
+                if (formErrors.role_id || formErrors.access_level || formErrors.can_organize_event || formErrors.can_organize_meetings || formErrors.is_active) {
                     setActiveTab('permissions');
                     return;
                 }
@@ -457,6 +458,20 @@ export default function UserCreate({ roles, departments }: UserCreateProps) {
                                     </div>
 
                                     <div>
+                                        <InputLabel htmlFor="can_organize_meetings" value="Peut organiser des staffs" />
+                                        <select
+                                            id="can_organize_meetings"
+                                            value={data.can_organize_meetings}
+                                            onChange={(event) => setData('can_organize_meetings', event.target.value)}
+                                            className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm transition-all focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                                        >
+                                            <option value="0">Non</option>
+                                            <option value="1">Oui</option>
+                                        </select>
+                                        <InputError message={errors.can_organize_meetings} className="mt-2" />
+                                    </div>
+
+                                    <div>
                                         <InputLabel htmlFor="is_active" value="Etat initial du compte" />
                                         <select
                                             id="is_active"
@@ -471,7 +486,7 @@ export default function UserCreate({ roles, departments }: UserCreateProps) {
                                     </div>
                                 </div>
 
-                                <div className="mt-6 grid gap-4 md:grid-cols-3">
+                                <div className="mt-6 grid gap-4 md:grid-cols-4">
                                     <div className="rounded-2xl border border-cyan-200 bg-cyan-50 p-4 dark:border-cyan-500/20 dark:bg-cyan-500/10">
                                         <p className="text-xs uppercase tracking-[0.16em] text-cyan-700 dark:text-cyan-300">Publication</p>
                                         <p className="mt-2 text-sm font-semibold text-cyan-900 dark:text-cyan-100">
@@ -482,6 +497,12 @@ export default function UserCreate({ roles, departments }: UserCreateProps) {
                                         <p className="text-xs uppercase tracking-[0.16em] text-amber-700 dark:text-amber-300">Organisation</p>
                                         <p className="mt-2 text-sm font-semibold text-amber-900 dark:text-amber-100">
                                             {data.can_organize_event === '1' ? 'Autorisee' : 'Desactivee'}
+                                        </p>
+                                    </div>
+                                    <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-500/20 dark:bg-emerald-500/10">
+                                        <p className="text-xs uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-300">Staffs</p>
+                                        <p className="mt-2 text-sm font-semibold text-emerald-900 dark:text-emerald-100">
+                                            {data.can_organize_meetings === '1' ? 'Autorisee' : 'Desactivee'}
                                         </p>
                                     </div>
                                     <div className="rounded-2xl border border-violet-200 bg-violet-50 p-4 dark:border-violet-500/20 dark:bg-violet-500/10">
@@ -558,6 +579,15 @@ export default function UserCreate({ roles, departments }: UserCreateProps) {
                                     </div>
                                     <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
                                         {data.can_organize_event === '1' ? 'Oui' : 'Non'}
+                                    </p>
+                                </div>
+                                <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-950">
+                                    <div className="flex items-center gap-2 text-slate-700 dark:text-slate-200">
+                                        <Building2 className="h-4 w-4 text-emerald-500" />
+                                        <span className="text-sm font-semibold">Organisation staff</span>
+                                    </div>
+                                    <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                                        {data.can_organize_meetings === '1' ? 'Oui' : 'Non'}
                                     </p>
                                 </div>
                                 <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-950">

@@ -67,6 +67,7 @@ class AdminController extends Controller
                 'is_super_admin',
                 'can_publish_publication',
                 'can_organize_event',
+                'can_organize_meetings',
                 'created_at',
             ])
             ->when($search !== '', function ($query) use ($search) {
@@ -103,6 +104,7 @@ class AdminController extends Controller
                     'is_super_admin' => (bool) $user->is_super_admin,
                     'can_publish_publication' => (bool) $user->can_publish_publication,
                     'can_organize_event' => (bool) $user->can_organize_event,
+                    'can_organize_meetings' => (bool) $user->can_organize_meetings,
                     'access_level' => $this->resolveAccessLevel($user, $roleName),
                     'created_at' => optional($user->created_at)?->toIso8601String(),
                 ];
@@ -149,6 +151,7 @@ class AdminController extends Controller
             'photo' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif,webp', 'max:2048'],
             'access_level' => ['required', 'string', 'in:user,publisher,admin'],
             'can_organize_event' => ['required', 'boolean'],
+            'can_organize_meetings' => ['required', 'boolean'],
             'is_active' => ['required', 'boolean'],
             'password' => ['required', 'confirmed', Password::defaults()],
         ]);
@@ -176,6 +179,7 @@ class AdminController extends Controller
                 'is_super_admin' => $isAdminAccess,
                 'can_publish_publication' => $canPublish,
                 'can_organize_event' => (bool) $validated['can_organize_event'],
+                'can_organize_meetings' => (bool) $validated['can_organize_meetings'],
                 'password' => $validated['password'],
             ]);
 
@@ -263,6 +267,7 @@ class AdminController extends Controller
                 'is_super_admin' => (bool) $user->is_super_admin,
                 'can_publish_publication' => (bool) $user->can_publish_publication,
                 'can_organize_event' => (bool) $user->can_organize_event,
+                'can_organize_meetings' => (bool) $user->can_organize_meetings,
                 'access_level' => $this->resolveAccessLevel($user, $roleName),
                 'profile' => [
                     'matricule' => $user->profile?->matricule,
@@ -792,6 +797,7 @@ class AdminController extends Controller
             'role_id' => ['nullable', 'exists:roles,id'],
             'access_level' => ['required', 'string', 'in:user,publisher,admin'],
             'can_organize_event' => ['nullable', 'boolean'],
+            'can_organize_meetings' => ['nullable', 'boolean'],
         ]);
 
         $isAdminAccess = $validated['access_level'] === 'admin';
@@ -804,6 +810,9 @@ class AdminController extends Controller
             'can_organize_event' => array_key_exists('can_organize_event', $validated)
                 ? (bool) $validated['can_organize_event']
                 : (bool) $user->can_organize_event,
+            'can_organize_meetings' => array_key_exists('can_organize_meetings', $validated)
+                ? (bool) $validated['can_organize_meetings']
+                : (bool) $user->can_organize_meetings,
         ]);
 
         return back()->with('success', 'Privileges utilisateur mis a jour.');

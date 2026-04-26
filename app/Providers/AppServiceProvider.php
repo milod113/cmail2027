@@ -37,5 +37,9 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('organize-events', function (User $user): bool {
             return $user->canOrganizeEvents();
         });
+
+        Gate::define('organize-meetings', function (User $user): bool {
+            return $user->canOrganizeMeetings();
+        });
     }
 }
