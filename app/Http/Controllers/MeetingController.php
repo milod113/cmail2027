@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\MeetingOpened;
+use App\Events\MeetingStateUpdated;
 use App\Models\Meeting;
 use App\Models\MeetingNote;
 use App\Models\MeetingSection;
 use App\Models\MeetingTopic;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -91,7 +94,6 @@ class MeetingController extends Controller
             'location_or_link' => ['nullable', 'string', 'max:2000'],
             'start_time' => ['required', 'date'],
             'end_time' => ['nullable', 'date', 'after_or_equal:start_time'],
-            'status' => ['required', Rule::in(['planifie', 'en_cours', 'termine', 'annule'])],
             'participant_ids' => ['required', 'array', 'min:1'],
             'participant_ids.*' => ['integer', 'distinct', 'exists:users,id'],
             'sections' => ['required', 'array', 'min:1'],
@@ -136,12 +138,12 @@ class MeetingController extends Controller
                 'start_time' => $validated['start_time'],
                 'end_time' => $validated['end_time'] ?? null,
                 'organizer_id' => $request->user()->id,
-                'status' => $validated['status'],
+                'status' => 'planifie',
             ]);
 
             $meeting->participants()->sync(
                 $participantIds->mapWithKeys(fn (int $participantId): array => [
-                    $participantId => ['is_present' => false],
+                    $participantId => ['joined_at' => null],
                 ])->all()
             );
 
@@ -180,6 +182,7 @@ class MeetingController extends Controller
             'participants:id,name,email',
             'sections' => fn ($query) => $query->orderBy('order'),
             'sections.topics' => fn ($query) => $query->orderBy('order'),
+            'sections.topics.actions' => fn ($query) => $query->with('owner:id,name,email')->latest('due_at'),
             'sections.topics.notes' => fn ($query) => $query
                 ->with('user:id,name,email')
                 ->orderBy('created_at'),
@@ -187,6 +190,58 @@ class MeetingController extends Controller
 
         return Inertia::render('Meetings/Show', [
             'meeting' => $this->mapMeetingDetail($meeting, $request->user()),
+            'actionOwners' => $this->actionOwnerOptions($meeting),
+        ]);
+    }
+
+    public function openMeeting(Request $request, Meeting $meeting): RedirectResponse
+    {
+        Gate::authorize('manage', $meeting);
+        abort_if($meeting->opened_at !== null, 422, 'Le staff a deja ete ouvert.');
+        abort_if($meeting->closed_at !== null, 422, 'Ce staff est deja cloture.');
+
+        $meeting->forceFill([
+            'opened_at' => now(),
+            'status' => 'en_cours',
+        ])->save();
+
+        $meeting->refresh();
+
+        $this->broadcastSafely(new MeetingOpened($meeting));
+
+        return back()->with('success', 'Le staff a ete ouvert et la prise de notes est maintenant active.');
+    }
+
+    public function closeMeeting(Request $request, Meeting $meeting): RedirectResponse
+    {
+        Gate::authorize('manage', $meeting);
+
+        abort_if($meeting->opened_at === null, 422, 'Le staff doit etre ouvert avant d etre cloture.');
+        abort_if($meeting->closed_at !== null, 422, 'Ce staff est deja cloture.');
+
+        $meeting->forceFill([
+            'closed_at' => now(),
+            'status' => 'termine',
+        ])->save();
+
+        $meeting->refresh();
+        $this->broadcastSafely(new MeetingStateUpdated($meeting, 'meeting-closed'));
+
+        return back()->with('success', 'Le staff a ete cloture. Les notes et decisions sont maintenant figees.');
+    }
+
+    public function joinMeeting(Request $request, Meeting $meeting): JsonResponse
+    {
+        Gate::authorize('view', $meeting);
+
+        abort_if((int) $meeting->organizer_id === (int) $request->user()->id, 422, 'L organisateur n a pas besoin de rejoindre manuellement le staff.');
+        abort_if($meeting->opened_at === null || $meeting->status !== 'en_cours', 403, 'Le staff n est pas encore ouvert.');
+        abort_if($meeting->closed_at !== null, 403, 'Le staff est deja cloture.');
+
+        $joinedAt = $this->ensureParticipantJoined($meeting, $request->user());
+
+        return response()->json([
+            'joined_at' => optional($joinedAt)?->toIso8601String(),
         ]);
     }
 
@@ -216,8 +271,34 @@ class MeetingController extends Controller
             ->values();
     }
 
+    private function actionOwnerOptions(Meeting $meeting): Collection
+    {
+        $participantIds = $meeting->participants()
+            ->pluck('users.id')
+            ->push((int) $meeting->organizer_id)
+            ->unique()
+            ->values();
+
+        return User::query()
+            ->whereIn('id', $participantIds)
+            ->orderBy('name')
+            ->get(['id', 'name', 'email'])
+            ->map(fn (User $user): array => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+            ])
+            ->values();
+    }
+
     private function mapMeetingDetail(Meeting $meeting, User $currentUser): array
     {
+        $participantPivot = $meeting->participants
+            ->firstWhere('id', $currentUser->id)?->pivot;
+        $viewerIsOrganizer = (int) $meeting->organizer_id === (int) $currentUser->id;
+        $viewerJoinedAt = optional($participantPivot?->joined_at)?->toIso8601String();
+        $meetingIsOpen = $meeting->opened_at !== null && $meeting->closed_at === null;
+
         return [
             'id' => $meeting->id,
             'title' => $meeting->title,
@@ -225,7 +306,18 @@ class MeetingController extends Controller
             'location_or_link' => $meeting->location_or_link,
             'start_time' => optional($meeting->start_time)?->toIso8601String(),
             'end_time' => optional($meeting->end_time)?->toIso8601String(),
+            'opened_at' => optional($meeting->opened_at)?->toIso8601String(),
+            'closed_at' => optional($meeting->closed_at)?->toIso8601String(),
             'status' => $meeting->status,
+            'viewer' => [
+                'id' => $currentUser->id,
+                'is_organizer' => $viewerIsOrganizer,
+                'joined_at' => $viewerJoinedAt,
+                'can_open' => $viewerIsOrganizer && $meeting->opened_at === null && $meeting->closed_at === null,
+                'can_close' => $viewerIsOrganizer && $meeting->opened_at !== null && $meeting->closed_at === null,
+                'can_manage' => $viewerIsOrganizer && $meeting->closed_at === null,
+                'can_write_notes' => $meetingIsOpen && ($viewerIsOrganizer || $viewerJoinedAt !== null),
+            ],
             'organizer' => $meeting->organizer
                 ? [
                     'id' => $meeting->organizer->id,
@@ -238,7 +330,7 @@ class MeetingController extends Controller
                     'id' => $participant->id,
                     'name' => $participant->name,
                     'email' => $participant->email,
-                    'is_present' => (bool) $participant->pivot?->is_present,
+                    'joined_at' => optional($participant->pivot?->joined_at)?->toIso8601String(),
                 ])
                 ->values(),
             'sections' => $meeting->sections
@@ -254,7 +346,25 @@ class MeetingController extends Controller
                                     'title' => $topic->title,
                                     'expected_duration' => $topic->expected_duration,
                                     'status' => $topic->status,
+                                    'decision_summary' => $topic->decision_summary,
                                     'order' => $topic->order,
+                                    'actions' => $topic->actions
+                                        ->map(fn (\App\Models\MeetingTopicAction $action): array => [
+                                            'id' => $action->id,
+                                            'meeting_topic_id' => $action->meeting_topic_id,
+                                            'title' => $action->title,
+                                            'notes' => $action->notes,
+                                            'status' => $action->status,
+                                            'due_at' => optional($action->due_at)?->toIso8601String(),
+                                            'owner' => $action->owner
+                                                ? [
+                                                    'id' => $action->owner->id,
+                                                    'name' => $action->owner->name,
+                                                    'email' => $action->owner->email,
+                                                ]
+                                                : null,
+                                        ])
+                                        ->values(),
                                     'notes' => $topic->notes
                                         ->filter(fn (MeetingNote $note): bool => ! $note->is_private
                                             || (int) $note->user_id === (int) $currentUser->id
@@ -281,5 +391,36 @@ class MeetingController extends Controller
                 })
                 ->values(),
         ];
+    }
+
+    private function ensureParticipantJoined(Meeting $meeting, User $user): ?\Illuminate\Support\Carbon
+    {
+        if ((int) $meeting->organizer_id === (int) $user->id) {
+            return null;
+        }
+
+        if ($meeting->opened_at === null || $meeting->closed_at !== null || $meeting->status !== 'en_cours') {
+            return null;
+        }
+
+        $participant = $meeting->participants()
+            ->where('users.id', $user->id)
+            ->first();
+
+        if (! $participant) {
+            return null;
+        }
+
+        if ($participant->pivot?->joined_at !== null) {
+            return $participant->pivot->joined_at;
+        }
+
+        $timestamp = now();
+
+        $meeting->participants()->updateExistingPivot($user->id, [
+            'joined_at' => $timestamp,
+        ]);
+
+        return $timestamp;
     }
 }

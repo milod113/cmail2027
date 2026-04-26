@@ -265,13 +265,18 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(Meeting::class, 'meeting_participants')
             ->using(MeetingParticipant::class)
-            ->withPivot(['is_present'])
+            ->withPivot(['joined_at'])
             ->withTimestamps();
     }
 
     public function meetingNotes(): HasMany
     {
         return $this->hasMany(MeetingNote::class);
+    }
+
+    public function assignedMeetingTopicActions(): HasMany
+    {
+        return $this->hasMany(MeetingTopicAction::class, 'owner_id');
     }
 
     public function favoriteContacts(): BelongsToMany

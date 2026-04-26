@@ -14,13 +14,13 @@ class MeetingParticipant extends Pivot
     protected $fillable = [
         'meeting_id',
         'user_id',
-        'is_present',
+        'joined_at',
     ];
 
     protected function casts(): array
     {
         return [
-            'is_present' => 'boolean',
+            'joined_at' => 'datetime',
         ];
     }
 

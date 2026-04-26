@@ -107,6 +107,9 @@ export default function ShiftDashboard({ tasks = [], mode = 'active' }) {
                     <div className="space-y-4">
                         {tasks.map((task) => {
                             const isMessageTask = task.kind === 'message_task';
+                            const canArchive = Boolean(task.archive_url);
+                            const canRestore = Boolean(task.restore_url);
+                            const canDestroy = Boolean(task.destroy_url);
                             const isCompleted = task.status === 'completed';
                             const isBusy = busyKey !== null && busyKey.endsWith(`-${task.id}`);
                             const createdAtLabel = formatDate(task.created_at, locale);
@@ -167,6 +170,11 @@ export default function ShiftDashboard({ tasks = [], mode = 'active' }) {
                                                             {__('Message')} #{task.message_id}
                                                         </span>
                                                     ) : null}
+                                                    {!task.message_id && task.meeting?.id ? (
+                                                        <span className="rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300">
+                                                            {__('Reunion')} #{task.meeting.id}
+                                                        </span>
+                                                    ) : null}
                                                 </div>
                                             </div>
 
@@ -175,6 +183,8 @@ export default function ShiftDashboard({ tasks = [], mode = 'active' }) {
                                                 {archivedAtLabel ? <span>{__('Archivee le')} {archivedAtLabel}</span> : null}
                                                 {dueDateLabel ? <span>{__('Echeance')} : {dueDateLabel}</span> : null}
                                                 {task.message?.sujet ? <span>{__('Sujet')} : {task.message.sujet}</span> : null}
+                                                {task.meeting?.title ? <span>{__('Staff')} : {task.meeting.title}</span> : null}
+                                                {task.meeting?.topic_title ? <span>{__('Point')} : {task.meeting.topic_title}</span> : null}
                                             </div>
 
                                             <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -188,7 +198,7 @@ export default function ShiftDashboard({ tasks = [], mode = 'active' }) {
                                                     </Link>
                                                 ) : null}
 
-                                                {isMessageTask ? null : isArchivedMode ? (
+                                                {isArchivedMode && canRestore ? (
                                                     <button
                                                         type="button"
                                                         onClick={() => restoreTask(task.id)}
@@ -198,7 +208,9 @@ export default function ShiftDashboard({ tasks = [], mode = 'active' }) {
                                                         <RotateCcw className="h-3.5 w-3.5" />
                                                         {__('Restaurer')}
                                                     </button>
-                                                ) : (
+                                                ) : null}
+
+                                                {!isArchivedMode && canArchive ? (
                                                     <button
                                                         type="button"
                                                         onClick={() => archiveTask(task.id)}
@@ -208,9 +220,9 @@ export default function ShiftDashboard({ tasks = [], mode = 'active' }) {
                                                         <Archive className="h-3.5 w-3.5" />
                                                         {__('Archiver')}
                                                     </button>
-                                                )}
+                                                ) : null}
 
-                                                {isMessageTask ? null : (
+                                                {!isMessageTask && canDestroy ? (
                                                     <button
                                                         type="button"
                                                         onClick={() => destroyTask(task.id)}
@@ -220,7 +232,7 @@ export default function ShiftDashboard({ tasks = [], mode = 'active' }) {
                                                         <Trash2 className="h-3.5 w-3.5" />
                                                         {__('Supprimer')}
                                                     </button>
-                                                )}
+                                                ) : null}
                                             </div>
                                         </div>
                                     </div>

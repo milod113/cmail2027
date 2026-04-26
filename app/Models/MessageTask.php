@@ -12,6 +12,10 @@ class MessageTask extends Model
 
     protected $fillable = [
         'message_id',
+        'owner_id',
+        'meeting_id',
+        'meeting_topic_id',
+        'meeting_topic_action_id',
         'title',
         'description',
         'due_date',
@@ -32,5 +36,25 @@ class MessageTask extends Model
     public function message(): BelongsTo
     {
         return $this->belongsTo(Message::class);
+    }
+
+    public function owner(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'owner_id');
+    }
+
+    public function meeting(): BelongsTo
+    {
+        return $this->belongsTo(Meeting::class);
+    }
+
+    public function meetingTopic(): BelongsTo
+    {
+        return $this->belongsTo(MeetingTopic::class, 'meeting_topic_id');
+    }
+
+    public function meetingTopicAction(): BelongsTo
+    {
+        return $this->belongsTo(MeetingTopicAction::class, 'meeting_topic_action_id');
     }
 }

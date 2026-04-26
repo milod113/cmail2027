@@ -12,6 +12,7 @@ use App\Http\Controllers\MessageActionController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\MeetingController;
 use App\Http\Controllers\MeetingNoteController;
+use App\Http\Controllers\MeetingTopicController;
 use App\Http\Controllers\PresenceController;
 use App\Http\Controllers\PublicationController;
 use App\Http\Controllers\ReportController;
@@ -69,7 +70,18 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/meetings', [MeetingController::class, 'store'])
         ->middleware('can:organize-meetings')
         ->name('meetings.store');
+    Route::post('/meetings/{meeting}/open', [MeetingController::class, 'openMeeting'])->name('meetings.open');
+    Route::post('/meetings/{meeting}/close', [MeetingController::class, 'closeMeeting'])->name('meetings.close');
+    Route::post('/meetings/{meeting}/join', [MeetingController::class, 'joinMeeting'])->name('meetings.join');
     Route::get('/meetings/{meeting}', [MeetingController::class, 'show'])->name('meetings.show');
+    Route::patch('/meetings/{meeting}/topics/{topic}/decision', [MeetingTopicController::class, 'updateDecision'])
+        ->name('meetings.topics.decision.update');
+    Route::post('/meetings/{meeting}/topics/{topic}/actions', [MeetingTopicController::class, 'storeAction'])
+        ->name('meetings.topics.actions.store');
+    Route::patch('/meetings/{meeting}/topics/{topic}/actions/{action}', [MeetingTopicController::class, 'updateAction'])
+        ->name('meetings.topics.actions.update');
+    Route::post('/meetings/{meeting}/topics/{topic}/tasks', [MeetingTopicController::class, 'storeTask'])
+        ->name('meetings.topics.tasks.store');
     Route::post('/meetings/{meeting}/topics/{topic}/notes', [MeetingNoteController::class, 'store'])
         ->name('meetings.notes.store');
     Route::get('/inbox', [MessageController::class, 'inbox'])->name('messages.inbox');

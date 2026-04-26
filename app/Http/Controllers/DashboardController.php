@@ -81,17 +81,24 @@ class DashboardController extends Controller
         $tasks = MessageTask::query()
             ->with([
                 'message:id,sender_id,receiver_id,receiver_ids,sujet',
+                'meeting:id,title',
+                'meetingTopic:id,title',
+                'meetingTopicAction:id,title',
             ])
-            ->whereHas('message', function (Builder $query) use ($user) {
-                $query->where(function (Builder $messageQuery) use ($user) {
-                    $messageQuery
-                        ->where('sender_id', $user->id)
-                        ->orWhere('receiver_id', $user->id);
+            ->where(function (Builder $query) use ($user) {
+                $query
+                    ->whereHas('message', function (Builder $messageQuery) use ($user) {
+                        $messageQuery->where(function (Builder $authorizedMessageQuery) use ($user) {
+                            $authorizedMessageQuery
+                                ->where('sender_id', $user->id)
+                                ->orWhere('receiver_id', $user->id);
 
-                    if (Schema::hasColumn('messages', 'receiver_ids')) {
-                        $messageQuery->orWhereJsonContains('receiver_ids', (int) $user->id);
-                    }
-                });
+                            if (Schema::hasColumn('messages', 'receiver_ids')) {
+                                $authorizedMessageQuery->orWhereJsonContains('receiver_ids', (int) $user->id);
+                            }
+                        });
+                    })
+                    ->orWhere('owner_id', (int) $user->id);
             })
             ->orderByRaw('CASE WHEN is_completed = 0 THEN 0 ELSE 1 END')
             ->orderByRaw('CASE WHEN due_date IS NULL THEN 1 ELSE 0 END')
@@ -105,7 +112,7 @@ class DashboardController extends Controller
 
                 return [
                     'id' => $task->id,
-                    'kind' => 'message_task',
+                    'kind' => $task->meeting_id !== null ? 'meeting_task' : 'message_task',
                     'message_id' => $task->message_id,
                     'title' => $task->title,
                     'description' => $task->description,
@@ -125,6 +132,15 @@ class DashboardController extends Controller
                             'view_url' => $isSender
                                 ? route('messages.sent.show', $message)
                                 : route('messages.show', $message),
+                        ]
+                        : null,
+                    'meeting' => $task->meeting
+                        ? [
+                            'id' => $task->meeting->id,
+                            'title' => $task->meeting->title,
+                            'view_url' => route('meetings.show', $task->meeting),
+                            'topic_title' => $task->meetingTopic?->title,
+                            'action_title' => $task->meetingTopicAction?->title,
                         ]
                         : null,
                 ];

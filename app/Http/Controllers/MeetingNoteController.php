@@ -19,6 +19,18 @@ class MeetingNoteController extends Controller
         $topic->loadMissing('section:id,meeting_id');
 
         abort_unless((int) $topic->section->meeting_id === (int) $meeting->id, 404);
+        abort_if($meeting->opened_at === null, 403, 'Le staff n a pas encore ete ouvert par l organisateur.');
+        abort_if($meeting->closed_at !== null, 403, 'Le staff est cloture. La prise de notes est desactivee.');
+
+        $isOrganizer = (int) $meeting->organizer_id === (int) $request->user()->id;
+
+        if (! $isOrganizer) {
+            $participant = $meeting->participants()
+                ->where('users.id', $request->user()->id)
+                ->first();
+
+            abort_if(! $participant || $participant->pivot?->joined_at === null, 403, 'Vous devez rejoindre officiellement le staff avant de pouvoir prendre des notes.');
+        }
 
         $validated = $request->validate([
             'content' => ['required', 'string', 'max:20000'],

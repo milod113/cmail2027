@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Message;
 use App\Models\MessageTask;
-use App\Models\Task;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -17,21 +16,21 @@ class TaskController extends Controller
     public function index(Request $request): Response
     {
         return Inertia::render('Tasks/Index', [
-            'tasks' => $this->buildMessageTasksCollection((int) $request->user()->id),
+            'tasks' => $this->buildVisibleTasksCollection((int) $request->user()->id),
         ]);
     }
 
     public function archives(Request $request): Response
     {
         return Inertia::render('Tasks/Archives', [
-            'tasks' => $this->buildTasksCollection((int) $request->user()->id, archived: true),
+            'tasks' => collect(),
         ]);
     }
 
     public function calendar(Request $request): Response
     {
         return Inertia::render('Tasks/Calendar', [
-            'tasks' => $this->buildMessageTasksCollection((int) $request->user()->id),
+            'tasks' => $this->buildVisibleTasksCollection((int) $request->user()->id),
         ]);
     }
 
@@ -39,12 +38,15 @@ class TaskController extends Controller
     {
         $task->loadMissing([
             'message:id,sender_id,receiver_id,receiver_ids,sujet',
+            'meeting:id,title',
+            'meetingTopic:id,title',
+            'meetingTopicAction:id,title',
         ]);
 
-        $this->authorizeMessageTaskAccess((int) $request->user()->id, $task);
+        $this->authorizeTaskAccess((int) $request->user()->id, $task);
 
         return Inertia::render('Tasks/Show', [
-            'task' => $this->serializeMessageTask($task, (int) $request->user()->id),
+            'task' => $this->serializeTask($task, (int) $request->user()->id),
         ]);
     }
 
@@ -81,7 +83,7 @@ class TaskController extends Controller
             'message:id,sender_id,receiver_id,receiver_ids,sujet',
         ]);
 
-        $this->authorizeMessageTaskAccess((int) $request->user()->id, $task);
+        $this->authorizeTaskAccess((int) $request->user()->id, $task);
 
         $task->update([
             'is_completed' => ! $task->is_completed,
@@ -90,117 +92,68 @@ class TaskController extends Controller
         return back()->with('success', 'Statut de la tache mis a jour.');
     }
 
-    public function archive(Request $request, Task $task): RedirectResponse
+    public function archive(Request $request, MessageTask $task): RedirectResponse
     {
-        $this->authorizeTaskOwnership($request, $task);
-
-        $task->update([
-            'archived_at' => now(),
-        ]);
-
-        return back()->with('success', 'Tache archivee avec succes.');
+        abort(404);
     }
 
-    public function restore(Request $request, Task $task): RedirectResponse
+    public function restore(Request $request, MessageTask $task): RedirectResponse
     {
-        $this->authorizeTaskOwnership($request, $task);
-
-        $task->update([
-            'archived_at' => null,
-        ]);
-
-        return back()->with('success', 'Tache restauree avec succes.');
+        abort(404);
     }
 
-    public function destroy(Request $request, Task $task): RedirectResponse
+    public function destroy(Request $request, MessageTask $task): RedirectResponse
     {
-        $this->authorizeTaskOwnership($request, $task);
-
-        $task->delete();
-
-        return back()->with('success', 'Tache supprimee avec succes.');
+        abort(404);
     }
 
-    private function buildTasksCollection(int $userId, bool $archived)
+    private function buildVisibleTasksCollection(int $userId)
     {
-        return Task::query()
-            ->with([
-                'message:id,sujet',
-            ])
-            ->where('user_id', $userId)
-            ->when($archived, fn ($query) => $query->archived(), fn ($query) => $query->active())
-            ->when(! $archived, fn ($query) => $query->orderByRaw("CASE WHEN status = 'pending' THEN 0 ELSE 1 END"))
-            ->when($archived, fn ($query) => $query->latest('archived_at'))
-            ->latest()
-            ->get([
-                'id',
-                'user_id',
-                'message_id',
-                'title',
-                'description',
-                'status',
-                'archived_at',
-                'created_at',
-            ])
-            ->map(function (Task $task) {
-                return [
-                    'id' => $task->id,
-                    'message_id' => $task->message_id,
-                    'title' => $task->title,
-                    'description' => $task->description,
-                    'status' => $task->status,
-                    'archived_at' => optional($task->archived_at)?->toIso8601String(),
-                    'created_at' => optional($task->created_at)?->toIso8601String(),
-                    'message' => $task->message
-                        ? [
-                            'id' => $task->message->id,
-                            'sujet' => $task->message->sujet,
-                        ]
-                        : null,
-                ];
-            })
-            ->values();
-    }
-
-    private function buildMessageTasksCollection(int $userId)
-    {
-        return $this->visibleMessageTasksQuery($userId)
+        return $this->visibleTasksQuery($userId)
             ->orderByRaw('CASE WHEN is_completed = 0 THEN 0 ELSE 1 END')
             ->orderByRaw('CASE WHEN due_date IS NULL THEN 1 ELSE 0 END')
             ->orderBy('due_date')
             ->latest('id')
             ->get()
-            ->map(fn (MessageTask $task) => $this->serializeMessageTask($task, $userId))
+            ->map(fn (MessageTask $task) => $this->serializeTask($task, $userId))
             ->values();
     }
 
-    private function visibleMessageTasksQuery(int $userId): Builder
+    private function visibleTasksQuery(int $userId): Builder
     {
         return MessageTask::query()
             ->with([
                 'message:id,sender_id,receiver_id,receiver_ids,sujet',
+                'meeting:id,title',
+                'meetingTopic:id,title',
+                'meetingTopicAction:id,title',
             ])
-            ->whereHas('message', function (Builder $query) use ($userId) {
-                $query->where(function (Builder $messageQuery) use ($userId) {
-                    $messageQuery
-                        ->where('sender_id', $userId)
-                        ->orWhere('receiver_id', $userId);
+            ->where(function (Builder $query) use ($userId) {
+                $query
+                    ->whereHas('message', function (Builder $messageQuery) use ($userId) {
+                        $messageQuery->where(function (Builder $authorizedMessageQuery) use ($userId) {
+                            $authorizedMessageQuery
+                                ->where('sender_id', $userId)
+                                ->orWhere('receiver_id', $userId);
 
-                    if (Schema::hasColumn('messages', 'receiver_ids')) {
-                        $messageQuery->orWhereJsonContains('receiver_ids', $userId);
-                    }
-                });
+                            if (Schema::hasColumn('messages', 'receiver_ids')) {
+                                $authorizedMessageQuery->orWhereJsonContains('receiver_ids', $userId);
+                            }
+                        });
+                    })
+                    ->orWhere('owner_id', $userId);
             });
     }
 
-    private function serializeMessageTask(MessageTask $task, int $userId): array
+    private function serializeTask(MessageTask $task, int $userId): array
     {
         $message = $task->message;
         $isSender = $message && (int) $message->sender_id === $userId;
+        $isMeetingTask = $task->meeting_id !== null;
 
         return [
             'id' => $task->id,
-            'kind' => 'message_task',
+            'kind' => $isMeetingTask ? 'meeting_task' : 'message_task',
             'message_id' => $task->message_id,
             'title' => $task->title,
             'description' => $task->description,
@@ -222,18 +175,25 @@ class TaskController extends Controller
                         : route('messages.show', $message),
                 ]
                 : null,
+            'meeting' => $task->meeting
+                ? [
+                    'id' => $task->meeting->id,
+                    'title' => $task->meeting->title,
+                    'view_url' => route('meetings.show', $task->meeting),
+                    'topic_title' => $task->meetingTopic?->title,
+                    'action_title' => $task->meetingTopicAction?->title,
+                ]
+                : null,
         ];
     }
 
-    private function authorizeTaskOwnership(Request $request, Task $task): void
+    private function authorizeTaskAccess(int $userId, MessageTask $task): void
     {
-        abort_unless((int) $task->user_id === (int) $request->user()->id, 403);
-    }
+        if ((int) ($task->owner_id ?? 0) === $userId) {
+            return;
+        }
 
-    private function authorizeMessageTaskAccess(int $userId, MessageTask $task): void
-    {
         abort_unless($task->message instanceof Message, 404);
-
         $this->authorizeMessageAccess($userId, $task->message);
     }
 

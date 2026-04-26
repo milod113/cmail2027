@@ -18,6 +18,8 @@ class Meeting extends Model
         'location_or_link',
         'start_time',
         'end_time',
+        'opened_at',
+        'closed_at',
         'organizer_id',
         'status',
     ];
@@ -27,6 +29,8 @@ class Meeting extends Model
         return [
             'start_time' => 'datetime',
             'end_time' => 'datetime',
+            'opened_at' => 'datetime',
+            'closed_at' => 'datetime',
         ];
     }
 
@@ -39,7 +43,7 @@ class Meeting extends Model
     {
         return $this->belongsToMany(User::class, 'meeting_participants')
             ->using(MeetingParticipant::class)
-            ->withPivot(['is_present'])
+            ->withPivot(['joined_at'])
             ->withTimestamps();
     }
 

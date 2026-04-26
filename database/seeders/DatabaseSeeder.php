@@ -100,5 +100,9 @@ class DatabaseSeeder extends Seeder
                 ],
             );
         }
+
+        $this->call([
+            MeetingModuleSeeder::class,
+        ]);
     }
 }

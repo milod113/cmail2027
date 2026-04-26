@@ -16,6 +16,7 @@ class MeetingTopic extends Model
         'title',
         'expected_duration',
         'status',
+        'decision_summary',
         'order',
     ];
 
@@ -34,5 +35,10 @@ class MeetingTopic extends Model
     public function notes(): HasMany
     {
         return $this->hasMany(MeetingNote::class)->latest('created_at');
+    }
+
+    public function actions(): HasMany
+    {
+        return $this->hasMany(MeetingTopicAction::class)->latest('due_at');
     }
 }

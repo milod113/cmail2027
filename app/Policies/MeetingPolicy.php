@@ -17,4 +17,9 @@ class MeetingPolicy
             ->where('users.id', $user->id)
             ->exists();
     }
+
+    public function manage(User $user, Meeting $meeting): bool
+    {
+        return (int) $meeting->organizer_id === (int) $user->id;
+    }
 }
