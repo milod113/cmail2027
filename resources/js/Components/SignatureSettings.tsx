@@ -1,7 +1,6 @@
 import { useForm, usePage } from '@inertiajs/react';
 import { useMemo, useEffect, type FormEvent, type ReactNode } from 'react';
 import {
-    BadgeCheck,
     Building2,
     CheckCircle2,
     Edit3,
@@ -27,7 +26,6 @@ type AuthUser = {
     name?: string;
     email?: string;
     department_name?: string | null;
-    role?: string | null;
 };
 
 export default function SignatureSettings({ settings, profile }: SignatureSettingsProps) {
@@ -44,56 +42,31 @@ export default function SignatureSettings({ settings, profile }: SignatureSettin
 
         return {
             enabled: data.use_auto_signature,
-            role: user?.role ?? '',
             name: user?.name ?? '',
             email: user?.email ?? '',
             grade: profile?.grade ?? '',
             department: user?.department_name ?? '',
             phone: profile?.telephone ?? '',
+            institution: 'CHU de Tlemcen',
             customText: data.custom_signature?.trim() ?? '',
         };
-    }, [
-        auth?.user,
-        data.custom_signature,
-        data.use_auto_signature,
-        profile?.grade,
-        profile?.telephone,
-    ]);
+    }, [auth?.user, data.custom_signature, data.use_auto_signature, profile?.grade, profile?.telephone]);
 
     const preview = useMemo(() => {
         if (!signatureProfile.enabled) {
             return __('Signature automatique desactivee.');
         }
 
-        const lines = [];
-
-        if (signatureProfile.role) {
-            lines.push(signatureProfile.role);
-        }
-
-        lines.push(`**${signatureProfile.name}**`);
-
-        if (signatureProfile.grade) {
-            lines.push(signatureProfile.grade);
-        }
-
-        if (signatureProfile.department) {
-            lines.push(signatureProfile.department);
-        }
-
-        if (signatureProfile.phone) {
-            lines.push(`${__('Telephone')} : ${signatureProfile.phone}`);
-        }
-
-        if (signatureProfile.email) {
-            lines.push(signatureProfile.email);
-        }
-
-        if (signatureProfile.customText) {
-            lines.push(signatureProfile.customText);
-        }
-
-        return lines.filter(Boolean).join('\n\n');
+        return [
+            signatureProfile.name ? `**${signatureProfile.name}**` : '',
+            signatureProfile.grade,
+            signatureProfile.department,
+            signatureProfile.institution,
+            [signatureProfile.email, signatureProfile.phone].filter(Boolean).join(' | '),
+            signatureProfile.customText,
+        ]
+            .filter(Boolean)
+            .join('\n');
     }, [__, signatureProfile]);
 
     useEffect(() => {
@@ -122,13 +95,13 @@ export default function SignatureSettings({ settings, profile }: SignatureSettin
                             <div>
                                 <div className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-cyan-700 dark:bg-slate-950/70 dark:text-cyan-300">
                                     <Sparkles className="h-3.5 w-3.5" />
-                                    Carte Email Pro
+                                    Signature institutionnelle
                                 </div>
                                 <h3 className="mt-3 text-xl font-bold text-slate-900 dark:text-white">
-                                    {__('Configurer la signature')}
+                                    {__('Signature de messagerie')}
                                 </h3>
                                 <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-600 dark:text-slate-300">
-                                    {__('Activez ou personnalisez votre signature automatique pour donner a chaque message une finition plus claire et plus professionnelle.')}
+                                    {__('Votre signature sera ajoutee automatiquement au bas de vos messages avec un format sobre, clair et institutionnel.')}
                                 </p>
                             </div>
                         </div>
@@ -164,26 +137,28 @@ export default function SignatureSettings({ settings, profile }: SignatureSettin
                                 </span>
                             </div>
                             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                                {__('La signature sera ajoutee automatiquement au bas de vos nouveaux messages pour garder une presentation reguliere.')}
+                                {__('Le nom, le poste, la direction et les coordonnees seront ajoutes automatiquement a chaque message sortant.')}
                             </p>
                         </div>
                     </label>
 
                     <div className="grid gap-3 sm:grid-cols-2">
-                        <InfoPill icon={<BadgeCheck className="h-4 w-4" />} label={__('Nom et identite')} value={signatureProfile.name || __('Non renseigne')} />
-                        <InfoPill icon={<Building2 className="h-4 w-4" />} label={__('Service')} value={signatureProfile.department || __('Aucun service')} />
-                        <InfoPill icon={<Phone className="h-4 w-4" />} label={__('Telephone')} value={signatureProfile.phone || __('Non renseigne')} />
+                        <InfoPill icon={<Edit3 className="h-4 w-4" />} label={__('Nom complet')} value={signatureProfile.name || __('Non renseigne')} />
+                        <InfoPill icon={<Building2 className="h-4 w-4" />} label={__('Poste / fonction')} value={signatureProfile.grade || __('Non renseigne')} />
+                        <InfoPill icon={<Landmark className="h-4 w-4" />} label={__('Direction / service')} value={signatureProfile.department || __('Aucun service')} />
                         <InfoPill icon={<Mail className="h-4 w-4" />} label={__('Email')} value={signatureProfile.email || __('Non renseigne')} />
+                        <InfoPill icon={<Phone className="h-4 w-4" />} label={__('Telephone')} value={signatureProfile.phone || __('Non renseigne')} />
+                        <InfoPill icon={<Building2 className="h-4 w-4" />} label={__('Etablissement')} value={signatureProfile.institution} />
                     </div>
 
                     {data.use_auto_signature ? (
                         <div className="space-y-3">
                             <div className="flex items-center justify-between gap-3">
                                 <label htmlFor="custom_signature" className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-                                    {__('Texte personnalise')}
+                                    {__('Mention complementaire')}
                                 </label>
                                 <span className="text-xs text-slate-500 dark:text-slate-400">
-                                    {__('Ajoutez votre formule de fin, disponibilite ou precision utile.')}
+                                    {__('Ajoutez une formule de politesse ou une precision utile si necessaire.')}
                                 </span>
                             </div>
 
@@ -192,9 +167,9 @@ export default function SignatureSettings({ settings, profile }: SignatureSettin
                                     id="custom_signature"
                                     value={data.custom_signature}
                                     onChange={(event) => setData('custom_signature', event.target.value)}
-                                    rows={7}
+                                    rows={5}
                                     className="block w-full resize-none rounded-[1.25rem] border border-white bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-200 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 dark:focus:border-cyan-500/50 dark:focus:ring-cyan-500/20"
-                                    placeholder={__('Disponible cet apres-midi pour validation. Merci de privilegier le retour par telephone en cas d urgence.')}
+                                    placeholder={__('Disponible pour tout complement d information.')}
                                 />
                             </div>
 
@@ -209,7 +184,7 @@ export default function SignatureSettings({ settings, profile }: SignatureSettin
                     )}
 
                     <div className="flex flex-wrap items-center justify-between gap-3 rounded-3xl bg-cyan-50/80 px-4 py-3 text-sm text-cyan-800 dark:bg-cyan-500/10 dark:text-cyan-200">
-                        <span>{__('Le nom, le service et les coordonnees sont automatiquement integres dans le rendu.')}</span>
+                        <span>{__('Le format institutionnel est applique automatiquement et reste lisible dans tous les messages.')}</span>
                         <button
                             type="submit"
                             disabled={processing}
@@ -271,8 +246,18 @@ export default function SignatureSettings({ settings, profile }: SignatureSettin
                                                     <p className="text-lg font-bold text-slate-900 dark:text-white">
                                                         {signatureProfile.name || __('Nom utilisateur')}
                                                     </p>
-                                                    <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-                                                        {[signatureProfile.role, signatureProfile.grade, signatureProfile.department].filter(Boolean).join(' · ') || __('Fonction et service')}
+                                                    {signatureProfile.grade ? (
+                                                        <p className="mt-1 text-sm font-medium text-slate-700 dark:text-slate-200">
+                                                            {signatureProfile.grade}
+                                                        </p>
+                                                    ) : null}
+                                                    {signatureProfile.department ? (
+                                                        <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                                                            {signatureProfile.department}
+                                                        </p>
+                                                    ) : null}
+                                                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                                                        {signatureProfile.institution}
                                                     </p>
                                                 </div>
                                                 <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-700 shadow-sm dark:bg-slate-950/80 dark:text-cyan-300">
@@ -280,40 +265,11 @@ export default function SignatureSettings({ settings, profile }: SignatureSettin
                                                 </span>
                                             </div>
 
-                                            <div className="grid gap-3 sm:grid-cols-2">
-                                                {signatureProfile.phone ? (
-                                                    <PreviewRow
-                                                        icon={<Phone className="h-4 w-4" />}
-                                                        label={__('Telephone')}
-                                                        value={signatureProfile.phone}
-                                                        tone="emerald"
-                                                    />
-                                                ) : null}
-                                                {signatureProfile.email ? (
-                                                    <PreviewRow
-                                                        icon={<Mail className="h-4 w-4" />}
-                                                        label={__('Email')}
-                                                        value={signatureProfile.email}
-                                                        tone="cyan"
-                                                    />
-                                                ) : null}
-                                                {signatureProfile.department ? (
-                                                    <PreviewRow
-                                                        icon={<Landmark className="h-4 w-4" />}
-                                                        label={__('Service')}
-                                                        value={signatureProfile.department}
-                                                        tone="violet"
-                                                    />
-                                                ) : null}
-                                                {signatureProfile.grade ? (
-                                                    <PreviewRow
-                                                        icon={<Building2 className="h-4 w-4" />}
-                                                        label={__('Fonction')}
-                                                        value={signatureProfile.grade}
-                                                        tone="amber"
-                                                    />
-                                                ) : null}
-                                            </div>
+                                            {(signatureProfile.email || signatureProfile.phone) ? (
+                                                <div className="rounded-2xl border border-white/80 bg-white/70 px-4 py-3 text-sm font-medium text-slate-700 shadow-sm dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-200">
+                                                    {[signatureProfile.email, signatureProfile.phone].filter(Boolean).join(' | ')}
+                                                </div>
+                                            ) : null}
 
                                             {signatureProfile.customText ? (
                                                 <div className="rounded-2xl border border-white/80 bg-white/70 px-4 py-3 text-sm leading-relaxed text-slate-700 shadow-sm dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-300">
@@ -324,12 +280,12 @@ export default function SignatureSettings({ settings, profile }: SignatureSettin
                                     </div>
                                 ) : (
                                     <div className="rounded-[1.5rem] border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center dark:border-slate-700 dark:bg-slate-900/60">
-                                        <BadgeCheck className="mx-auto h-8 w-8 text-slate-400 dark:text-slate-500" />
+                                        <CheckCircle2 className="mx-auto h-8 w-8 text-slate-400 dark:text-slate-500" />
                                         <p className="mt-3 text-sm font-semibold text-slate-900 dark:text-white">
                                             {__('Signature desactivee')}
                                         </p>
                                         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                                            {__('Activez la signature automatique pour voir ici un rendu complet de votre carte email.')}
+                                            {__('Activez la signature automatique pour voir ici un rendu complet et institutionnel.')}
                                         </p>
                                     </div>
                                 )}
@@ -376,55 +332,6 @@ function InfoPill({
                         {label}
                     </p>
                     <p className="mt-1 truncate text-sm font-medium text-slate-900 dark:text-white">
-                        {value}
-                    </p>
-                </div>
-            </div>
-        </div>
-    );
-}
-
-function PreviewRow({
-    icon,
-    label,
-    value,
-    tone,
-}: {
-    icon: ReactNode;
-    label: string;
-    value: string;
-    tone: 'cyan' | 'emerald' | 'violet' | 'amber';
-}) {
-    const toneClasses = {
-        cyan: {
-            wrap: 'border-cyan-200/80 bg-cyan-50/80 dark:border-cyan-500/20 dark:bg-cyan-500/10',
-            icon: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-500/15 dark:text-cyan-300',
-        },
-        emerald: {
-            wrap: 'border-emerald-200/80 bg-emerald-50/80 dark:border-emerald-500/20 dark:bg-emerald-500/10',
-            icon: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300',
-        },
-        violet: {
-            wrap: 'border-violet-200/80 bg-violet-50/80 dark:border-violet-500/20 dark:bg-violet-500/10',
-            icon: 'bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300',
-        },
-        amber: {
-            wrap: 'border-amber-200/80 bg-amber-50/80 dark:border-amber-500/20 dark:bg-amber-500/10',
-            icon: 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300',
-        },
-    }[tone];
-
-    return (
-        <div className={`rounded-2xl border px-3 py-3 ${toneClasses.wrap}`}>
-            <div className="flex items-center gap-3">
-                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${toneClasses.icon}`}>
-                    {icon}
-                </div>
-                <div className="min-w-0">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-                        {label}
-                    </p>
-                    <p className="mt-0.5 truncate text-sm font-medium text-slate-800 dark:text-slate-100">
                         {value}
                     </p>
                 </div>

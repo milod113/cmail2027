@@ -1,5 +1,6 @@
 import { useRealtimePresence } from '@/Hooks/useRealtimePresence';
 import { PageProps } from '@/types';
+import ThemeAccentSwitcher from '@/Components/ThemeAccentSwitcher';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
     ArrowLeft,
@@ -12,8 +13,11 @@ import {
     LifeBuoy,
     LayoutDashboard,
     LogOut,
+    Menu,
     MessageSquare,
     Moon,
+    PenSquare,
+    Megaphone,
     Search,
     ShieldAlert,
     ShieldCheck,
@@ -105,26 +109,35 @@ function notificationIcon(type: string) {
     }
 }
 
-function AdminNavLink({ item }: { item: AdminNavItem }) {
+function SuperAdminBadge() {
+    return (
+        <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
+            Super Admin
+        </span>
+    );
+}
+
+function AdminNavLink({ item, isCollapsed = false }: { item: AdminNavItem; isCollapsed?: boolean }) {
     const active = route().current(item.routeName);
 
     return (
         <Link
             href={item.href}
+            title={isCollapsed ? item.label : undefined}
             className={`group flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition ${
                 active
-                    ? 'bg-cyan-50 text-cyan-700 shadow-sm dark:bg-cyan-500/15 dark:text-cyan-300'
+                    ? 'app-nav-active border shadow-sm'
                     : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white'
-            }`}
+            } ${isCollapsed ? 'justify-center px-2' : ''}`}
         >
             <span
                 className={`${
-                    active ? 'text-cyan-600 dark:text-cyan-300' : 'text-slate-400 group-hover:text-cyan-500'
+                    active ? 'app-nav-icon-active' : 'text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white'
                 }`}
             >
                 {item.icon}
             </span>
-            <span>{item.label}</span>
+            {!isCollapsed ? <span>{item.label}</span> : null}
         </Link>
     );
 }
@@ -284,7 +297,9 @@ export default function AdminLayout({ title, description, actions, children }: A
 
     const { auth } = usePage<PageProps>().props;
     const [darkMode, setDarkMode] = useState(false);
+    const [accentTheme, setAccentTheme] = useState<'classic' | 'sunrise'>('classic');
     const [quickSearch, setQuickSearch] = useState('');
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
     const navigation: AdminNavItem[] = [
         {
@@ -300,6 +315,12 @@ export default function AdminLayout({ title, description, actions, children }: A
             icon: <Users className="h-4.5 w-4.5" />,
         },
         {
+            label: 'Nouveau message',
+            routeName: 'messages.create',
+            href: route('messages.create'),
+            icon: <PenSquare className="h-4.5 w-4.5" />,
+        },
+        {
             label: 'Roles',
             routeName: 'roles.index',
             href: route('roles.index'),
@@ -310,6 +331,30 @@ export default function AdminLayout({ title, description, actions, children }: A
             routeName: 'departments.index',
             href: route('departments.index'),
             icon: <Building2 className="h-4.5 w-4.5" />,
+        },
+        {
+            label: 'Niveaux',
+            routeName: 'organization-levels.index',
+            href: route('organization-levels.index'),
+            icon: <ShieldCheck className="h-4.5 w-4.5" />,
+        },
+        {
+            label: 'Unites',
+            routeName: 'organizational-units.index',
+            href: route('organizational-units.index'),
+            icon: <Building2 className="h-4.5 w-4.5" />,
+        },
+        {
+            label: 'Postes hierarchiques',
+            routeName: 'positions.index',
+            href: route('positions.index'),
+            icon: <FileText className="h-4.5 w-4.5" />,
+        },
+        {
+            label: 'Affectations utilisateurs',
+            routeName: 'user-positions.index',
+            href: route('user-positions.index'),
+            icon: <Users className="h-4.5 w-4.5" />,
         },
         {
             label: 'Support',
@@ -341,23 +386,43 @@ export default function AdminLayout({ title, description, actions, children }: A
             href: route('admin.publications.index'),
             icon: <FileText className="h-4.5 w-4.5" />,
         },
+        {
+            label: 'Annonces',
+            routeName: 'admin.announcements.index',
+            href: route('admin.announcements.index'),
+            icon: <Megaphone className="h-4.5 w-4.5" />,
+        },
     ];
 
     const userInitials = useMemo(() => getInitials(auth.user.name), [auth.user.name]);
 
     useEffect(() => {
         const storedTheme = window.localStorage.getItem('theme');
+        const storedAccentTheme = window.localStorage.getItem('app-accent-theme');
+        const storedSidebarState = window.localStorage.getItem('admin-sidebar-collapsed');
         const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
         const shouldUseDark = storedTheme ? storedTheme === 'dark' : prefersDark;
 
         setDarkMode(shouldUseDark);
+        setAccentTheme(storedAccentTheme === 'sunrise' ? 'sunrise' : 'classic');
+        setSidebarCollapsed(storedSidebarState === 'true');
         document.documentElement.classList.toggle('dark', shouldUseDark);
+        document.documentElement.dataset.appTheme = storedAccentTheme === 'sunrise' ? 'sunrise' : 'classic';
     }, []);
 
     useEffect(() => {
         document.documentElement.classList.toggle('dark', darkMode);
         window.localStorage.setItem('theme', darkMode ? 'dark' : 'light');
     }, [darkMode]);
+
+    useEffect(() => {
+        window.localStorage.setItem('admin-sidebar-collapsed', sidebarCollapsed ? 'true' : 'false');
+    }, [sidebarCollapsed]);
+
+    useEffect(() => {
+        document.documentElement.dataset.appTheme = accentTheme;
+        window.localStorage.setItem('app-accent-theme', accentTheme);
+    }, [accentTheme]);
 
     const handleQuickSearch = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -373,52 +438,104 @@ export default function AdminLayout({ title, description, actions, children }: A
     };
 
     return (
-        <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(6,182,212,0.12),_transparent_22%),radial-gradient(circle_at_bottom_right,_rgba(14,165,233,0.10),_transparent_24%)] bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+        <div className="app-shell min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
             <Head title={title} />
 
             <div className="mx-auto flex min-h-screen w-full max-w-[1680px]">
-                <aside className="hidden w-72 shrink-0 border-r border-slate-200/70 bg-white/85 px-4 py-5 backdrop-blur dark:border-slate-800 dark:bg-slate-900/85 lg:flex lg:flex-col">
-                    <div className="rounded-[1.75rem] border border-slate-200 bg-gradient-to-br from-white to-cyan-50 px-4 py-4 shadow-sm dark:border-slate-800 dark:from-slate-900 dark:to-slate-900">
-                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-600">Admin Panel</p>
-                        <h2 className="mt-1 text-lg font-bold text-slate-900 dark:text-white">Cmail 2027</h2>
-                        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Administration hospitaliere</p>
+                <aside
+                    className={`hidden shrink-0 border-r border-slate-200/70 bg-white/85 px-4 py-5 backdrop-blur transition-all duration-300 dark:border-slate-800 dark:bg-slate-900/85 lg:flex lg:flex-col ${
+                        sidebarCollapsed ? 'w-24' : 'w-72'
+                    }`}
+                >
+                    <div
+                        className={`app-panel-soft ${
+                            sidebarCollapsed ? 'px-3 py-4' : 'px-4 py-4'
+                        }`}
+                    >
+                        <div className={`flex ${sidebarCollapsed ? 'justify-center' : 'items-start justify-between gap-3'}`}>
+                            <div className={sidebarCollapsed ? 'hidden' : 'min-w-0'}>
+                                <p className="app-accent-text text-xs font-semibold uppercase tracking-[0.2em]">Admin Panel</p>
+                                <h2 className="mt-1 text-lg font-bold text-slate-900 dark:text-white">Cmail 2027</h2>
+                                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Administration hospitaliere</p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setSidebarCollapsed((current) => !current)}
+                                className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-white/85 text-slate-600 transition hover:bg-white hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-300 dark:hover:bg-slate-900 dark:hover:text-white"
+                                aria-label={sidebarCollapsed ? 'Ouvrir la sidebar admin' : 'Reduire la sidebar admin'}
+                                title={sidebarCollapsed ? 'Ouvrir la sidebar' : 'Reduire la sidebar'}
+                            >
+                                <Menu className="h-4.5 w-4.5" />
+                            </button>
+                        </div>
                     </div>
 
                     <nav className="mt-5 space-y-1">
                         {navigation.map((item) => (
-                            <AdminNavLink key={item.routeName} item={item} />
+                            <AdminNavLink key={item.routeName} item={item} isCollapsed={sidebarCollapsed} />
                         ))}
                     </nav>
 
-                    <div className="mt-5 rounded-[1.75rem] border border-cyan-100 bg-gradient-to-br from-cyan-50 via-white to-sky-50 p-4 dark:border-cyan-500/20 dark:from-cyan-500/10 dark:via-slate-900 dark:to-slate-900">
-                        <div className="flex items-center gap-2 text-cyan-700 dark:text-cyan-300">
-                            <Sparkles className="h-4 w-4" />
-                            <p className="text-sm font-semibold">Pilotage rapide</p>
+                    {!sidebarCollapsed ? (
+                        <div className="app-panel-soft mt-5 p-4">
+                            <div className="app-accent-text flex items-center gap-2">
+                                <Sparkles className="h-4 w-4" />
+                                <p className="text-sm font-semibold">Pilotage rapide</p>
+                            </div>
+                            <p className="mt-2 text-xs leading-5 text-slate-600 dark:text-slate-300">
+                                Utilisez la barre du haut pour rechercher un utilisateur, suivre les alertes et changer le theme.
+                            </p>
                         </div>
-                        <p className="mt-2 text-xs leading-5 text-slate-600 dark:text-slate-300">
-                            Utilisez la barre du haut pour rechercher un utilisateur, suivre les alertes et changer le theme.
-                        </p>
-                    </div>
+                    ) : (
+                        <div className="mt-5 flex justify-center">
+                            <div className="app-panel-soft app-accent-text flex h-12 w-12 items-center justify-center rounded-2xl">
+                                <Sparkles className="h-4 w-4" />
+                            </div>
+                        </div>
+                    )}
 
                     <div className="mt-auto space-y-3 pt-5">
-                        <div className="rounded-[1.75rem] border border-slate-200 bg-white px-4 py-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                            <p className="text-xs text-slate-500 dark:text-slate-400">Connecte en tant que</p>
-                            <div className="mt-3 flex items-center gap-3">
-                                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-sky-600 text-sm font-bold text-white">
-                                    {userInitials}
+                        <div
+                            className={`app-panel ${
+                                sidebarCollapsed ? 'px-3 py-3' : 'px-4 py-4'
+                            }`}
+                        >
+                            {!sidebarCollapsed ? (
+                                <>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">Connecte en tant que</p>
+                                    <div className="mt-3 flex items-center gap-3">
+                                        <div className="app-icon-orb h-11 w-11">
+                                            {userInitials}
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">{auth.user.name}</p>
+                                            <p className="truncate text-xs text-slate-500 dark:text-slate-400">{auth.user.email}</p>
+                                            {auth.user.is_super_admin ? (
+                                                <div className="mt-2">
+                                                    <SuperAdminBadge />
+                                                </div>
+                                            ) : null}
+                                        </div>
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="flex justify-center">
+                                    <div
+                                        className="app-icon-orb h-11 w-11"
+                                        title={`${auth.user.name} - ${auth.user.email}`}
+                                    >
+                                        {userInitials}
+                                    </div>
                                 </div>
-                                <div className="min-w-0">
-                                    <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">{auth.user.name}</p>
-                                    <p className="truncate text-xs text-slate-500 dark:text-slate-400">{auth.user.email}</p>
-                                </div>
-                            </div>
+                            )}
                         </div>
                         <Link
                             href={route('dashboard')}
+                            title={sidebarCollapsed ? "Retour a l'application" : undefined}
                             className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
                         >
                             <ArrowLeft className="h-4 w-4" />
-                            Retour a l'application
+                            {!sidebarCollapsed ? "Retour a l'application" : null}
                         </Link>
                     </div>
                 </aside>
@@ -428,7 +545,7 @@ export default function AdminLayout({ title, description, actions, children }: A
                         <div className="flex flex-col gap-4">
                             <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                                 <div className="min-w-0">
-                                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-600">Administration</p>
+                                    <p className="app-accent-text text-xs font-semibold uppercase tracking-[0.18em]">Administration</p>
                                     <h1 className="truncate text-2xl font-bold text-slate-900 dark:text-white">{title}</h1>
                                     {description ? (
                                         <p className="text-sm text-slate-500 dark:text-slate-400">{description}</p>
@@ -444,12 +561,14 @@ export default function AdminLayout({ title, description, actions, children }: A
                                                 value={quickSearch}
                                                 onChange={(event) => setQuickSearch(event.target.value)}
                                                 placeholder="Recherche admin rapide..."
-                                                className="w-full rounded-2xl border border-slate-200 bg-white/90 py-3 pl-11 pr-4 text-sm text-slate-900 shadow-sm outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-100 dark:border-slate-700 dark:bg-slate-900/90 dark:text-slate-100 dark:focus:ring-cyan-500/10"
+                                                className="w-full rounded-2xl border border-slate-200 bg-white/90 py-3 pl-11 pr-4 text-sm text-slate-900 shadow-sm outline-none transition focus:ring-2 app-accent-ring dark:border-slate-700 dark:bg-slate-900/90 dark:text-slate-100"
                                             />
                                         </label>
                                     </form>
 
                                     <AdminNotificationBell userId={auth.user.id} />
+
+                                    <ThemeAccentSwitcher value={accentTheme} onChange={setAccentTheme} compact />
 
                                     <button
                                         type="button"
@@ -461,12 +580,17 @@ export default function AdminLayout({ title, description, actions, children }: A
                                     </button>
 
                                     <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white/90 px-3 py-2 shadow-sm dark:border-slate-700 dark:bg-slate-900/90">
-                                        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-sky-600 text-sm font-bold text-white">
+                                        <div className="app-icon-orb h-10 w-10">
                                             {userInitials}
                                         </div>
                                         <div className="hidden sm:block">
                                             <p className="text-sm font-semibold text-slate-900 dark:text-white">{auth.user.name}</p>
                                             <p className="text-xs text-slate-500 dark:text-slate-400">Supervision admin</p>
+                                            {auth.user.is_super_admin ? (
+                                                <div className="mt-1.5">
+                                                    <SuperAdminBadge />
+                                                </div>
+                                            ) : null}
                                         </div>
                                         <Link
                                             href={route('logout')}
@@ -483,19 +607,19 @@ export default function AdminLayout({ title, description, actions, children }: A
                             <div className="flex flex-wrap items-center gap-2">
                                 <Link
                                     href={route('admin.support.index')}
-                                    className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-cyan-300 hover:text-cyan-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-cyan-500 dark:hover:text-cyan-300"
+                                    className="app-pill"
                                 >
                                     Support
                                 </Link>
                                 <Link
                                     href={route('admin.feedback.index')}
-                                    className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-cyan-300 hover:text-cyan-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-cyan-500 dark:hover:text-cyan-300"
+                                    className="app-pill"
                                 >
                                     Feedback
                                 </Link>
                                 <Link
                                     href={route('admin.reports.index')}
-                                    className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-cyan-300 hover:text-cyan-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-cyan-500 dark:hover:text-cyan-300"
+                                    className="app-pill"
                                 >
                                     Signalements
                                 </Link>

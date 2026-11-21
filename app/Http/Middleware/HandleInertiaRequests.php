@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Http\Controllers\GlobalAnnouncementController;
 use App\Models\UserSetting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
@@ -118,6 +119,7 @@ class HandleInertiaRequests extends Middleware
                 ]
                 : null,
             'signature' => $user->formatted_signature,
+            'active_announcements' => GlobalAnnouncementController::activeAnnouncementsForUser($user),
             'delegation_reminder' => $hasActiveDelegation
                 ? [
                     'is_active' => true,

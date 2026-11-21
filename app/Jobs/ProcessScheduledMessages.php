@@ -48,6 +48,7 @@ class ProcessScheduledMessages implements ShouldQueue
                     }
 
                     $deliveredCount++;
+                    \App\Support\MessageEmailNotifier::delivered($message->fresh());
                     $this->broadcastSafely(
                         new NotificationCreated((int) $message->receiver_id, 'message', (int) $message->id)
                     );

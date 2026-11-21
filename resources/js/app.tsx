@@ -7,6 +7,10 @@ import { createRoot } from 'react-dom/client';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
+if (typeof window !== 'undefined') {
+    document.documentElement.dataset.appTheme = window.localStorage.getItem('app-accent-theme') || 'classic';
+}
+
 createInertiaApp({
     title: (title) => `${title} - ${appName}`,
     resolve: (name) =>

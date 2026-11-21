@@ -17,3 +17,9 @@ yarn-error.log
 /.fleet
 /.idea
 /.vscode
+
+# Fichiers temporaires de génération de code
+/.tmp-codegen/
+# Pièces jointes privées et fichiers OCR temporaires
+/storage/app/attachments/
+/storage/app/ocr-tmp/

@@ -11,6 +11,7 @@ class UserSetting extends Model
     use HasFactory;
 
     protected $fillable = [
+        'email_notifications',
         'user_id',
         'is_out_of_office',
         'ooo_message',
@@ -29,6 +30,7 @@ class UserSetting extends Model
         'escalation_enabled' => 'boolean',
         'escalation_timeout' => 'integer',
         'use_auto_signature' => 'boolean',
+        'email_notifications' => 'boolean',
     ];
 
     public function user(): BelongsTo

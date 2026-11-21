@@ -1,7 +1,7 @@
 import AdminLayout from '@/Layouts/AdminLayout';
 import { FormEvent, useState } from 'react';
 import { Link, router } from '@inertiajs/react';
-import { Eye, Plus, Search, UserRoundCheck, UserX } from 'lucide-react';
+import { Eye, Mail, Plus, Search, UserRoundCheck, UserX } from 'lucide-react';
 
 type RoleOption = {
     id: number;
@@ -151,11 +151,11 @@ export default function UsersIndex({ filters, roles, users }: UsersIndexProps) {
                         </p>
                     </div>
 
-                    <div className="overflow-x-auto">
+                    <div className="overflow-x-auto xl:overflow-visible">
                         <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-800">
                             <thead className="bg-slate-50 dark:bg-slate-950/40">
                                 <tr>
-                                    {['Nom', 'Prenom', 'Service / Departement', 'Role metier', 'Etat', 'Privileges', 'Publication', 'Organisateur', 'Actions'].map((heading) => (
+                                    {['Utilisateur', 'Affectation', 'Role metier', 'Acces', 'Etat', 'Actions'].map((heading) => (
                                         <th
                                             key={heading}
                                             className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400"
@@ -170,29 +170,45 @@ export default function UsersIndex({ filters, roles, users }: UsersIndexProps) {
                                     users.data.map((user) => (
                                         <tr key={user.id} className="transition hover:bg-slate-50 dark:hover:bg-slate-950/40">
                                             <td className="px-5 py-4">
-                                                <p className="text-sm font-semibold text-slate-900 dark:text-white">{user.last_name}</p>
-                                                <p className="text-xs text-slate-500 dark:text-slate-400">{user.email}</p>
+                                                <div className="min-w-[240px]">
+                                                    <p className="text-sm font-semibold text-slate-900 dark:text-white">{user.name}</p>
+                                                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{user.email}</p>
+                                                    <div className="mt-2 flex flex-wrap gap-1.5">
+                                                        {user.is_super_admin ? (
+                                                            <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">
+                                                                Super admin
+                                                            </span>
+                                                        ) : null}
+                                                        {user.can_publish_publication ? (
+                                                            <span className="rounded-full bg-cyan-50 px-2.5 py-1 text-[11px] font-semibold text-cyan-700 dark:bg-cyan-500/10 dark:text-cyan-300">
+                                                                Publication
+                                                            </span>
+                                                        ) : null}
+                                                        {user.can_organize_event ? (
+                                                            <span className="rounded-full bg-violet-50 px-2.5 py-1 text-[11px] font-semibold text-violet-700 dark:bg-violet-500/10 dark:text-violet-300">
+                                                                Evenements
+                                                            </span>
+                                                        ) : null}
+                                                    </div>
+                                                </div>
                                             </td>
 
                                             <td className="px-5 py-4">
-                                                <p className="text-sm font-semibold text-slate-900 dark:text-white">{user.first_name}</p>
-                                                <p className="text-xs text-slate-400 dark:text-slate-500">{user.name}</p>
-                                            </td>
-
-                                            <td className="px-5 py-4">
-                                                <p className="text-sm font-medium text-slate-900 dark:text-white">
-                                                    {user.service_name ?? 'Sans departement'}
-                                                </p>
-                                                <p className="text-xs text-slate-500 dark:text-slate-400">
-                                                    {user.department_name ?? 'Aucun service'}
-                                                </p>
+                                                <div className="min-w-[190px]">
+                                                    <p className="text-sm font-medium text-slate-900 dark:text-white">
+                                                        {user.service_name ?? 'Sans departement'}
+                                                    </p>
+                                                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                                                        {user.department_name ?? 'Aucun service'}
+                                                    </p>
+                                                </div>
                                             </td>
 
                                             <td className="px-5 py-4">
                                                 <select
                                                     value={user.role_id ?? ''}
                                                     onChange={(event) => handleRoleChange(user, event.target.value)}
-                                                    className="w-52 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition hover:border-cyan-500 focus:border-cyan-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                                                    className="w-44 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition hover:border-cyan-500 focus:border-cyan-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                                                 >
                                                     <option value="">Aucun role</option>
                                                     {roles.map((role) => (
@@ -201,6 +217,28 @@ export default function UsersIndex({ filters, roles, users }: UsersIndexProps) {
                                                         </option>
                                                     ))}
                                                 </select>
+                                            </td>
+
+                                            <td className="px-5 py-4">
+                                                <div className="flex min-w-[170px] flex-col gap-2">
+                                                    <select
+                                                        value={user.access_level}
+                                                        onChange={(event) => handleAccessLevelChange(user, event.target.value as UserRow['access_level'])}
+                                                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition hover:border-cyan-500 focus:border-cyan-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                                                    >
+                                                        <option value="user">Standard</option>
+                                                        <option value="publisher">Publieur</option>
+                                                        <option value="admin">Admin</option>
+                                                    </select>
+                                                    <select
+                                                        value={user.can_organize_event ? '1' : '0'}
+                                                        onChange={(event) => handleOrganizerPermissionChange(user, event.target.value === '1')}
+                                                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition hover:border-cyan-500 focus:border-cyan-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                                                    >
+                                                        <option value="0">Events: non</option>
+                                                        <option value="1">Events: oui</option>
+                                                    </select>
+                                                </div>
                                             </td>
 
                                             <td className="px-5 py-4">
@@ -226,42 +264,15 @@ export default function UsersIndex({ filters, roles, users }: UsersIndexProps) {
                                             </td>
 
                                             <td className="px-5 py-4">
-                                                <select
-                                                    value={user.access_level}
-                                                    onChange={(event) => handleAccessLevelChange(user, event.target.value as UserRow['access_level'])}
-                                                    className="w-44 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition hover:border-cyan-500 focus:border-cyan-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
-                                                >
-                                                    <option value="user">Standard</option>
-                                                    <option value="publisher">Droit publier</option>
-                                                    <option value="admin">Droit admin</option>
-                                                </select>
-                                            </td>
+                                                <div className="flex min-w-[132px] flex-col gap-2">
+                                                    <Link
+                                                        href={route('messages.create', { recipient_id: user.id })}
+                                                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-cyan-300 hover:bg-cyan-50 hover:text-cyan-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-cyan-500/30 dark:hover:bg-cyan-500/10 dark:hover:text-cyan-300"
+                                                    >
+                                                        <Mail className="h-3.5 w-3.5" />
+                                                        Contacter
+                                                    </Link>
 
-                                            <td className="px-5 py-4">
-                                                <span
-                                                    className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                                                        user.can_publish_publication
-                                                            ? 'bg-cyan-50 text-cyan-700 dark:bg-cyan-500/10 dark:text-cyan-300'
-                                                            : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
-                                                    }`}
-                                                >
-                                                    {user.can_publish_publication ? 'Autorise' : 'Non autorise'}
-                                                </span>
-                                            </td>
-
-                                            <td className="px-5 py-4">
-                                                <select
-                                                    value={user.can_organize_event ? '1' : '0'}
-                                                    onChange={(event) => handleOrganizerPermissionChange(user, event.target.value === '1')}
-                                                    className="w-36 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition hover:border-cyan-500 focus:border-cyan-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
-                                                >
-                                                    <option value="0">Non</option>
-                                                    <option value="1">Oui</option>
-                                                </select>
-                                            </td>
-
-                                            <td className="px-5 py-4">
-                                                <div className="flex min-w-[180px] flex-col gap-2">
                                                     <Link
                                                         href={route('admin.users.show', user.id)}
                                                         className="inline-flex items-center justify-center gap-2 rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs font-semibold text-cyan-700 transition hover:border-cyan-300 hover:bg-cyan-100 dark:border-cyan-500/30 dark:bg-cyan-500/10 dark:text-cyan-300 dark:hover:bg-cyan-500/20"
@@ -300,7 +311,7 @@ export default function UsersIndex({ filters, roles, users }: UsersIndexProps) {
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan={9} className="px-5 py-10 text-center text-sm text-slate-500 dark:text-slate-400">
+                                        <td colSpan={6} className="px-5 py-10 text-center text-sm text-slate-500 dark:text-slate-400">
                                             Aucun utilisateur trouve.
                                         </td>
                                     </tr>

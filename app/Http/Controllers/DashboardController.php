@@ -155,6 +155,7 @@ class DashboardController extends Controller
                     ->where('is_delivered', true)
                     ->where('lu', false)
                     ->where('archived', false)
+                    ->whereNull('receiver_archived_at')->whereNull('receiver_deleted_at')
                     ->count(),
                 'pending_invitations' => EventInvitation::query()
                     ->where('user_id', $user->id)

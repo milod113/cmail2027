@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Schema;
 
 class Message extends Model
 {
@@ -68,6 +69,11 @@ class Message extends Model
         'is_delivered' => 'boolean',
         'requires_receipt' => 'boolean',
         'archived' => 'boolean',
+        'last_pinged_at' => 'datetime',
+        'sender_archived_at' => 'datetime',
+        'receiver_archived_at' => 'datetime',
+        'sender_deleted_at' => 'datetime',
+        'receiver_deleted_at' => 'datetime',
         'envoye' => 'boolean',
         'can_be_redirected' => 'boolean',
         'category_confidence' => 'float',
@@ -75,7 +81,25 @@ class Message extends Model
 
     protected static function booted(): void
     {
+        // E-mail « nouveau message » au destinataire, dès que le message est livré
+        static::created(function (self $message): void {
+            \App\Support\MessageEmailNotifier::delivered($message);
+            // Pièce jointe PDF / image : extraction du texte en arrière-plan (recherche dans les scans)
+            if (filled($message->fichier)) {
+                \App\Models\AttachmentText::queueFor($message->fichier);
+            }
+        });
+        static::updated(function (self $message): void {
+            if ($message->wasChanged('is_delivered') && $message->is_delivered) {
+                \App\Support\MessageEmailNotifier::delivered($message);
+            }
+        });
+
         static::creating(function (self $message): void {
+            if (! Schema::hasColumn($message->getTable(), 'category')) {
+                return;
+            }
+
             if (filled($message->category)) {
                 return;
             }
@@ -87,8 +111,61 @@ class Message extends Model
             );
 
             $message->category = $classification['category'];
-            $message->category_source = $classification['source'];
-            $message->category_confidence = $classification['confidence'];
+
+            if (Schema::hasColumn($message->getTable(), 'category_source')) {
+                $message->category_source = $classification['source'];
+            }
+
+            if (Schema::hasColumn($message->getTable(), 'category_confidence')) {
+                $message->category_confidence = $classification['confidence'];
+            }
+        });
+    }
+
+    /**
+     * Côté de l'utilisateur sur ce message : 'sender', 'receiver' ou null.
+     * (Archivage / suppression sont personnels : chacun agit sur son côté.)
+     */
+    public function sideFor(int $userId): ?string
+    {
+        if ((int) $this->receiver_id === $userId) {
+            return 'receiver';
+        }
+        if ((int) $this->sender_id === $userId) {
+            return 'sender';
+        }
+
+        return null;
+    }
+
+    /** Messages visibles dans la boîte de réception de l'utilisateur. */
+    public function scopeInboxVisibleFor(Builder $query, int $userId): Builder
+    {
+        return $query
+            ->where('receiver_id', $userId)
+            ->where('archived', false)
+            ->whereNull('receiver_archived_at')
+            ->whereNull('receiver_deleted_at');
+    }
+
+    /** Messages visibles dans les « Envoyés » de l'utilisateur. */
+    public function scopeSentVisibleFor(Builder $query, int $userId): Builder
+    {
+        return $query
+            ->where('sender_id', $userId)
+            ->where('archived', false)
+            ->whereNull('sender_archived_at')
+            ->whereNull('sender_deleted_at');
+    }
+
+    /** Messages archivés par l'utilisateur (de son côté), non supprimés. */
+    public function scopeArchivedFor(Builder $query, int $userId): Builder
+    {
+        return $query->where(function (Builder $q) use ($userId) {
+            $q->where(fn ($s) => $s->where('sender_id', $userId)->whereNotNull('sender_archived_at')->whereNull('sender_deleted_at'))
+                ->orWhere(fn ($r) => $r->where('receiver_id', $userId)->whereNotNull('receiver_archived_at')->whereNull('receiver_deleted_at'))
+                // Archivage global (modération) : toujours visible dans les archives des participants.
+                ->orWhere(fn ($g) => $g->where('archived', true)->where(fn ($p) => $p->where('sender_id', $userId)->orWhere('receiver_id', $userId)));
         });
     }
 

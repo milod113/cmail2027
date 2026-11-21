@@ -44,6 +44,12 @@ class MessageActionController extends Controller
             return back()->with('success', 'Ce message a deja ete valide.');
         }
 
+        // Enregistre la relance : le téléphone du destinataire la reçoit par interrogation du serveur.
+        $message->forceFill([
+            'last_pinged_at' => now(),
+            'ping_count' => ((int) $message->ping_count) + 1,
+        ])->save();
+
         $this->broadcastSafely(
             new NotificationCreated((int) $message->receiver_id, 'message', (int) $message->id)
         );

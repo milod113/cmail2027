@@ -8,13 +8,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
+use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -182,31 +184,27 @@ class User extends Authenticatable
             return '';
         }
 
-        $lines = [];
+        $lines = [
+            "**{$this->name}**",
+            optional($this->profile)->grade,
+            optional($this->department)->name,
+            'CHU de Tlemcen',
+        ];
 
-        if ($roleName = trim((string) optional($this->role)->nom_role)) {
-            $lines[] = $roleName;
-        }
+        $contactLine = collect([
+            $this->email,
+            optional($this->profile)->telephone,
+        ])->filter(fn ($value) => filled($value))->implode(' | ');
 
-        $lines[] = "**{$this->name}**";
-
-        if ($title = optional($this->profile)->grade) {
-            $lines[] = $title;
-        }
-
-        if ($department = optional($this->department)->name) {
-            $lines[] = $department;
-        }
-
-        if ($phone = optional($this->profile)->telephone) {
-            $lines[] = "📞 {$phone}";
+        if ($contactLine !== '') {
+            $lines[] = $contactLine;
         }
 
         if ($custom = trim((string) $settings->custom_signature)) {
             $lines[] = $custom;
         }
 
-        return trim(implode("\n\n", array_filter($lines)));
+        return trim(implode("\n", array_filter($lines)));
     }
 
     public function publications(): HasMany
@@ -249,6 +247,41 @@ class User extends Authenticatable
         return $this->hasMany(EventInvitation::class);
     }
 
+    public function userPositions(): HasMany
+    {
+        return $this->hasMany(UserPosition::class);
+    }
+
+    public function primaryUserPosition(): HasOne
+    {
+        return $this->hasOne(UserPosition::class)->where('is_primary', true)->where('is_active', true);
+    }
+
+    public function currentPrimaryUserPosition(): HasOne
+    {
+        return $this->hasOne(UserPosition::class)
+            ->where('is_primary', true)
+            ->where('is_active', true)
+            ->where(function ($query) {
+                $query->whereNull('starts_at')->orWhereDate('starts_at', '<=', now()->toDateString());
+            })
+            ->where(function ($query) {
+                $query->whereNull('ends_at')->orWhereDate('ends_at', '>=', now()->toDateString());
+            });
+    }
+
+    public function positions(): HasManyThrough
+    {
+        return $this->hasManyThrough(
+            Position::class,
+            UserPosition::class,
+            'user_id',
+            'id',
+            'id',
+            'position_id',
+        );
+    }
+
     public function invitedEvents(): BelongsToMany
     {
         return $this->belongsToMany(Event::class, 'event_invitations')
@@ -285,6 +318,19 @@ class User extends Authenticatable
             ->withTimestamps();
     }
 
+    public function globalAnnouncements(): BelongsToMany
+    {
+        return $this->belongsToMany(GlobalAnnouncement::class, 'global_announcement_user')
+            ->withPivot([
+                'id',
+                'is_read',
+                'read_at',
+                'is_acknowledged',
+                'acknowledged_at',
+            ])
+            ->withTimestamps();
+    }
+
     public function favoritedByUsers(): BelongsToMany
     {
         return $this->belongsToMany(self::class, 'favorite_contacts', 'favorite_contact_id', 'user_id')
@@ -315,3 +361,5 @@ class User extends Authenticatable
         return (bool) $this->can_organize_meetings;
     }
 }
+
+

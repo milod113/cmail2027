@@ -24,3 +24,11 @@ Schedule::command('tasks:dispatch-reminders')
     ->name('dispatch-task-reminders')
     ->everyMinute()
     ->withoutOverlapping();
+
+// File d'attente traitée aussi par le planificateur (schedule:work) : e-mails, OCR des
+// documents, messages programmés… partent même si la fenêtre « queue:work » est fermée.
+// S'arrête dès que la file est vide (ou après 55 s) ; jamais deux fois en même temps.
+Schedule::command('queue:work --stop-when-empty --tries=3 --max-time=55')
+    ->name('process-queue')
+    ->everyMinute()
+    ->withoutOverlapping(5);

@@ -8,6 +8,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -33,7 +34,16 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        $user = $request->user();
+        $normalizedRole = Str::of((string) optional($user?->role)->nom_role)->lower()->trim()->value();
+        $defaultRoute = (
+            (bool) ($user?->is_super_admin ?? false)
+            || in_array($normalizedRole, ['admin', 'superadmin'], true)
+        )
+            ? route('admin.dashboard', absolute: false)
+            : route('dashboard', absolute: false);
+
+        return redirect()->intended($defaultRoute);
     }
 
     /**

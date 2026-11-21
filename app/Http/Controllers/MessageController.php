@@ -10,6 +10,9 @@ use App\Models\MessageDraft;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\UserSetting;
+use App\Models\AttachmentText;
+use App\Support\Attachments;
+use App\Support\MessageSearch;
 use App\Support\MessageCategorizer;
 use App\Support\MessageEscalationService;
 use Illuminate\Http\RedirectResponse;
@@ -51,12 +54,13 @@ class MessageController extends Controller
             ->with([
                 'sender' => fn ($query) => $query
                     ->with('role:id,nom_role')
-                    ->select('id', 'name', 'email', 'role_id'),
+                    ->select('id', 'name', 'email', 'role_id', 'is_super_admin'),
                 'originalReceiver:id,name,email',
             ])
             ->where('receiver_id', $user->id)
             ->where('is_delivered', true)
             ->where('archived', false)
+            ->whereNull('receiver_archived_at')->whereNull('receiver_deleted_at')
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($subQuery) use ($search) {
                     $subQuery
@@ -66,7 +70,9 @@ class MessageController extends Controller
                             $userQuery
                                 ->where('name', 'like', "%{$search}%")
                                 ->orWhere('email', 'like', "%{$search}%");
-                        });
+                        })
+                        // Texte des documents scannés joints (OCR)
+                        ->orWhere(fn ($docQuery) => MessageSearch::whereDocumentMatches($docQuery, $search));
                 });
             })
             ->when($roleId > 0, function ($query) use ($roleId) {
@@ -99,7 +105,29 @@ class MessageController extends Controller
                 'scheduled_at',
                 'type_message',
                 'category',
+                'fichier',
             ]);
+
+        // Recherche : extrait du document scanné quand le mot y a été trouvé
+        if ($search !== '') {
+            $docs = AttachmentText::query()
+                ->whereIn('path', $messages->pluck('fichier')->filter()->unique())
+                ->where('ocr_status', 'completed')
+                ->get(['path', 'ocr_text', 'method'])
+                ->keyBy('path');
+            $texts = $docs->map(fn ($d) => $d->ocr_text);
+            $messages->each(function (Message $message) use ($texts, $docs, $search) {
+                $ocr = $message->fichier ? ($texts[$message->fichier] ?? null) : null;
+                $snippet = MessageSearch::snippet($ocr, $search);
+                $inText = MessageSearch::contains($message->sujet, $search) || MessageSearch::contains($message->contenu, $search);
+                if ($snippet === null && $ocr !== null && ! $inText) {
+                    $snippet = MessageSearch::head($ocr);
+                }
+                $message->setAttribute('ocr_snippet', $snippet);
+                $message->setAttribute('ocr_terms', $snippet ? MessageSearch::terms($search) : []);
+                $message->setAttribute('ocr_kind', $snippet ? (($docs[$message->fichier]->method ?? 'ocr') === 'ocr' ? 'scan' : 'document') : null);
+            });
+        }
 
         return Inertia::render('Messages/Inbox', [
             'stats' => [
@@ -155,6 +183,7 @@ class MessageController extends Controller
                 ])
                 ->where('sender_id', $user->id)
                 ->where('archived', false)
+                ->whereNull('sender_archived_at')->whereNull('sender_deleted_at')
                 ->when($search !== '', function ($query) use ($search) {
                     $query->where(function ($subQuery) use ($search) {
                         $subQuery
@@ -309,12 +338,7 @@ class MessageController extends Controller
                 'sender:id,name,email',
                 'receiver:id,name,email',
             ])
-            ->where('archived', true)
-            ->where(function ($query) use ($user) {
-                $query
-                    ->where('sender_id', $user->id)
-                    ->orWhere('receiver_id', $user->id);
-            })
+            ->archivedFor((int) $user->id)
             ->latest('updated_at')
             ->latest()
             ->get([
@@ -366,7 +390,7 @@ class MessageController extends Controller
                         'id' => $reply->id,
                         'contenu' => $reply->contenu,
                         'fichier' => $reply->fichier,
-                        'attachment_url' => $reply->fichier ? Storage::disk('public')->url($reply->fichier) : null,
+                        'attachment_url' => Attachments::webUrl('legacy', (int) $reply->id, $reply->fichier),
                         'created_at' => optional($reply->created_at)?->toString(),
                         'user' => [
                             'id' => $reply->user_id,
@@ -399,7 +423,7 @@ class MessageController extends Controller
                 'can_be_redirected' => $message->can_be_redirected,
                 'can_forward' => true,
                 'fichier' => $message->fichier,
-                'attachment_url' => $message->fichier ? Storage::disk('public')->url($message->fichier) : null,
+                'attachment_url' => Attachments::webUrl('message', (int) $message->id, $message->fichier),
                 'receiver' => $message->receiver
                     ? [
                         'id' => $message->receiver->id,
@@ -448,7 +472,7 @@ class MessageController extends Controller
         }
 
         $message->load([
-            'sender:id,name,email',
+            'sender:id,name,email,is_super_admin',
             'receiver:id,name,email',
         ]);
 
@@ -471,7 +495,7 @@ class MessageController extends Controller
                         'id' => $reply->id,
                         'contenu' => $reply->contenu,
                         'fichier' => $reply->fichier,
-                        'attachment_url' => $reply->fichier ? Storage::disk('public')->url($reply->fichier) : null,
+                        'attachment_url' => Attachments::webUrl('legacy', (int) $reply->id, $reply->fichier),
                         'created_at' => optional($reply->created_at)?->toString(),
                         'user' => [
                             'name' => $reply->user_name,
@@ -492,7 +516,7 @@ class MessageController extends Controller
                 'acknowledged_at' => optional($message->acknowledged_at)?->toIso8601String(),
                 'type_message' => $message->type_message,
                 'fichier' => $message->fichier,
-                'attachment_url' => $message->fichier ? Storage::disk('public')->url($message->fichier) : null,
+                'attachment_url' => Attachments::webUrl('message', (int) $message->id, $message->fichier),
                 'created_at' => optional($message->sent_at ?? $message->created_at)?->toIso8601String(),
                 'can_be_redirected' => $message->can_be_redirected,
                 'can_forward' => $message->sender_id === $request->user()->id || $message->can_be_redirected,
@@ -506,6 +530,7 @@ class MessageController extends Controller
                         'id' => $message->sender->id,
                         'name' => $message->sender->name,
                         'email' => $message->sender->email,
+                        'is_super_admin' => (bool) $message->sender->is_super_admin,
                     ]
                     : null,
                 'receiver' => $message->receiver
@@ -627,7 +652,7 @@ class MessageController extends Controller
         ]);
 
         $storedFile = $request->hasFile('fichier')
-            ? $request->file('fichier')->store('reponses', 'public')
+            ? Attachments::store($request->file('fichier'), 'reponses')
             : null;
 
         DB::table('reponses')->insert([
@@ -712,7 +737,7 @@ class MessageController extends Controller
                 'deadline_reponse' => '',
                 'can_be_redirected' => $message->can_be_redirected,
                 'attachment_name' => $message->fichier ? basename($message->fichier) : null,
-                'attachment_url' => $message->fichier ? Storage::disk('public')->url($message->fichier) : null,
+                'attachment_url' => Attachments::webUrl('message', (int) $message->id, $message->fichier),
                 'existing_attachment_path' => $message->fichier,
                 'forwarded_from_message_id' => $message->id,
                 'forwarded_from' => [
@@ -797,7 +822,7 @@ class MessageController extends Controller
             'deadline_reponse' => optional($draft->deadline_reponse)?->format('Y-m-d\TH:i'),
             'can_be_redirected' => $draft->can_be_redirected,
             'attachment_name' => $draft->fichier ? basename($draft->fichier) : null,
-            'attachment_url' => $draft->fichier ? Storage::disk('public')->url($draft->fichier) : null,
+            'attachment_url' => Attachments::webUrl('draft', (int) $draft->id, $draft->fichier),
             'existing_attachment_path' => $draft->fichier,
             'forwarded_from_message_id' => $draft->forwarded_from_message_id,
         ]));
@@ -854,7 +879,7 @@ class MessageController extends Controller
             'sujet' => $validated['sujet'] ?? '',
             'contenu' => $validated['contenu'] ?? '',
             'fichier' => $request->hasFile('fichier')
-                ? $request->file('fichier')->store('message-drafts', 'public')
+                ? Attachments::store($request->file('fichier'), 'message-drafts')
                 : $this->resolveExistingAttachmentPath($request),
             'important' => $validated['important'] ?? false,
             'requires_receipt' => $validated['requires_receipt'] ?? false,
@@ -922,7 +947,7 @@ class MessageController extends Controller
         }
 
         if ($draft->fichier && $draft->fichier !== $storedFile && $this->draftOwnsAttachment($draft, $draft->fichier)) {
-            Storage::disk('public')->delete($draft->fichier);
+            Attachments::delete($draft->fichier);
         }
 
         $draft->delete();
@@ -946,9 +971,7 @@ class MessageController extends Controller
     {
         $this->authorizeMessageAccess($request->user()->id, $message);
 
-        $message->update([
-            'archived' => true,
-        ]);
+        $this->setPersonalArchive($message, (int) $request->user()->id, true);
 
         return back()->with('success', 'Message archivé avec succès.');
     }
@@ -970,11 +993,9 @@ class MessageController extends Controller
             $this->authorizeMessageAccess($request->user()->id, $message);
         }
 
-        Message::query()
-            ->whereIn('id', $messages->pluck('id'))
-            ->update([
-                'archived' => true,
-            ]);
+        foreach ($messages as $message) {
+            $this->setPersonalArchive($message, (int) $request->user()->id, true);
+        }
 
         return back()->with('success', 'Messages archivés avec succès.');
     }
@@ -983,9 +1004,7 @@ class MessageController extends Controller
     {
         $this->authorizeMessageAccess($request->user()->id, $message);
 
-        $message->update([
-            'archived' => false,
-        ]);
+        $this->setPersonalArchive($message, (int) $request->user()->id, false);
 
         return back()->with('success', 'Message restauré avec succès.');
     }
@@ -1249,6 +1268,7 @@ class MessageController extends Controller
                 ->where('is_delivered', true)
                 ->where('lu', false)
                 ->where('archived', false)
+                ->whereNull('receiver_archived_at')->whereNull('receiver_deleted_at')
                 ->count(),
         ];
 
@@ -1582,6 +1602,20 @@ class MessageController extends Controller
         );
     }
 
+    /**
+     * Archivage personnel : seul le côté de l'utilisateur (expéditeur ou
+     * destinataire) est modifié ; l'autre participant garde le message.
+     */
+    private function setPersonalArchive(Message $message, int $userId, bool $archived): void
+    {
+        $side = $message->sideFor($userId);
+        if ($side === null) {
+            return;
+        }
+
+        $message->forceFill([$side.'_archived_at' => $archived ? now() : null])->save();
+    }
+
     private function shouldRenderGroupThreadView(int $userId, Message $message): bool
     {
         return (int) $message->sender_id === (int) $userId
@@ -1855,10 +1889,10 @@ class MessageController extends Controller
             return $this->resolveExistingAttachmentPath($request) ?? $draft->fichier;
         }
 
-        $storedFile = $request->file('fichier')->store('message-drafts', 'public');
+        $storedFile = Attachments::store($request->file('fichier'), 'message-drafts');
 
         if ($draft->fichier && $this->draftOwnsAttachment($draft, $draft->fichier)) {
-            Storage::disk('public')->delete($draft->fichier);
+            Attachments::delete($draft->fichier);
         }
 
         return $storedFile;
@@ -1929,7 +1963,7 @@ class MessageController extends Controller
     private function resolveAttachmentPath(Request $request, string $directory): ?string
     {
         if ($request->hasFile('fichier')) {
-            return $request->file('fichier')->store($directory, 'public');
+            return Attachments::store($request->file('fichier'), $directory);
         }
 
         return $this->resolveExistingAttachmentPath($request);
@@ -1943,7 +1977,7 @@ class MessageController extends Controller
             return null;
         }
 
-        return Storage::disk('public')->exists($path) ? $path : null;
+        return Attachments::exists($path) ? $path : null;
     }
 
     private function resolveForwardedFromMessageId(?int $messageId, int $userId): ?int

@@ -1,4 +1,4 @@
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import AdminLayout from '@/Layouts/AdminLayout';
 import { useTranslation } from '@/Hooks/useTranslation';
 import { PageProps } from '@/types';
 import { Head, Link, router, usePage } from '@inertiajs/react';
@@ -29,7 +29,7 @@ export default function Index({
     };
 
     return (
-        <AuthenticatedLayout
+        <AdminLayout
             title={__('Rôles')}
             description={__('Gérez les rôles des utilisateurs et les règles de protection.')}
             actions={
@@ -142,6 +142,6 @@ export default function Index({
                     </div>
                 </section>
             </div>
-        </AuthenticatedLayout>
+        </AdminLayout>
     );
 }

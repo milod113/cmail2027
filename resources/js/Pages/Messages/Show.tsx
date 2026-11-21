@@ -29,12 +29,14 @@ import {
   AlertCircle,
   CornerDownLeft,
   ClipboardList,
+  Crown,
 } from 'lucide-react';
 
 type MessageUser = {
     id?: number;
     name: string;
     email?: string;
+    is_super_admin?: boolean;
 };
 
 type ReplyItem = {
@@ -335,6 +337,12 @@ export default function Show({ message }: { message: MessageDetail }) {
                                     <span className="font-medium text-slate-700 dark:text-slate-300">
                                         {message.sender?.name ?? __('Inconnu')}
                                     </span>
+                                    {message.sender?.is_super_admin ? (
+                                        <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
+                                            <Crown className="h-3.5 w-3.5" />
+                                            {__('Super Admin')}
+                                        </span>
+                                    ) : null}
                                 </div>
                                 {originalRelative && (
                                     <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">

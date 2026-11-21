@@ -1,4 +1,4 @@
-import { BadgeCheck, BriefcaseBusiness, Building2, Mail, Phone, Sparkles } from 'lucide-react';
+import { Building2, Mail, Phone, Sparkles } from 'lucide-react';
 import type { ComponentType } from 'react';
 
 type MessageContentWithSignatureProps = {
@@ -10,146 +10,95 @@ type ParsedSignature = {
     body: string;
     signature: {
         name: string;
-        roleName: string | null;
         title: string | null;
         department: string | null;
-        phone: string | null;
+        institution: string | null;
+        contactLine: string | null;
         email: string | null;
+        phone: string | null;
         notes: string[];
     } | null;
 };
 
 function extractSignature(content: string): ParsedSignature {
-    const normalized = content.replace(/\r\n?/g, '\n').trim();
+    const normalized = content
+        .replace(/\\n/g, '\n')
+        .replace(/\r\n?/g, '\n')
+        .trim();
 
     if (normalized === '') {
         return { body: '', signature: null };
     }
 
-    const paragraphs = normalized
-        .split(/\n{2,}/)
-        .map((paragraph) => paragraph.trim())
+    const lines = normalized
+        .split('\n')
+        .map((line) => line.trim())
         .filter(Boolean);
 
-    if (paragraphs.length < 2) {
+    if (lines.length < 3) {
         return { body: normalized, signature: null };
     }
 
-    const signatureStart = findSignatureStart(paragraphs);
+    const signatureStart = findSignatureStart(lines);
 
     if (signatureStart === -1) {
         return { body: normalized, signature: null };
     }
 
-    const roleIndex = resolveRoleIndex(paragraphs, signatureStart);
-    const signatureParts = paragraphs.slice(signatureStart);
-    const name = signatureParts[0]?.replace(/^\*\*/, '').replace(/\*\*$/, '').trim();
-    const roleName = roleIndex !== null ? paragraphs[roleIndex] : null;
+    const body = lines.slice(0, signatureStart).join('\n\n').trim();
+    const signatureLines = lines.slice(signatureStart);
+    const name = signatureLines[0]?.replace(/^\*\*/, '').replace(/\*\*$/, '').trim();
 
     if (!name) {
         return { body: normalized, signature: null };
     }
 
-    let title: string | null = null;
-    let department: string | null = null;
-    let phone: string | null = null;
-    let email: string | null = null;
-    const notes: string[] = [];
+    const title = signatureLines[1] ?? null;
+    const department = signatureLines[2] ?? null;
+    const institution = signatureLines[3] ?? null;
+    const contactLine = signatureLines[4] ?? null;
+    const notes = signatureLines.slice(5);
 
-    signatureParts.slice(1).forEach((part) => {
-        const cleaned = part.replace(/[^\p{L}\p{N}@+().\s-]/gu, '').trim();
-        const digits = cleaned.replace(/\D/g, '');
+    const contactParts = (contactLine ?? '')
+        .split('|')
+        .map((part) => part.trim())
+        .filter(Boolean);
 
-        if (!email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleaned)) {
-            email = cleaned;
-            return;
-        }
-
-        if (!phone && digits.length >= 8) {
-            phone = cleaned.replace(/^(Telephone|Tel|Phone)\s*:?\s*/i, '').trim();
-            return;
-        }
-
-        if (!title) {
-            title = part;
-            return;
-        }
-
-        if (!department) {
-            department = part;
-            return;
-        }
-
-        notes.push(part);
-    });
-
-    if (!roleName && !title && !department && !phone && !email) {
-        return { body: normalized, signature: null };
-    }
+    const email = contactParts.find((part) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(part)) ?? null;
+    const phone = contactParts.find((part) => part !== email) ?? null;
 
     return {
-        body: paragraphs.slice(0, roleIndex ?? signatureStart).join('\n\n').trim(),
+        body,
         signature: {
             name,
-            roleName,
             title,
             department,
-            phone,
+            institution,
+            contactLine,
             email,
+            phone,
             notes,
         },
     };
 }
 
-function findSignatureStart(paragraphs: string[]): number {
-    for (let index = paragraphs.length - 2; index >= 0; index -= 1) {
-        const candidate = paragraphs[index];
+function findSignatureStart(lines: string[]): number {
+    for (let index = lines.length - 1; index >= 0; index -= 1) {
+        const candidate = lines[index];
         const isMarkdownName = /^\*\*[^*\n]+\*\*$/.test(candidate);
 
         if (!isMarkdownName) {
             continue;
         }
 
-        const trailingParts = paragraphs.slice(index + 1);
+        const trailing = lines.slice(index + 1);
 
-        if (
-            trailingParts.length > 0 &&
-            trailingParts.some((part) => /@|\d{8,}|telephone|tel|service|direction|departement|department/i.test(part))
-        ) {
-            return index;
-        }
-
-        if (trailingParts.length >= 2) {
+        if (trailing.length >= 2 && trailing.some((line) => /chu|@|\|/i.test(line))) {
             return index;
         }
     }
 
     return -1;
-}
-
-function resolveRoleIndex(paragraphs: string[], signatureStart: number): number | null {
-    const candidateIndex = signatureStart - 1;
-
-    if (candidateIndex < 0) {
-        return null;
-    }
-
-    const candidate = paragraphs[candidateIndex]?.trim();
-
-    if (!candidate) {
-        return null;
-    }
-
-    if (
-        candidate.length > 90 ||
-        /[*@]/.test(candidate) ||
-        /\d{6,}/.test(candidate) ||
-        /[.!?]/.test(candidate)
-    ) {
-        return null;
-    }
-
-    return candidateIndex;
 }
 
 function ContactPill({
@@ -188,7 +137,7 @@ export default function MessageContentWithSignature({
         <div className={className}>
             {body ? <p className="whitespace-pre-wrap text-start">{body}</p> : null}
 
-            {signature && (
+            {signature ? (
                 <div className={`${body ? 'mt-6' : ''} overflow-hidden rounded-[28px] border border-cyan-100 bg-gradient-to-br from-cyan-50 via-white to-sky-50/70 shadow-lg shadow-cyan-100/50 dark:border-cyan-500/20 dark:from-cyan-500/10 dark:via-slate-900/90 dark:to-sky-500/10 dark:shadow-none`}>
                     <div className="border-b border-cyan-100/80 bg-white/70 px-5 py-4 backdrop-blur-sm dark:border-cyan-500/10 dark:bg-slate-950/30">
                         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -204,33 +153,41 @@ export default function MessageContentWithSignature({
                                             Signature
                                         </span>
                                     </div>
-                                    {(signature.title || signature.department) && (
-                                        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                                            {[signature.title, signature.department].filter(Boolean).join(' - ')}
-                                        </p>
-                                    )}
+                                    {signature.title ? (
+                                        <p className="mt-1 text-sm font-medium text-slate-700 dark:text-slate-200">{signature.title}</p>
+                                    ) : null}
+                                    {signature.department ? (
+                                        <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{signature.department}</p>
+                                    ) : null}
+                                    {signature.institution ? (
+                                        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{signature.institution}</p>
+                                    ) : null}
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <div className="space-y-4 px-5 py-5">
+                        {signature.contactLine ? (
+                            <div className="rounded-2xl border border-white/80 bg-white/70 px-4 py-3 text-sm font-medium text-slate-700 shadow-sm dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-200">
+                                {signature.contactLine}
+                            </div>
+                        ) : null}
+
                         <div className="grid gap-3 md:grid-cols-2">
-                            {signature.roleName && <ContactPill icon={BadgeCheck} label="Fonction" value={signature.roleName} />}
-                            {signature.department && <ContactPill icon={Building2} label="Service" value={signature.department} />}
-                            {signature.phone && <ContactPill icon={Phone} label="Telephone" value={signature.phone} />}
-                            {signature.title && <ContactPill icon={BriefcaseBusiness} label="Poste" value={signature.title} />}
-                            {signature.email && <ContactPill icon={Mail} label="Email" value={signature.email} />}
+                            {signature.department ? <ContactPill icon={Building2} label="Service" value={signature.department} /> : null}
+                            {signature.phone ? <ContactPill icon={Phone} label="Telephone" value={signature.phone} /> : null}
+                            {signature.email ? <ContactPill icon={Mail} label="Email" value={signature.email} /> : null}
                         </div>
 
-                        {signature.notes.length > 0 && (
+                        {signature.notes.length > 0 ? (
                             <div className="rounded-2xl border border-slate-200/80 bg-white/80 p-4 text-sm text-slate-600 shadow-sm dark:border-slate-700/80 dark:bg-slate-950/40 dark:text-slate-300">
                                 <p className="whitespace-pre-wrap">{signature.notes.join('\n\n')}</p>
                             </div>
-                        )}
+                        ) : null}
                     </div>
                 </div>
-            )}
+            ) : null}
         </div>
     );
 }

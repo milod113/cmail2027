@@ -1,9 +1,10 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import ReportModal from '@/Components/ReportModal';
+import OcrSnippet from '@/Components/OcrSnippet';
 import { useTranslation } from '@/Hooks/useTranslation';
 import { Head, Link, router } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
-import { Archive, CalendarDays, CheckCircle2, ChevronRight, Filter, Search, Shield, Star, X, Zap } from 'lucide-react';
+import { Archive, CalendarDays, CheckCircle2, ChevronRight, Crown, Filter, Search, Shield, Star, X, Zap } from 'lucide-react';
 
 type RoleOption = {
     id: number;
@@ -19,6 +20,10 @@ type InboxMessage = {
     sent_at: string | null;
     type_message: string | null;
     category: string | null;
+    /** Recherche : extrait du document scanné où le mot a été trouvé (OCR) */
+    ocr_snippet?: string | null;
+    ocr_terms?: string[];
+    ocr_kind?: 'scan' | 'document' | null;
     original_receiver_id?: number | null;
     original_receiver?: {
         id: number;
@@ -29,6 +34,7 @@ type InboxMessage = {
         id: number;
         name: string;
         email: string;
+        is_super_admin?: boolean;
         role?: {
             id: number;
             nom_role: string;
@@ -538,6 +544,12 @@ export default function Inbox({
                                                         {message.sender.role.nom_role}
                                                     </span>
                                                 ) : null}
+                                                {message.sender?.is_super_admin ? (
+                                                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800 dark:bg-amber-500/15 dark:text-amber-300">
+                                                        <Crown className="h-3.5 w-3.5" />
+                                                        {__('Super Admin')}
+                                                    </span>
+                                                ) : null}
                                                 {message.original_receiver ? (
                                                     <span className="rounded-full bg-violet-100 px-2.5 py-1 text-xs font-semibold text-violet-800 dark:bg-violet-500/15 dark:text-violet-300">
                                                         {message.type_message === 'escalated' ? __('Escalade pour') : __('Delegue pour')} {message.original_receiver.name}
@@ -551,10 +563,14 @@ export default function Inbox({
                                             </div>
                                             <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
                                                 {__('De')} {message.sender?.name ?? __('Inconnu')} {message.sender?.email ? `(${message.sender.email})` : ''}
+                                                {message.sender?.is_super_admin ? ` ${__('· Super Admin')}` : ''}
                                             </p>
                                             <p className="mt-3 line-clamp-2 text-sm text-slate-700 dark:text-slate-200">
                                                 {message.contenu}
                                             </p>
+                                            {message.ocr_snippet ? (
+                                                <OcrSnippet snippet={message.ocr_snippet} terms={message.ocr_terms ?? []} kind={message.ocr_kind} />
+                                            ) : null}
                                         </div>
 
                                         <div className="flex flex-col items-end gap-3">

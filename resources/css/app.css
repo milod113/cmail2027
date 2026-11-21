@@ -1,3 +1,129 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+    :root {
+        --app-accent-rgb: 6 182 212;
+        --app-accent-strong-rgb: 14 165 233;
+        --app-accent-deep-rgb: 15 23 42;
+        --app-accent-soft-rgb: 236 254 255;
+        --app-accent-border-rgb: 165 243 252;
+        --app-accent-text-rgb: 14 116 144;
+        --app-shell-top-rgb: 6 182 212;
+        --app-shell-bottom-rgb: 14 165 233;
+    }
+
+    :root[data-app-theme='sunrise'] {
+        --app-accent-rgb: 249 115 22;
+        --app-accent-strong-rgb: 245 158 11;
+        --app-accent-deep-rgb: 127 29 29;
+        --app-accent-soft-rgb: 255 247 237;
+        --app-accent-border-rgb: 253 186 116;
+        --app-accent-text-rgb: 194 65 12;
+        --app-shell-top-rgb: 249 115 22;
+        --app-shell-bottom-rgb: 251 191 36;
+    }
+
+    html {
+        color-scheme: light;
+    }
+
+    html.dark {
+        color-scheme: dark;
+    }
+}
+
+@layer components {
+    .app-shell {
+        background-image:
+            radial-gradient(circle at top left, rgb(var(--app-shell-top-rgb) / 0.12), transparent 22%),
+            radial-gradient(circle at bottom right, rgb(var(--app-shell-bottom-rgb) / 0.1), transparent 24%);
+    }
+
+    .app-panel {
+        @apply rounded-[1.75rem] border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900;
+    }
+
+    .app-panel-soft {
+        @apply rounded-[1.75rem] border shadow-sm;
+        border-color: rgb(var(--app-accent-border-rgb) / 0.7);
+        background-image:
+            linear-gradient(135deg, rgb(var(--app-accent-soft-rgb) / 0.9), rgb(255 255 255 / 0.98), rgb(var(--app-accent-soft-rgb) / 0.52));
+    }
+
+    .dark .app-panel-soft {
+        border-color: rgb(var(--app-accent-rgb) / 0.22);
+        background-image:
+            linear-gradient(135deg, rgb(var(--app-accent-rgb) / 0.12), rgb(15 23 42 / 0.94), rgb(2 6 23 / 0.92));
+    }
+
+    .app-accent-text {
+        color: rgb(var(--app-accent-text-rgb));
+    }
+
+    .dark .app-accent-text {
+        color: rgb(var(--app-accent-border-rgb));
+    }
+
+    .app-accent-ring {
+        --tw-ring-color: rgb(var(--app-accent-rgb) / 0.12);
+    }
+
+    .app-accent-gradient {
+        background-image: linear-gradient(135deg, rgb(var(--app-accent-rgb)), rgb(var(--app-accent-strong-rgb)), rgb(var(--app-accent-deep-rgb)));
+    }
+
+    .app-accent-button {
+        @apply inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold text-white shadow-lg transition-all;
+        background-image: linear-gradient(135deg, rgb(var(--app-accent-rgb)), rgb(var(--app-accent-strong-rgb)), rgb(var(--app-accent-deep-rgb)));
+        box-shadow: 0 18px 38px -20px rgb(var(--app-accent-rgb) / 0.7);
+    }
+
+    .app-accent-button:hover {
+        transform: translateY(-1px);
+        filter: brightness(0.98);
+    }
+
+    .app-icon-orb {
+        @apply flex items-center justify-center rounded-2xl text-sm font-bold text-white;
+        background-image: linear-gradient(135deg, rgb(var(--app-accent-rgb)), rgb(var(--app-accent-strong-rgb)));
+    }
+
+    .app-nav-active {
+        border-color: rgb(var(--app-accent-border-rgb) / 0.8);
+        background-image: linear-gradient(90deg, rgb(var(--app-accent-rgb) / 0.12), rgb(var(--app-accent-strong-rgb) / 0.1));
+        color: rgb(var(--app-accent-text-rgb));
+        box-shadow: 0 12px 28px -24px rgb(var(--app-accent-rgb) / 0.85);
+    }
+
+    .dark .app-nav-active {
+        border-color: rgb(var(--app-accent-rgb) / 0.3);
+        color: rgb(var(--app-accent-border-rgb));
+    }
+
+    .app-nav-icon-active {
+        color: rgb(var(--app-accent-text-rgb));
+    }
+
+    .dark .app-nav-icon-active {
+        color: rgb(var(--app-accent-border-rgb));
+    }
+
+    .app-pill {
+        @apply rounded-full border px-3 py-1.5 text-xs font-semibold transition;
+        border-color: rgb(var(--app-accent-border-rgb) / 0.55);
+        background-color: rgb(255 255 255 / 0.85);
+        color: rgb(var(--app-accent-text-rgb));
+    }
+
+    .app-pill:hover {
+        background-color: rgb(var(--app-accent-soft-rgb) / 0.95);
+    }
+
+    .dark .app-pill {
+        border-color: rgb(var(--app-accent-rgb) / 0.26);
+        background-color: rgb(15 23 42 / 0.8);
+        color: rgb(var(--app-accent-border-rgb));
+    }
+}

@@ -44,6 +44,15 @@ return [
             'throw' => false,
         ],
 
+        // Pièces jointes des messages : stockage PRIVÉ (jamais servi directement par le
+        // serveur web). Seule la route /attachments/... les distribue, après contrôle d'accès.
+        'attachments' => [
+            'driver' => 'local',
+            'root' => storage_path('app/attachments'),
+            'visibility' => 'private',
+            'throw' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),

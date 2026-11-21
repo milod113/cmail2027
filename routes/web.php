@@ -7,18 +7,23 @@ use App\Http\Controllers\ChatController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EventInvitationController;
 use App\Http\Controllers\FeedbackController;
+use App\Http\Controllers\GlobalAnnouncementController;
 use App\Http\Controllers\LikeController;
 use App\Http\Controllers\MessageActionController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\MeetingController;
 use App\Http\Controllers\MeetingNoteController;
 use App\Http\Controllers\MeetingTopicController;
+use App\Http\Controllers\OrganizationLevelController;
+use App\Http\Controllers\OrganizationalUnitController;
+use App\Http\Controllers\PositionController;
 use App\Http\Controllers\PresenceController;
 use App\Http\Controllers\PublicationController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ScheduledMessageController;
 use App\Http\Controllers\SupportTicketController;
 use App\Http\Controllers\TaskController;
+use App\Http\Controllers\UserPositionController;
 use App\Models\Department;
 use App\Models\Establishment;
 use App\Models\Message;
@@ -47,6 +52,14 @@ Route::post('/language', function (Request $request) {
 
     return back();
 })->name('language.switch');
+
+// Pièces jointes privées : contrôle d'accès fait dans le contrôleur (lien signé mobile
+// OU utilisateur connecté faisant partie du message) — donc hors du groupe « auth ».
+Route::get('/attachments/{type}/{id}/{name?}', [\App\Http\Controllers\AttachmentController::class, 'show'])
+    ->where('type', 'message|legacy|draft')
+    ->where('id', '[0-9]+')
+    ->middleware('throttle:120,1')
+    ->name('attachments.show');
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/events/invitations', [EventInvitationController::class, 'index'])->name('events.invitations');
@@ -233,12 +246,12 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/messages/{message}/important', [MessageController::class, 'toggleImportant'])->name('messages.important.toggle');
     Route::get('/notifications', [MessageController::class, 'notifications'])->name('notifications.index');
     Route::post('/notifications/read', [MessageController::class, 'markNotificationsRead'])->name('notifications.read');
+    Route::post('/announcements/{announcement}/read', [GlobalAnnouncementController::class, 'markAsRead'])->name('announcements.read');
+    Route::post('/announcements/{announcement}/acknowledge', [GlobalAnnouncementController::class, 'acknowledge'])->name('announcements.acknowledge');
     Route::patch('/tasks/{task}/toggle-status', [TaskController::class, 'toggleStatus'])->name('tasks.toggle-status');
     Route::patch('/tasks/{task}/archive', [TaskController::class, 'archive'])->name('tasks.archive');
     Route::patch('/tasks/{task}/restore', [TaskController::class, 'restore'])->name('tasks.restore');
     Route::delete('/tasks/{task}', [TaskController::class, 'destroy'])->name('tasks.destroy');
-    Route::resource('departments', DepartmentController::class)->except(['show']);
-    Route::resource('roles', RoleController::class)->except(['show']);
 });
 
 Route::middleware(['auth', 'admin'])
@@ -266,7 +279,21 @@ Route::middleware(['auth', 'admin'])
         Route::patch('/publications/{publication}', [AdminController::class, 'updatePublication'])->name('publications.update');
         Route::patch('/publications/{publication}/archive', [AdminController::class, 'togglePublicationArchive'])->name('publications.archive');
         Route::delete('/publications/{publication}', [AdminController::class, 'destroyPublication'])->name('publications.destroy');
+        Route::get('/announcements', [GlobalAnnouncementController::class, 'index'])->name('announcements.index');
+        Route::get('/announcements/create', [GlobalAnnouncementController::class, 'create'])->name('announcements.create');
+        Route::post('/announcements', [GlobalAnnouncementController::class, 'store'])->name('announcements.store');
+        Route::get('/announcements/{announcement}', [GlobalAnnouncementController::class, 'show'])->name('announcements.show');
+        Route::patch('/announcements/{announcement}/publish', [GlobalAnnouncementController::class, 'togglePublish'])->name('announcements.publish');
     });
+
+Route::middleware(['auth', 'admin'])->group(function () {
+    Route::resource('departments', DepartmentController::class)->except(['show']);
+    Route::resource('roles', RoleController::class)->except(['show']);
+    Route::resource('organization-levels', OrganizationLevelController::class)->except(['show']);
+    Route::resource('organizational-units', OrganizationalUnitController::class)->except(['show']);
+    Route::resource('positions', PositionController::class)->except(['show']);
+    Route::resource('user-positions', UserPositionController::class)->except(['show']);
+});
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

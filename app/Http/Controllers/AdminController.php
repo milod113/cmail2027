@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Events\NotificationCreated;
 use App\Models\AppFeedback;
 use App\Models\Department;
+use App\Models\GlobalAnnouncement;
 use App\Models\Message;
 use App\Models\Publication;
 use App\Models\ReportedMessage;
@@ -29,6 +30,35 @@ class AdminController extends Controller
 {
     public function index(): Response
     {
+        $recentAnnouncements = GlobalAnnouncement::query()
+            ->with(['creator:id,name,email'])
+            ->withCount([
+                'recipients',
+                'recipients as read_count' => fn ($query) => $query->where('global_announcement_user.is_read', true),
+            ])
+            ->latest('published_at')
+            ->latest('created_at')
+            ->take(4)
+            ->get()
+            ->map(function (GlobalAnnouncement $announcement): array {
+                return [
+                    'id' => $announcement->id,
+                    'title' => $announcement->title,
+                    'priority' => $announcement->priority,
+                    'is_published' => (bool) $announcement->is_published,
+                    'published_at' => optional($announcement->published_at)?->toIso8601String(),
+                    'recipients_count' => (int) ($announcement->recipients_count ?? 0),
+                    'read_count' => (int) ($announcement->read_count ?? 0),
+                    'creator' => $announcement->creator
+                        ? [
+                            'name' => $announcement->creator->name,
+                            'email' => $announcement->creator->email,
+                        ]
+                        : null,
+                ];
+            })
+            ->values();
+
         return Inertia::render('Admin/Dashboard', [
             'stats' => [
                 'users_total' => User::query()->count(),
@@ -37,6 +67,8 @@ class AdminController extends Controller
                 'support_open' => SupportTicket::query()->where('status', 'open')->count(),
                 'messages_total' => Message::query()->count(),
                 'publications_total' => Publication::query()->count(),
+                'announcements_total' => GlobalAnnouncement::query()->count(),
+                'announcements_published' => GlobalAnnouncement::query()->where('is_published', true)->count(),
             ],
             'recentSupportTickets' => SupportTicket::query()
                 ->with('user:id,name,email')
@@ -45,6 +77,7 @@ class AdminController extends Controller
                 ->get()
                 ->map(fn (SupportTicket $ticket) => $this->mapSupportTicket($ticket))
                 ->values(),
+            'recentAnnouncements' => $recentAnnouncements,
         ]);
     }
 
@@ -785,6 +818,10 @@ class AdminController extends Controller
         $user->update([
             'is_blocked' => ! $validated['is_active'],
         ]);
+
+        if ($user->is_blocked) {
+            $user->tokens()->delete(); // application mobile : déconnexion immédiate
+        }
 
         return back()->with('success', $validated['is_active']
             ? 'Utilisateur debloque avec succes.'

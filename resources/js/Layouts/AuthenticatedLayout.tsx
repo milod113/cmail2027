@@ -1,6 +1,8 @@
 import Dropdown from '@/Components/Dropdown';
+import GlobalAnnouncementsBanner from '@/Components/GlobalAnnouncementsBanner';
 import LanguageSwitcher from '@/Components/LanguageSwitcher';
 import SupportDrawer from '@/Components/SupportDrawer';
+import ThemeAccentSwitcher from '@/Components/ThemeAccentSwitcher';
 import { useRealtimePresence } from '@/Hooks/useRealtimePresence';
 import { useTranslation } from '@/Hooks/useTranslation';
 import { Link, usePage } from '@inertiajs/react';
@@ -53,6 +55,14 @@ const scaleOnHover = {
     whileTap: { scale: 0.98 }
 };
 
+function SuperAdminBadge() {
+    return (
+        <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
+            Super Admin
+        </span>
+    );
+}
+
 function SidebarLink({
     item,
     mobile = false,
@@ -79,7 +89,7 @@ function SidebarLink({
                     group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium
                     transition-all duration-200 ease-out
                     ${isActive
-                        ? 'bg-gradient-to-r from-cyan-500/15 to-sky-500/15 text-cyan-700 dark:text-cyan-300 shadow-sm border border-cyan-200/30 dark:border-cyan-500/20'
+                        ? 'app-nav-active border shadow-sm'
                         : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800/60 dark:hover:text-white'
                     }
                     ${mobile ? 'w-full' : ''}
@@ -89,8 +99,8 @@ function SidebarLink({
                 <span className={`
                     transition-all duration-200 relative
                     ${isActive
-                        ? 'text-cyan-600 dark:text-cyan-400'
-                        : 'text-slate-400 group-hover:text-cyan-500 dark:text-slate-500'
+                        ? 'app-nav-icon-active'
+                        : 'text-slate-400 group-hover:text-slate-900 dark:text-slate-500 dark:group-hover:text-white'
                     }
                     ${isCollapsed ? 'scale-110' : ''}
                 `}>
@@ -121,7 +131,7 @@ function SidebarLink({
                             </span>
                         )}
                         {isActive && (
-                            <ChevronRight className="absolute right-3 h-3.5 w-3.5 text-cyan-500" />
+                            <ChevronRight className="app-nav-icon-active absolute right-3 h-3.5 w-3.5" />
                         )}
                     </>
                 )}
@@ -511,6 +521,19 @@ export default function AuthenticatedLayout({
                         email: string;
                     } | null;
                 } | null;
+                active_announcements?: {
+                    id: number;
+                    title: string;
+                    content: string;
+                    priority: string;
+                    requires_acknowledgement: boolean;
+                    is_pinned: boolean;
+                    audience_label: string;
+                    is_read: boolean;
+                    is_acknowledged: boolean;
+                    starts_at: string | null;
+                    ends_at: string | null;
+                }[];
             };
         };
         current_locale: string;
@@ -519,6 +542,7 @@ export default function AuthenticatedLayout({
 
     const [mobileOpen, setMobileOpen] = useState(false);
     const [darkMode, setDarkMode] = useState(false);
+    const [accentTheme, setAccentTheme] = useState<'classic' | 'sunrise'>('classic');
     const [scrolled, setScrolled] = useState(false);
     const [unreadInboxCount, setUnreadInboxCount] = useState(0);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -527,12 +551,15 @@ export default function AuthenticatedLayout({
 
     useEffect(() => {
         const storedTheme = window.localStorage.getItem('theme');
+        const storedAccentTheme = window.localStorage.getItem('app-accent-theme');
         const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
         const storedCollapsed = window.localStorage.getItem('sidebarCollapsed');
         const shouldUseDark = storedTheme ? storedTheme === 'dark' : prefersDark;
 
         document.documentElement.classList.toggle('dark', shouldUseDark);
+        document.documentElement.dataset.appTheme = storedAccentTheme === 'sunrise' ? 'sunrise' : 'classic';
         setDarkMode(shouldUseDark);
+        setAccentTheme(storedAccentTheme === 'sunrise' ? 'sunrise' : 'classic');
         setIsSidebarCollapsed(storedCollapsed === 'true');
     }, []);
 
@@ -544,6 +571,11 @@ export default function AuthenticatedLayout({
     useEffect(() => {
         window.localStorage.setItem('sidebarCollapsed', String(isSidebarCollapsed));
     }, [isSidebarCollapsed]);
+
+    useEffect(() => {
+        document.documentElement.dataset.appTheme = accentTheme;
+        window.localStorage.setItem('app-accent-theme', accentTheme);
+    }, [accentTheme]);
 
     useEffect(() => {
         const handleScroll = () => setScrolled(window.scrollY > 10);
@@ -685,10 +717,11 @@ export default function AuthenticatedLayout({
         .toUpperCase()
         .slice(0, 2);
     const delegationReminder = auth.user.delegation_reminder;
+    const activeAnnouncements = auth.user.active_announcements ?? [];
     const showDelegationReminder = Boolean(delegationReminder?.is_active);
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-cyan-50/40 dark:from-slate-950 dark:via-slate-900 dark:to-cyan-950/30">
+        <div className="app-shell min-h-screen bg-gradient-to-br from-slate-50 via-white to-cyan-50/40 dark:from-slate-950 dark:via-slate-900 dark:to-cyan-950/30">
             <div className="flex min-h-screen">
                 {/* Desktop Sidebar */}
                 <motion.aside
@@ -703,7 +736,7 @@ export default function AuthenticatedLayout({
                         {/* Logo Section */}
                         <motion.div
                             whileHover={{ scale: 1.02 }}
-                            className={`group mb-6 rounded-2xl border border-slate-200/80 bg-white/90 p-4 shadow-sm transition-all hover:shadow-md dark:border-slate-800 dark:bg-slate-900/90 ${isSidebarCollapsed ? 'px-2' : ''}`}
+                            className={`app-panel group mb-6 rounded-2xl p-4 transition-all hover:shadow-md ${isSidebarCollapsed ? 'px-2' : ''}`}
                         >
                             {!isSidebarCollapsed ? (
                                 <>
@@ -741,7 +774,7 @@ export default function AuthenticatedLayout({
                         >
                             <Link
                                 href={route('messages.create')}
-                                className={`inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-600 to-sky-700 text-sm font-semibold text-white shadow-lg shadow-cyan-500/20 transition-all hover:scale-[1.02] hover:shadow-xl hover:shadow-cyan-500/30 ${
+                                className={`app-accent-button ${
                                     isSidebarCollapsed ? 'h-10 w-10 p-0' : 'w-full px-4 py-3'
                                 }`}
                             >
@@ -774,10 +807,10 @@ export default function AuthenticatedLayout({
                             whileHover={{ scale: 1.02 }}
                             className={`mt-6 pt-4 border-t border-slate-200/50 dark:border-slate-800/50 w-full ${isSidebarCollapsed ? 'flex justify-center' : ''}`}
                         >
-                            <div className={`rounded-xl bg-gradient-to-br from-slate-50 to-cyan-50/40 p-3 dark:from-slate-900/50 dark:to-cyan-900/20 ${isSidebarCollapsed ? 'p-2' : ''}`}>
+                            <div className={`app-panel-soft rounded-xl p-3 ${isSidebarCollapsed ? 'p-2' : ''}`}>
                                 {!isSidebarCollapsed ? (
                                     <div className="flex items-center gap-3">
-                                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-sky-600 text-sm font-bold text-white shadow-md">
+                                        <div className="app-icon-orb h-10 w-10 rounded-xl shadow-md">
                                             {userInitials}
                                         </div>
                                         <div className="flex-1 min-w-0">
@@ -787,10 +820,15 @@ export default function AuthenticatedLayout({
                                             <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
                                                 {auth.user.email}
                                             </div>
+                                            {auth.user.is_super_admin ? (
+                                                <div className="mt-2">
+                                                    <SuperAdminBadge />
+                                                </div>
+                                            ) : null}
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-sky-600 text-sm font-bold text-white shadow-md">
+                                    <div className="app-icon-orb h-10 w-10 rounded-xl shadow-md">
                                         {userInitials}
                                     </div>
                                 )}
@@ -828,8 +866,8 @@ export default function AuthenticatedLayout({
 
                                     <div className="min-w-0">
                                         <div className="flex flex-wrap items-center gap-2">
-                                            <Sparkles className="h-4 w-4 text-cyan-500" />
-                                            <p className="text-xs font-semibold uppercase tracking-wider text-cyan-600 dark:text-cyan-400">
+                                            <Sparkles className="app-accent-text h-4 w-4" />
+                                            <p className="app-accent-text text-xs font-semibold uppercase tracking-wider">
                                                 {__('Messagerie centrale')}
                                             </p>
                                         </div>
@@ -852,6 +890,8 @@ export default function AuthenticatedLayout({
 
                                     <NotificationBell __={__} locale={current_locale} userId={auth.user.id} onUnreadMessagesChange={setUnreadInboxCount} />
 
+                                    <ThemeAccentSwitcher value={accentTheme} onChange={setAccentTheme} compact />
+
                                     {actions}
 
                                     <motion.button
@@ -859,7 +899,7 @@ export default function AuthenticatedLayout({
                                         whileTap={{ scale: 0.95 }}
                                         type="button"
                                         onClick={() => setDarkMode((value) => !value)}
-                                        className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white/80 text-slate-600 transition-all hover:border-cyan-300 hover:bg-white hover:text-cyan-600 hover:shadow-md dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-300 dark:hover:border-cyan-500/40 dark:hover:bg-slate-900"
+                                        className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white/80 text-slate-600 transition-all hover:bg-white hover:text-slate-900 hover:shadow-md dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-300 dark:hover:bg-slate-900 dark:hover:text-white"
                                         aria-label="Toggle theme"
                                     >
                                         <AnimatePresence mode="wait" initial={false}>
@@ -883,10 +923,10 @@ export default function AuthenticatedLayout({
                                         <Dropdown.Trigger>
                                             <motion.button
                                                 whileHover={{ scale: 1.02 }}
-                                                className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white/80 px-2.5 py-1.5 text-sm font-medium text-slate-700 transition-all hover:border-cyan-300 hover:bg-white hover:shadow-md dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200 sm:px-3"
+                                                className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white/80 px-2.5 py-1.5 text-sm font-medium text-slate-700 transition-all hover:bg-white hover:shadow-md dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200 sm:px-3"
                                             >
                                                 <span className="hidden sm:inline">{auth.user.name.split(' ')[0]}</span>
-                                                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500 to-sky-600 text-sm font-bold text-white shadow-md">
+                                                <div className="app-icon-orb h-8 w-8 rounded-lg shadow-md">
                                                     {userInitials}
                                                 </div>
                                                 <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
@@ -896,14 +936,19 @@ export default function AuthenticatedLayout({
                                         <Dropdown.Content align={isRtl ? 'left' : 'right'} width="48">
                                             <div className="border-b border-slate-100 px-4 py-3 dark:border-slate-800">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-sky-600 text-sm font-bold text-white">
+                                                    <div className="app-icon-orb h-10 w-10 rounded-xl">
                                                         {userInitials}
                                                     </div>
                                                     <div>
                                                         <p className="text-sm font-semibold text-slate-900 dark:text-white">{auth.user.name}</p>
                                                         <p className="text-xs text-slate-500 dark:text-slate-400">{auth.user.email}</p>
+                                                        {auth.user.is_super_admin ? (
+                                                            <div className="mt-1.5">
+                                                                <SuperAdminBadge />
+                                                            </div>
+                                                        ) : null}
                                                         {auth.user.role && (
-                                                            <span className="text-[10px] font-medium text-cyan-600 dark:text-cyan-400">
+                                                            <span className="app-accent-text text-[10px] font-medium">
                                                                 {auth.user.role}
                                                             </span>
                                                         )}
@@ -937,6 +982,8 @@ export default function AuthenticatedLayout({
                             </div>
                         </div>
                     </motion.header>
+
+                    <GlobalAnnouncementsBanner announcements={activeAnnouncements} />
 
                     {showDelegationReminder && (
                         <div className="border-b border-amber-200/70 bg-amber-50/90 dark:border-amber-500/30 dark:bg-amber-500/10">
@@ -1004,6 +1051,11 @@ export default function AuthenticatedLayout({
                                                 <div>
                                                     <div className="font-semibold text-slate-900 dark:text-white">{auth.user.name}</div>
                                                     <div className="text-sm text-slate-500 dark:text-slate-400">{auth.user.email}</div>
+                                                    {auth.user.is_super_admin ? (
+                                                        <div className="mt-1.5">
+                                                            <SuperAdminBadge />
+                                                        </div>
+                                                    ) : null}
                                                 </div>
                                             </div>
                                         </div>
