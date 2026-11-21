@@ -70,6 +70,11 @@ Route::prefix('mobile')->name('mobile.')->group(function () {
         Route::get('/contacts/{user}/messages', [ContactController::class, 'conversation'])->name('contacts.messages');
         Route::post('/contacts/{user}/favorite', [ContactController::class, 'favorite'])->name('contacts.favorite');
         Route::delete('/contacts/{user}/favorite', [ContactController::class, 'unfavorite'])->name('contacts.unfavorite');
+        // Dictée vocale : transcription locale (whisper.cpp) en file d'attente
+        Route::post('/dictations', [\App\Http\Controllers\Api\Mobile\DictationController::class, 'store'])->middleware('throttle:20,1')->name('dictations.store');
+        Route::get('/dictations/{dictation}', [\App\Http\Controllers\Api\Mobile\DictationController::class, 'show'])->name('dictations.show');
+        Route::delete('/dictations/{dictation}', [\App\Http\Controllers\Api\Mobile\DictationController::class, 'destroy'])->name('dictations.destroy');
+
         // Recherche (objet, texte et contenu des documents scannés) — avant /messages/{message}
         Route::get('/messages/search', [MessageController::class, 'search'])->middleware('throttle:60,1')->name('messages.search');
         Route::get('/messages/inbox', [MessageController::class, 'inbox'])->name('messages.inbox');

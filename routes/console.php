@@ -32,3 +32,6 @@ Schedule::command('queue:work --stop-when-empty --tries=3 --max-time=55')
     ->name('process-queue')
     ->everyMinute()
     ->withoutOverlapping(5);
+
+// Dictées vocales : textes effacés après 24 h, aucun audio conservé
+Schedule::command('dictations:prune')->name('prune-dictations')->hourly()->withoutOverlapping();
