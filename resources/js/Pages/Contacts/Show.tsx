@@ -110,7 +110,10 @@ type ThreadMessage = {
 
 type ChatMessage = {
     id: number;
-    body: string;
+    type?: 'text' | 'voice';
+    body: string | null;
+    audio_url?: string | null;
+    duration_ms?: number | null;
     created_at: string | null;
     read_at: string | null;
     direction: 'incoming' | 'outgoing';
@@ -528,7 +531,8 @@ export default function ContactsShow({
                 <div className="max-h-[26rem] space-y-3 overflow-y-auto pr-1">
                     {chatMessages.length > 0 ? (
                         chatMessages.map((message) => {
-                            const isOutgoing = message.direction === 'outgoing';
+                            // Le sens est recalculé ici : l'événement temps réel est préparé du point de vue de l'expéditeur.
+                            const isOutgoing = message.sender ? message.sender.id === auth.user.id : message.direction === 'outgoing';
 
                             return (
                                 <div
@@ -542,9 +546,21 @@ export default function ContactsShow({
                                                 : 'rounded-bl-md border border-white/70 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100'
                                         }`}
                                     >
-                                        <p className="whitespace-pre-wrap text-sm leading-6">
-                                            {message.body}
-                                        </p>
+                                        {message.type === 'voice' ? (
+                                            <div className="flex min-w-[220px] flex-col gap-1">
+                                                <span className={`text-xs font-semibold ${isOutgoing ? 'text-white/85' : 'text-slate-500 dark:text-slate-400'}`}>
+                                                    🎤 {__('Message vocal')}
+                                                    {message.duration_ms ? ` · ${Math.floor(message.duration_ms / 60000)}:${String(Math.round(message.duration_ms / 1000) % 60).padStart(2, '0')}` : ''}
+                                                </span>
+                                                {message.audio_url ? (
+                                                    <audio controls preload="none" src={message.audio_url} className="h-9 w-full max-w-[280px]" />
+                                                ) : null}
+                                            </div>
+                                        ) : (
+                                            <p className="whitespace-pre-wrap text-sm leading-6">
+                                                {message.body}
+                                            </p>
+                                        )}
                                         <div
                                             className={`mt-2 flex items-center justify-end gap-2 text-[10px] ${
                                                 isOutgoing ? 'text-white/75' : 'text-slate-500 dark:text-slate-400'

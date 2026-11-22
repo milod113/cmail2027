@@ -305,29 +305,7 @@ class ProfileController extends Controller
 
     private function mapChatMessage(ChatMessage $message, User $viewer): array
     {
-        $isOutgoing = (int) $message->sender_id === (int) $viewer->id;
-
-        return [
-            'id' => $message->id,
-            'body' => $message->body,
-            'created_at' => optional($message->created_at)?->toIso8601String(),
-            'read_at' => optional($message->read_at)?->toIso8601String(),
-            'direction' => $isOutgoing ? 'outgoing' : 'incoming',
-            'sender' => $message->sender
-                ? [
-                    'id' => $message->sender->id,
-                    'name' => $message->sender->name,
-                    'email' => $message->sender->email,
-                ]
-                : null,
-            'receiver' => $message->receiver
-                ? [
-                    'id' => $message->receiver->id,
-                    'name' => $message->receiver->name,
-                    'email' => $message->receiver->email,
-                ]
-                : null,
-        ];
+        return \App\Support\ChatPayload::map($message, (int) $viewer->id);
     }
 
     private function isUserOnline(User $user): bool

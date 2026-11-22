@@ -37,6 +37,7 @@ class HomeController extends Controller
                 'tasks' => $this->dueTasks($userId),
             ],
             'announcements' => $this->announcements($user),
+            'publications' => $this->publications($userId),
         ]);
     }
 
@@ -173,6 +174,41 @@ class HomeController extends Controller
     }
 
     /** Annonces actives destinées à l'utilisateur (épinglées, puis urgentes → normales). */
+    /** Dernières publications du fil d'actualité (lecture seule sur mobile). */
+    private function publications(int $userId): array
+    {
+        if (! Schema::hasTable('publications')) {
+            return [];
+        }
+
+        return \App\Models\Publication::query()
+            ->where('archived', false)
+            ->with('user:id,name')
+            ->withCount(['likes', 'comments'])
+            ->withExists(['likes as liked_by_me' => fn ($q) => $q->where('user_id', $userId)])
+            ->latest()
+            ->limit(10)
+            ->get()
+            ->map(function (\App\Models\Publication $p) {
+                $text = RichTextSanitizer::plainText($p->content);
+
+                return [
+                    'id' => $p->id,
+                    'title' => $p->title,
+                    'content' => $text,
+                    'excerpt' => Str::limit(preg_replace('/\s+/', ' ', $text), 160),
+                    'author' => $p->user?->name,
+                    'photo_url' => $p->photo_url ? url($p->photo_url) : null,
+                    'likes_count' => (int) $p->likes_count,
+                    'comments_count' => (int) $p->comments_count,
+                    'liked_by_me' => (bool) $p->liked_by_me,
+                    'created_at' => optional($p->created_at)?->toIso8601String(),
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
     private function announcements(User $user): array
     {
         if (! Schema::hasTable('global_announcements')) {

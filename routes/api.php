@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Controllers\Api\Mobile\AppVersionController;
 use App\Http\Controllers\Api\Mobile\AuthController;
+use App\Http\Controllers\Api\Mobile\ChatController;
 use App\Http\Controllers\Api\Mobile\ContactController;
 use App\Http\Controllers\Api\Mobile\DraftController;
 use App\Http\Controllers\Api\Mobile\EventController;
@@ -11,6 +13,7 @@ use App\Http\Controllers\Api\Mobile\MessageController;
 use App\Http\Controllers\Api\Mobile\MessageFollowUpController;
 use App\Http\Controllers\Api\Mobile\NotificationController;
 use App\Http\Controllers\Api\Mobile\ProfileController;
+use App\Http\Controllers\Api\Mobile\PublicationController;
 use App\Http\Controllers\Api\Mobile\ScheduledMessageController;
 use App\Http\Controllers\Api\Mobile\TaskController;
 use Illuminate\Support\Facades\Route;
@@ -29,6 +32,9 @@ Route::prefix('mobile')->name('mobile.')->group(function () {
     Route::post('/login', [AuthController::class, 'login'])
         ->middleware('throttle:5,1')
         ->name('login');
+
+    // Mise à jour de l'application : dernière version disponible (publique).
+    Route::get('/app-version', [AppVersionController::class, 'show'])->name('app-version');
 
     // Billet PDF d'invitation : lien temporaire signé (ouvert dans le navigateur, sans token).
     Route::get('/events/invitations/{invitation}/pdf', [EventController::class, 'pdf'])
@@ -50,6 +56,17 @@ Route::prefix('mobile')->name('mobile.')->group(function () {
         Route::get('/me', [AuthController::class, 'me'])->name('me');
         // Accueil + annonces de la direction
         Route::get('/home', [HomeController::class, 'index'])->name('home');
+        // Chat instantané (texte + vocal) et authentification du canal temps réel (Reverb)
+        Route::post('/broadcasting/auth', fn (\Illuminate\Http\Request $request) => \Illuminate\Support\Facades\Broadcast::auth($request))->name('broadcasting.auth');
+        Route::get('/chats/realtime', [ChatController::class, 'realtime'])->name('chats.realtime');
+        Route::get('/chats', [ChatController::class, 'conversations'])->name('chats.index');
+        Route::get('/chats/{user}/messages', [ChatController::class, 'messages'])->name('chats.messages');
+        Route::post('/chats/{user}/messages', [ChatController::class, 'send'])->middleware('throttle:60,1')->name('chats.send');
+        Route::post('/chats/{user}/read', [ChatController::class, 'markRead'])->name('chats.read');
+        // Publications : j'aime et commentaires
+        Route::post('/publications/{publication}/like', [PublicationController::class, 'like'])->middleware('throttle:60,1')->name('publications.like');
+        Route::get('/publications/{publication}/comments', [PublicationController::class, 'comments'])->name('publications.comments');
+        Route::post('/publications/{publication}/comments', [PublicationController::class, 'comment'])->middleware('throttle:20,1')->name('publications.comments.store');
         Route::post('/announcements/{announcement}/read', [HomeController::class, 'readAnnouncement'])->name('announcements.read');
         Route::post('/announcements/{announcement}/acknowledge', [HomeController::class, 'acknowledgeAnnouncement'])->name('announcements.acknowledge');
         Route::get('/notifications/poll', [NotificationController::class, 'poll'])
@@ -80,6 +97,8 @@ Route::prefix('mobile')->name('mobile.')->group(function () {
         Route::get('/messages/inbox', [MessageController::class, 'inbox'])->name('messages.inbox');
         Route::get('/messages/sent', [MessageController::class, 'sent'])->name('messages.sent');
         Route::post('/messages/send', [MessageController::class, 'send'])->name('messages.send');
+        // Suivi de lecture des messages envoyés avec suivi (avant /messages/{message})
+        Route::get('/messages/tracked', [MessageController::class, 'tracked'])->name('messages.tracked');
 
         // Messages groupés (suivi des réponses par destinataire)
         Route::get('/messages/groups', [GroupMessageController::class, 'index'])->name('messages.groups.index');

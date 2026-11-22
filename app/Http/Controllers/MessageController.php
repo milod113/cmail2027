@@ -360,6 +360,34 @@ class MessageController extends Controller
         ]);
     }
 
+    /**
+     * Ajoute aux réponses « legacy » (table reponses) les réponses du fil
+     * (messages enfants, créées notamment depuis l'application mobile).
+     */
+    private function mergeThreadReplies(\Illuminate\Support\Collection $legacy, Message $message, int $userId): \Illuminate\Support\Collection
+    {
+        $root = \App\Support\MessageThreads::root($message);
+
+        $children = \App\Support\MessageThreads::childReplies(array_values(array_unique([$root->id, $message->id])))
+            ->filter(fn (Message $r) => (int) $r->sender_id === $userId || (int) $r->receiver_id === $userId)
+            ->reject(fn (Message $r) => (int) $r->id === (int) $message->id)
+            ->map(fn (Message $r) => [
+                'id' => 'm'.$r->id,
+                'contenu' => $r->contenu,
+                'fichier' => $r->fichier,
+                'attachment_url' => Attachments::webUrl('message', (int) $r->id, $r->fichier),
+                'created_at' => optional($r->sent_at ?? $r->created_at)?->toIso8601String(),
+                'user' => [
+                    'id' => $r->sender?->id,
+                    'name' => $r->sender?->name,
+                ],
+            ]);
+
+        return $legacy->concat($children)
+            ->sortBy(fn ($r) => $r['created_at'] ? strtotime((string) $r['created_at']) : 0)
+            ->values();
+    }
+
     public function showSent(Request $request, Message $message): Response
     {
         abort_unless($message->sender_id === $request->user()->id, 403);
@@ -399,6 +427,8 @@ class MessageController extends Controller
                     ];
                 });
         }
+
+        $replies = $this->mergeThreadReplies($replies, $message, (int) $request->user()->id);
 
         return Inertia::render('Messages/SentShow', [
             'message' => [
@@ -503,6 +533,8 @@ class MessageController extends Controller
                     ];
                 });
         }
+
+        $replies = $this->mergeThreadReplies($replies, $message, (int) $request->user()->id);
 
         return Inertia::render('Messages/Show', [
             'message' => [

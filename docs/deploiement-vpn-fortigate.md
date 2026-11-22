@@ -144,11 +144,11 @@ Valider : l'assistant crée le tunnel, les adresses et une règle de pare‑feu.
 - *Étendue → Adresses IP distantes* : `192.168.1.0/24` et `10.212.134.0/24` (réseau local + clients VPN).
 
 ### 5.2 Démarrer Cmail
-Lancer **`demarrer-cmail.bat`** (dossier du projet). Il ouvre 3 fenêtres à laisser ouvertes :
+Cmail est servi par **Apache (XAMPP) sur le port 8000**, qui écoute sur toutes les interfaces (réseau local et VPN).
+Lancer **`demarrer-cmail.bat`** (dossier du projet) : il démarre Apache si besoin et ouvre 2 fenêtres à laisser ouvertes :
 
-1. serveur (`--host=0.0.0.0`, accepte les connexions du VPN) ;
-2. file d'attente (e‑mails, invitations) ;
-3. planificateur (messages programmés, récurrents).
+1. file d'attente (e‑mails, analyse des documents, dictée vocale) ;
+2. planificateur (messages programmés, récurrents).
 
 ---
 
@@ -206,7 +206,7 @@ Lancer **`demarrer-cmail.bat`** (dossier du projet). Il ouvre 3 fenêtres à lai
 |---|---|---|
 | FortiClient : « délai dépassé » | Mauvaise adresse publique, ports IPsec bloqués par l'opérateur | Adresse du serveur ; UDP 500/4500 autorisés sur le WAN |
 | FortiClient : « échec d'authentification » | Mot de passe, clé pré‑partagée ou groupe | Compte membre de `VPN-CMAIL` ? clé identique ? |
-| VPN connecté mais Cmail « Serveur injoignable » | Règle FortiGate ou pare‑feu Windows | Règle VPN → `SRV-CMAIL` / `CMAIL-8000` ; règle Windows TCP 8000 depuis `10.212.134.0/24` ; Cmail démarré |
+| VPN connecté mais Cmail « Serveur injoignable » | Règle FortiGate ou pare‑feu Windows | Règle VPN → `SRV-CMAIL` / `CMAIL-8000` ; règle Windows TCP 8000 depuis `10.212.134.0/24` ; Apache démarré (XAMPP) |
 | Cmail fonctionne mais pas de notifications | File d'attente / application en arrière‑plan | Fenêtres de `demarrer-cmail.bat` ouvertes ; batterie du téléphone « Sans restriction » pour Cmail et FortiClient |
 | Internet ne fonctionne plus quand le VPN est actif | Tunnel partiel désactivé | Activer *split tunneling* dans le tunnel `VPN-CMAIL` |
 | Fonctionne en Wi‑Fi interne mais pas en 4G | Test fait sans passer par le VPN | Refaire le test Wi‑Fi coupé |

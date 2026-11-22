@@ -105,6 +105,16 @@ class AttachmentController extends Controller
             return [$row->fichier, fn (User $u) => $this->canSeeMessage($u->id, $message)];
         }
 
+        if ($type === 'chat') {
+            // Message vocal du chat : réservé aux deux participants de la conversation
+            $chat = \App\Models\ChatMessage::query()->find($id);
+            if (! $chat) {
+                return [null, fn () => false];
+            }
+
+            return [$chat->audio_path, fn (User $u) => in_array((int) $u->id, [(int) $chat->sender_id, (int) $chat->receiver_id], true)];
+        }
+
         // Pièce jointe d'un brouillon : réservée à son auteur
         $draft = MessageDraft::query()->find($id);
         if (! $draft) {

@@ -363,6 +363,50 @@ class MessageController extends Controller
     /**
      * List the authenticated user's sent messages.
      */
+    /**
+     * Suivi de lecture : messages envoyés avec suivi, avec leur statut de lecture.
+     */
+    public function tracked(Request $request): JsonResponse
+    {
+        $userId = (int) $request->user()->id;
+
+        $rows = Message::query()
+            ->with('receiver:id,name,email')
+            ->where('sender_id', $userId)
+            ->where('is_tracked', true)
+            ->whereNull('parent_id')
+            ->whereNull('sender_deleted_at')
+            ->orderByDesc(DB::raw('COALESCE(sent_at, created_at)'))
+            ->limit(200)
+            ->get()
+            ->map(function (Message $m) {
+                $readAt = $m->read_at ?? ($m->lu ? $m->lu_le : null);
+
+                return [
+                    'id' => $m->id,
+                    'subject' => $m->sujet,
+                    'excerpt' => \Illuminate\Support\Str::limit(trim(preg_replace('/\s+/', ' ', (string) $m->contenu)), 140),
+                    'sent_at' => optional($m->sent_at ?? $m->created_at)?->toIso8601String(),
+                    'read_at' => $readAt?->toIso8601String(),
+                    'is_delivered' => (bool) $m->is_delivered,
+                    'receiver' => $m->receiver ? [
+                        'id' => $m->receiver->id,
+                        'name' => $m->receiver->name,
+                        'email' => $m->receiver->email,
+                    ] : null,
+                ];
+            });
+
+        return response()->json([
+            'data' => $rows,
+            'stats' => [
+                'total' => $rows->count(),
+                'read' => $rows->whereNotNull('read_at')->count(),
+                'unread' => $rows->whereNull('read_at')->where('is_delivered', true)->count(),
+            ],
+        ]);
+    }
+
     public function sent(Request $request): AnonymousResourceCollection
     {
         $user = $request->user();
@@ -521,6 +565,33 @@ class MessageController extends Controller
         $message->setRelation('replies', $replies);
 
         $payload = (new MessageResource($message))->toArray($request);
+
+        // Réponses faites depuis le web : elles sont dans l'ancienne table `reponses`.
+        // Id négatif pour ne pas entrer en collision avec les ids de messages.
+        $legacy = MessageThreads::legacyReplies([$message->id])->get($message->id, collect());
+        if ($legacy->isNotEmpty()) {
+            $legacyItems = $legacy->map(fn ($r) => [
+                'id' => -((int) $r->id),
+                'content' => $r->contenu,
+                'created_at' => $r->created_at ? \Illuminate\Support\Carbon::parse($r->created_at)->toIso8601String() : null,
+                'sender' => [
+                    'id' => (int) $r->user_id,
+                    'name' => $r->user_name,
+                    'email' => $r->user_email,
+                    'role' => null,
+                ],
+                'attachment_url' => \App\Support\Attachments::signedUrl('legacy', (int) $r->id, $r->fichier, $userId),
+                'attachment_name' => $r->fichier ? basename((string) $r->fichier) : null,
+            ]);
+            $current = $payload['replies'] ?? [];
+            if ($current instanceof \Illuminate\Http\Resources\Json\JsonResource) {
+                $current = $current->resolve($request);
+            }
+            $existing = collect($current);
+            $payload['replies'] = $existing->concat($legacyItems)
+                ->sortBy('created_at')->values()->all();
+        }
+
         $payload['group_id'] = MessageThreads::isGroupOwnedBy($root, $userId) ? $root->id : null;
         $payload['can_acknowledge'] = $this->canAcknowledge($message, $userId);
         // Suivi : l'expéditeur peut-il relancer ? Le destinataire a-t-il déjà signalé ?

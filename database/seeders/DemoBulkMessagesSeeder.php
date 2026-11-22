@@ -150,7 +150,14 @@ class DemoBulkMessagesSeeder extends DemoMessagesSeeder
             }
         });
 
-        $this->command?->info('Ajoutés : '.(Message::query()->count() - $before).' messages (réponses incluses).');
+        // Complément optionnel jusqu'à un total précis :
+        //   SEED_TOTAL=1000 php artisan db:seed --class=DemoBulkMessagesSeeder
+        $total = (int) env('SEED_TOTAL', 0);
+        while ($total > 0 && Message::query()->count() < $total) {
+            $this->randomMessage($this->pick($others), $me, $this->randomDate(60));
+        }
+
+        $this->command?->info('Ajoutés : '.(Message::query()->count() - $before).' messages (réponses incluses). Total : '.Message::query()->count().'.');
     }
 
     // ------------------------------------------------------------------ outils

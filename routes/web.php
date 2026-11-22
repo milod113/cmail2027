@@ -56,7 +56,7 @@ Route::post('/language', function (Request $request) {
 // Pièces jointes privées : contrôle d'accès fait dans le contrôleur (lien signé mobile
 // OU utilisateur connecté faisant partie du message) — donc hors du groupe « auth ».
 Route::get('/attachments/{type}/{id}/{name?}', [\App\Http\Controllers\AttachmentController::class, 'show'])
-    ->where('type', 'message|legacy|draft')
+    ->where('type', 'message|legacy|draft|chat')
     ->where('id', '[0-9]+')
     ->middleware('throttle:120,1')
     ->name('attachments.show');

@@ -27,8 +27,8 @@ class Attachments
     /** Durée de validité d'un lien signé donné à l'application mobile. */
     public const SIGNED_TTL_HOURS = 6;
 
-    /** Types de cibles : message (ligne de la table messages), legacy (table reponses), draft. */
-    public const TYPES = ['message', 'legacy', 'draft'];
+    /** Types de cibles : message (ligne de la table messages), legacy (table reponses), draft, chat (vocal du chat). */
+    public const TYPES = ['message', 'legacy', 'draft', 'chat'];
 
     // ------------------------------------------------------------------ stockage
 
@@ -162,6 +162,12 @@ class Attachments
             'png' => 'image/png',
             'gif' => 'image/gif',
             'webp' => 'image/webp',
+            // Messages vocaux du chat : lus directement par le lecteur audio
+            'm4a', 'mp4', 'aac' => 'audio/mp4',
+            'mp3' => 'audio/mpeg',
+            'ogg', 'oga', 'opus' => 'audio/ogg',
+            'webm' => 'audio/webm',
+            'wav' => 'audio/wav',
             default => null, // jamais de HTML / SVG servis « en ligne » (risque de script)
         };
     }

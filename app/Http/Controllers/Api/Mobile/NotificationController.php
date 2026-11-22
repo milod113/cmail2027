@@ -116,8 +116,36 @@ class NotificationController extends Controller
                 ->all();
         }
 
+        // Messages instantanés (chat) reçus : curseur séparé `after_chat_id`
+        $chats = [];
+        $latestChatId = 0;
+        if (\Illuminate\Support\Facades\Schema::hasTable('chat_messages')) {
+            $latestChatId = (int) \App\Models\ChatMessage::query()->where('receiver_id', $user->id)->max('id');
+            if ($request->filled('after_chat_id')) {
+                $chats = \App\Models\ChatMessage::query()
+                    ->with('sender:id,name')
+                    ->where('receiver_id', $user->id)
+                    ->whereNull('read_at')
+                    ->where('id', '>', $request->integer('after_chat_id'))
+                    ->orderByDesc('id')
+                    ->limit(20)
+                    ->get()
+                    ->reverse()
+                    ->values()
+                    ->map(fn ($c) => [
+                        'id' => $c->id,
+                        'sender_id' => (int) $c->sender_id,
+                        'sender_name' => $c->sender?->name,
+                        'preview' => \App\Support\ChatPayload::preview($c),
+                    ])
+                    ->all();
+            }
+        }
+
         return response()->json([
             'relances' => $relances,
+            'latest_chat_id' => $latestChatId,
+            'chats' => $chats,
             'latest_invitation_id' => $latestInvitationId,
             'invitations' => $invitations,
             'latest_id' => $latestId,

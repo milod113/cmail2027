@@ -23,3 +23,6 @@ yarn-error.log
 # Pièces jointes privées et fichiers OCR temporaires
 /storage/app/attachments/
 /storage/app/ocr-tmp/
+
+# APK de l application mobile (publie par copie, trop lourd pour git)
+/public/app/*.apk

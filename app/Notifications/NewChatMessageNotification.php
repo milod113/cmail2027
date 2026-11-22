@@ -32,7 +32,7 @@ class NewChatMessageNotification extends Notification
             'sender_id' => (int) $this->chatMessage->sender_id,
             'sender_name' => (string) optional($sender)->name,
             'sender_email' => (string) optional($sender)->email,
-            'preview' => str($this->chatMessage->body)->squish()->limit(120)->toString(),
+            'preview' => \App\Support\ChatPayload::preview($this->chatMessage),
         ];
     }
 }
